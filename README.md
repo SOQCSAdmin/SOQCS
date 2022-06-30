@@ -55,7 +55,7 @@ therefore, currently not all examples in C++ have their Python counterpart.
 
 For extended information about how to use SOQCS library in your own projects check the [documentation](./Documentation.html).
 # 3. Documentation #
-For more details about how to program with the SOQCS library, add it to your project or learn the details of the available methods and classes consult the available documentation [here](./Documentation.html).
+For more details about how to program with the SOQCS library, add it to your project or learn the details of the available methods and classes consult the available documentation [here](https://htmlpreview.github.io/?https://github.com/SOQCSAdmin/SOQCS/blob/main//Documentation.html).
 A copy of this documentation can be found in the root folder of SOQCS and it can be accessed by clicking on **Documentation.html**. 
 
 # 4. Authorship #
