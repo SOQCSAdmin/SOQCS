@@ -35,8 +35,16 @@ Download the library from the github folder.
 **Step 2**: Decompress. <br>
 Decompress the zip file with your favorite decompressor.
 
-**Step 3**: Install Eigen 3. <br>
-SOQCS needs Eigen 3 external library to be built. Eigen 3 can be automatically downloaded and installed for SOQCS using the configuration script <i>config.sh</i> in SOQCS root folder.
+**Step 3**: Install Eigen 3, unzip the documentation and create symbolic links. <br>
+SOQCS needs Eigen 3 external library to be built. Eigen 3 can be automatically downloaded and installed using the configuration script <i>config.sh</i> in SOQCS root folder.
+This configuration script also unzips the HTML documentation of the library and creates a few symbolic link within the SOQCS source tree needed to build the library. It also creates
+a symbolic link to the HTML documentation in the library root folder named <b>Documentation.html</b><br>
+<br>
+Note that you may need to give execution permission to the configuration script:
+
+```bash
+chmod 744 config.sh
+```  
 
 **Step 4**: Build the library. <br>
 Inside the library main SOQCS folder type <i>make</i>. This will build the library and all the examples. 
@@ -55,7 +63,7 @@ therefore, currently not all examples in C++ have their Python counterpart.
 
 For extended information about how to use SOQCS library in your own projects check the documentation.
 # 3. Documentation #
-For more details about how to program with the SOQCS library, add it to your project or learn the details of the available methods and classes consult the available documentation that can be found in the root folder of SOQCS. It can be accessed by clicking on **Documentation.html** after downloading the library. 
+For more details about how to program with the SOQCS library, add it to your project or learn the details of the available methods and classes consult the available documentation that can be found in the root folder of SOQCS. It can be accessed by clicking on **Documentation.html** after downloading the library and executing the configuration script. Otherwise, it will be found compressed in the file doc.zip .
 
 # 4. Authorship #
 <b>Javier Osca</b> <br>
