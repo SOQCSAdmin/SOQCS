@@ -47,7 +47,7 @@ Additionally, there are also versions of those same examples in Python that can 
 therefore, currently not all examples in C++ have their Python counterpart.
 </p>
 
-*     **Example 1  [C++] [Python]**: Elementary example program to show a basic simulation in SOQCS.
+*     Example 1  [C++] [Python]: Elementary example program to show a basic simulation in SOQCS.
 *     **Example 2  [C++] [Python]**: An example of HOM visibility using a beamsplitter and physical detectors.
 *     **Example 3  [C++] [Python]**: An example of the delay gate.
 *     **Example 4  [C++]**: A simulation of the entanglement swapping protocol. Example of use of density matrices in SOQCS.
