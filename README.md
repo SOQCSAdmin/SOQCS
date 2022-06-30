@@ -17,7 +17,7 @@
 # Related Publications #
 Please cite the most appropriate of these works if you make use of this library:
 
-* **<span style="color:blue"> Implementation of photon partial distinguishability in a quantum optical circuit simulation. </span>**. <i>Javier Osca and Jiri Vala</i>.  In preparation. 
+* **<span style="color:blue"> Implementation of photon partial distinguishability in a quantum optical circuit simulation</span>**. <i>Javier Osca and Jiri Vala</i>.  In preparation. 
 
 # 1. Requirements #
 
