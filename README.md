@@ -47,7 +47,7 @@ Additionally, there are also versions of those same examples in Python that can 
 therefore, currently not all examples in C++ have their Python counterpart.
 </p>
 
-*     **Example 1 [ [<span style="color:blue">C++</span>](https://github.com/SOQCSAdmin/SOQCS/blob/main/doc/html/live1_8cpp-example.html)] [[<span style="color:blue">Python</span>](./examples/live1.html)]**: Elementary example program to show a basic simulation in SOQCS.
+*     **Example 1 [ [<span style="color:blue">C++</span>](https://htmlpreview.github.io/?https://github.com/SOQCSAdmin/SOQCS/blob/main//doc/html/live1_8cpp-example.html)] [[<span style="color:blue">Python</span>](./examples/live1.html)]**: Elementary example program to show a basic simulation in SOQCS.
 *     **Example 2 [ [<span style="color:blue">C++</span>](./doc/html/live2_8cpp-example.html)] [[<span style="color:blue">Python</span>](./examples/live2.html)]**: An example of HOM visibility using a beamsplitter and physical detectors.
 *     **Example 3 [ [<span style="color:blue">C++</span>](./doc/html/live3_8cpp-example.html)] [[<span style="color:blue">Python</span>](./examples/live3.html)]**: An example of the delay gate.
 *     **Example 4 [ [<span style="color:blue">C++</span>](./doc/html/live4_8cpp-example.html)] [Python]**: A simulation of the entanglement swapping protocol. Example of use of density matrices in SOQCS.
