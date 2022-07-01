@@ -92,39 +92,34 @@
  *  - <b>Linux/Unix operating system</b>. <br>
  *  - <b>C++ compiler</b>.
  *  - <b>GNU Make</b>.
- *  - <a href="https://eigen.tuxfamily.org/index.php?title=Main_Page"> Eigen 3</a> library. (Follow the instruction installation below) <br>
+ *  - <a href="https://eigen.tuxfamily.org/index.php?title=Main_Page"> Eigen 3</a> library. (Follow the  installation instructions below) <br>
  * <br>
  *
  * \section build How to build it?
  * \subsection step1 Step 1: Download the library.
- * Download the library from the github folder.
- * \subsection step2 Step 2: Decompress
+ * Download SOQCS library from the github folder.
+ * \subsection step2 Step 2: Decompress.
  * Decompress the zip file with your favorite decompressor or type in the command line:
  *  @code
-    unzip "soqcs zip filename".zip
+    unzip SOQCS-main.zip
  *  @endcode
  * and move the resulting library folder to the desired location.
- * \subsection step3 Step 3: Install Eigen 3.
- * SOQCS needs Eigen 3 external library to be built. Eigen 3 can be automatically downloaded and installed for SOQCS using the script in SOQCS root folder:
+ * \subsection step3 Step 3: Configure the library.
+ *The configuration script automatically downloads and installs Eigen3 external library and creates symbolic links within the SOQCS source tree that
+ *are needed to build SOQCS library. It also unzips the SOQCS HTML documentation stored in doc.zip. Note that you may need to give execution
+ *permissions to the configuration script.
  * @code
-    /"SOQCS root folder"/config.sh
+    chmod 744 config.sh
+
+    ./config.sh
  * @endcode
  *
  * <b>Note for advanced users</b>: The script is configured to download V3.4 of Eigen. If V3.4 becomes unavailable the script can be reconfigured for other versions changing the number in the configuration variable
  * <i>VER</i> within the script. <br>
  *
- * \subsection step3_Alt Step 3 (alternate): Install Eigen 3 manually.
- * If the automated installation of Eigen does not work Eigen 3 library can be installed manually following the next steps.
- *  - Download Eigen 3 library manually from its <a href="https://eigen.tuxfamily.org/index.php?title=Main_Page"> homepage</a>.<br>
- *  - Decompress the library.
- *  - Copy the subfolder <i>Eigen</i> to its corresponding location in the SOQCS building source tree.
- *  @code
-        cp -R /"Eigen library folder"/Eigen/ *  /"SOQCS root folder"/src/Eigen/
-    @endcode
- * \subsection step4 Step 4: Build the library and all the examples.
+ * \subsection step4 Step 4: Build the library.
  * Inside the SOQCS library main folder type <i>make</i>. This will build the library and all the examples. The examples may be found in the subfolder <i>/SOQCS root folder/examples</i>.
- * \subsection step4_Alt Step 4 (alternate): Build only the library.
- * Inside the library main folder go to <i>/SOQCS root folder/src</i> folder and type <i>make</i>. This will build only the library without the examples. <br>
+ *
  * \subsection Trouble Troubleshooting
  * If some of the previous steps fail it is recommended to check the configuration file <i>conf.inc</i> in SOQCS root directory. If the command of the compiler or the linker in your computer has a different name or some compilation
  * flags are troublesome in your system they can be reconfigured in this file.
