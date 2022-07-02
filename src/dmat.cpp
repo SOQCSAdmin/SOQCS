@@ -981,16 +981,8 @@ int dmatrix::ketcompatible(int A, int B,mati pack_idx,qocircuit *qoc){
                     // If there is a level with the same number therefore we have found a "mirror".
                     if(w1==w2){
                         ismirrored=1;
-                        prev=j; // It has to be j instead of levelB because is the index in the loop. levelB may not be ordered.
-                        // These last lines are really really tricky to understand. Technically we should be tracing out by photons not by levels.
-                        // This is, in both kets we have to find the same photon with the same w degree of freedom (but maybe at different channels or
-                        // polarizations). However we only have level information. This is the reason because we need to check things like occupation.
-                        // A more tricky thing to see is that the frequency number has to appear in the same order in both kets otherwise they are not compatible.
-                        // This is the reason because we continue searching from the the previous level that has been "mirrored". The reason is we assume a certain
-                        // ordering of the photons to do the trace properly avoiding to apply the trace to mismatched pairs. For example we can order those of a lower
-                        // channel first. We order our levels following the same ordering to make this operation possible (any ordering is valid). Second quantization
-                        // allows for all photon permutation therefore if there is an order of the levels we can get a permutation of the photons with
-                        // that ordering. Therefore we assume the photons to be in this standard ordering in order to do the projection properly.
+                        prev=j; // It has to be j instead of levelB because is the index in the loop. LevB may not be ordered.
+                        // Photons are checked in order. Any order is valid provided we are consistent.
                     }
                 }
                 j=j+1;
