@@ -964,7 +964,7 @@ int dmatrix::ketcompatible(int A, int B,mati pack_idx,qocircuit *qoc){
             // I will call it "mirror" level. It is not necessarily the same level. Off diagonal entries
             // of the matrix maybe compatible.
             ismirrored=0;  // We assume it is not true until we find out a "mirror".
-            j=prev+1;      // This is tricky. Explained below.
+            j=prev+1;      // Explained below.
             // Search for a "mirror"
             while((ismirrored==0)&&(j<dicc->nlevel)){
                 // Occupation has to be the same. More on this below.
