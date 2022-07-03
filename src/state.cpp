@@ -2598,7 +2598,7 @@ void ph_bunch::create_ph_bunch(int i_level, int i_maxket){
     int *occ;         // Level occupation
 
     npack=0;
-    pack_list.resize(4,base);
+    pack_list.resize(4,10*base);        // We need to initialize by packet number. Temporary fix.
     bunch=new state(i_level,i_maxket);
     occ=new int[i_level]();
     bunch->add_ket(occ);
