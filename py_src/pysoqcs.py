@@ -187,8 +187,8 @@ class qocircuit(object):
         soqcs.qoc_noise(c_long(self.obj),c_double(stdev2))
         
     # Adds to the circuit a packet definition
-    def def_packet(self, t,f,w):
-        soqcs.qoc_def_packet(c_long(self.obj),t,f,w)        
+    def def_packet(self, n,t,f,w):
+        soqcs.qoc_def_packet(c_long(self.obj),n,c_double(t),c_double(f),c_double(w))        
 
     # Calculates the emitted packet visibility
     def emitted_vis(self, i,j):
