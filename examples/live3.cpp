@@ -41,8 +41,9 @@
 #include "soqcs.h"
 #include <fstream>
 
-const int    N      =  101;    // Number of points
-const double dtm    =  4;      // Max delay
+const int    N      =  100;    // Number of points
+const double taum   =  9;      // Max delay
+const double dt     =  3.0;    // Max delay
 
 int main(){
 
@@ -55,7 +56,7 @@ int main(){
     // Create objects
     hterm in_term;
     in_term.resize(4,2);
-    auto example = new qocircuit(2,1,2,1);
+    auto example = new qocircuit(2,1,6,1,10000,false);
     auto photons=new ph_bunch(example->num_levels(),1);
     auto sim= new simulator();
 
@@ -64,16 +65,17 @@ int main(){
     file.open ("Results.txt");
 
     // Loop dephasing times
-    auto dt=-dtm;
+    auto tau=0.001;
     for(int i=0;i<N;i++){
         // Create circuit
         example->reset();
         photons->clear();
-        photons->add_photons(1,0, H, 0.0, 1.0, 1.0,example);
-        photons->add_photons(1,1, H, 0.0, 1.0, 1.0,example);
+        photons->add_photons(1,1,0, 0.0, 1.0, 0.5,example);
+        photons->add_photons(0,0,0, tau, 1.0, 0.5,example);
+        photons->add_photons(1,0,0,  dt, 0.8, 0.5,example);
         photons->send2circuit('E',0,example);
         example->beamsplitter(0,1,45.0,0.0);
-        example->delay(1,dt);
+        example->delay(1,dt+0.001);
         example->beamsplitter(0,1,45.0,0.0);
         example->detector(0);
         example->detector(1);
@@ -84,13 +86,13 @@ int main(){
         // Print result
         in_term << 0, 1,
                    H, H,
-                   0, 1,
+                   1, 0,
                    1, 1;
         auto prob=measured->prob(in_term,example);
-        file << setw(10) <<real(dt) << " "  << setw(10) << prob << endl;
+        file << setw(10) <<real(tau) << " "  << setw(10) << prob << endl;
 
         // Advance
-        dt=dt+2.0*dtm/((double) (N-1));
+        tau=tau+taum/((double) (N-1));
 
         // Free memory
         delete measured;
