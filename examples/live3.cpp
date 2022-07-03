@@ -72,7 +72,7 @@ int main(){
         photons->clear();
         photons->add_photons(1,1,0, 0.0, 1.0, 0.5,example);
         photons->add_photons(0,0,0, tau, 1.0, 0.5,example);
-        photons->add_photons(1,0,0,  dt, 0.8, 0.5,example);
+        photons->add_photons(1,0,0,  dt, 1.0, 0.5,example);
         photons->send2circuit('E',0,example);
         example->beamsplitter(0,1,45.0,0.0);
         example->delay(1,dt+0.001);
