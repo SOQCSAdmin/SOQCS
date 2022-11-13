@@ -1,10 +1,7 @@
 include ../conf.inc
 
-libsocs.a:   dmat.o mthread.o sim.o state.o qocircuit.o util.o
-	     $(AR) $(ARFLAGS) libsoqcs.a mthread.o dmat.o sim.o state.o qocircuit.o util.o
-
-dmat.o:      dmat.cpp
-	     $(GPP)  $(FLAGS) -c dmat.cpp
+libsocs.a:   mthread.o sim.o dmat.o pbin.o qodev.o state.o qocircuit.o util.o
+	     $(AR) $(ARFLAGS) libsoqcs.a mthread.o sim.o dmat.o pbin.o qodev.o state.o qocircuit.o util.o
 
 mthread.o:   mthread.cpp
 	     $(GPP)  $(FLAGS) -c mthread.cpp
@@ -12,6 +9,15 @@ mthread.o:   mthread.cpp
 sim.o:       sim.cpp 
 	     $(GPP)  $(FLAGS) -c sim.cpp  
 
+dmat.o:      dmat.cpp
+	     $(GPP)  $(FLAGS) -c dmat.cpp
+
+pbin.o:      pbin.cpp
+	     $(GPP)  $(FLAGS) -c pbin.cpp
+	     
+qodev.o:     qodev.cpp
+	     $(GPP)  $(FLAGS) -c qodev.cpp
+	     
 state.o:     state.cpp
 	     $(GPP)  $(FLAGS) -c state.cpp
 

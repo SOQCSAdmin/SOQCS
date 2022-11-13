@@ -20,7 +20,7 @@ qocircuit::qocircuit(int i_nch){
 //  int i_nch;  // Number of channels
 
 
-    create_circuit(i_nch, 1, 1, 0, 0, false);
+    create_circuit(i_nch, 1, 1, 0, 0, false,'G');
 }
 
 
@@ -32,10 +32,10 @@ qocircuit::qocircuit(int i_nch){
 qocircuit::qocircuit(int i_nch, int i_nm, int i_ns){
 //  int i_nch;  // Number of channels
 //  int i_nm;   // Number of modes
-//  int i_ns;   // Number of spatial wavefunctions/times
+//  int i_ns;   // Number of wavepackets
 
 
-    create_circuit(i_nch, i_nm, i_ns, 0 ,0, false);
+    create_circuit(i_nch, i_nm, i_ns, 0 ,0, false, 'G');
 }
 
 
@@ -44,13 +44,15 @@ qocircuit::qocircuit(int i_nch, int i_nm, int i_ns){
 //  Create circuit
 //
 //----------------------------------------
-qocircuit::qocircuit(int i_nch, int i_nm, int i_ns, int clock){
-//  int i_nch;  // Number of channels
-//  int i_nm;   // Number of modes
-//  int i_ns;   // Number of spatial wavefunctions/times
+qocircuit::qocircuit(int i_nch, int i_nm, int i_ns,int clock, char i_ckind){
+//  int  i_nch;   // Number of channels
+//  int  i_nm;    // Number of modes
+//  int  i_ns;    // Number of wavepackets
+//  int  clock;   // Kind of detectors
+//  char i_ckind; // Kind of packets 'G'=Gaussian/'E'=Exponential
 
 
-    create_circuit(i_nch, i_nm, i_ns, clock ,0, false);
+    create_circuit(i_nch, i_nm, i_ns, clock ,0, false, i_ckind);
 }
 
 
@@ -59,15 +61,17 @@ qocircuit::qocircuit(int i_nch, int i_nm, int i_ns, int clock){
 //  Create circuit
 //
 //----------------------------------------
-qocircuit::qocircuit(int i_nch, int i_nm, int i_ns, int clock, int i_R, bool loss){
-//  int i_nch;  // Number of channels
-//  int i_nm;   // Number of modes
-//  int i_ns;   // Number of spatial wavefunctions/times
-//  int i_R;    // Number of iterations to calculate blinking and dark counts
-//  bool loss;  // Are losses going to be calculated explicitly? True=Yes/False=No
+qocircuit::qocircuit(int i_nch, int i_nm, int i_ns,int clock, int i_R, bool loss,char i_ckind){
+//  int  i_nch;   // Number of channels
+//  int  i_nm;    // Number of modes
+//  int  i_ns;    // Number of wavepackets
+//  int  clock;   // Kind of detectors
+//  int  i_R;     // Number of iterations to calculate blinking and dark counts
+//  bool loss;    // Are losses going to be calculated explicitly? True=Yes/False=No
+//  char i_ckind; // Kind of packets 'G'=Gaussian/'E'=Exponential
 
 
-    create_circuit(i_nch, i_nm, i_ns, clock, i_R, loss);
+    create_circuit(i_nch, i_nm, i_ns, clock, i_R, loss, i_ckind);
 }
 
 
@@ -76,17 +80,19 @@ qocircuit::qocircuit(int i_nch, int i_nm, int i_ns, int clock, int i_R, bool los
 //  Auxiliary private method to create a circuit
 //
 //----------------------------------------
-void qocircuit::create_circuit(int i_nch, int i_nm, int i_ns, int clock, int i_R, bool loss){
-//  int i_nch;  // Number of channels
-//  int i_nm;   // Number of modes
-//  int i_ns;   // Number of spatial wavefunctions/times
-//  int i_R;    // Number of iterations to calculate blinking and dark counts
-//  bool loss;  //Are losses going to be calculated explicitly? True=Yes/False=No
+void qocircuit::create_circuit(int i_nch, int i_nm, int i_ns,int clock, int i_R, bool loss, char i_ckind){
+//  int  i_nch;   // Number of channels
+//  int  i_nm;    // Number of modes
+//  int  i_ns;    // Number of wavepackets
+//  int  clock;   // Kind of detectors
+//  int  i_R;     // Number of iterations to calculate blinking and dark counts
+//  bool loss;    // Are losses going to be calculated explicitly? True=Yes/False=No
+//  char i_ckind; // Kind of packets 'G'=Gaussian/'E'=Exponential
 //  Auxiliary index
-    int i;      // Aux index
-    int j;      // Aux index
-    int k;      // Aux index
-    int l;      // Aux index
+    int i;        // Aux index
+    int j;        // Aux index
+    int k;        // Aux index
+    int l;        // Aux index
 
 
     // Initialize degrees of freedom
@@ -104,14 +110,18 @@ void qocircuit::create_circuit(int i_nch, int i_nm, int i_ns, int clock, int i_R
 
     // Initialize detector conditions
     ndetc=0;
+    nignored=0;
     ncond=0;
     timed=clock;
     det_def.resize(2,i_nch);
     det_par.resize(2,i_nch);
+    ch_ignored.resize(i_nch);
+
 
     // Initialize emitter/Packet definitions
+    ckind=i_ckind;
     npack=0;
-    pack_list.resize(4,ns);
+    pack_list.resize(5,ns);
     emitted=new photon_mdl();
     emiss=0;
     confidence=1.0;
@@ -162,6 +172,7 @@ qocircuit::~qocircuit(){
     int i; // Aux index
     int j; // Aux index
 
+
     // Destroy dictionaries/ liberate memory.
     for(i=0;i<nch;i++){
         for(j=0;j<nm;j++){
@@ -183,10 +194,13 @@ qocircuit::~qocircuit(){
 //
 //----------------------------------------------------------
 void qocircuit::reset(){
+
+
     // Resent circuit matrix
     circmtx=matc::Identity(nlevel,nlevel);
     // Reset detectors
     ndetc=0;
+    nignored=0;
     ncond=0;
     // Reset emitter/packets
     npack=0;
@@ -216,11 +230,8 @@ qocircuit *qocircuit::clone(){
 
 
     //Reserve memory
-    newcircuit= new qocircuit(nch,nm,ns,timed);
+    newcircuit= new qocircuit(nch,nm,ns,timed,ckind);
     newcircuit->losses=losses; // It has to be cloned that way. Otherwise the full constructor will double again the number of channels.
-
-    //Update print variable
-    newcircuit->flag_prnt=flag_prnt;
 
     // Copy dictionaries
     l=0;
@@ -238,9 +249,11 @@ qocircuit *qocircuit::clone(){
 
     // Copy detectors
     newcircuit->ndetc=ndetc;
+    newcircuit->nignored=nignored;
     newcircuit->ncond=ncond;
     newcircuit->det_def=det_def;
     newcircuit->det_par=det_par;
+    newcircuit->ch_ignored=ch_ignored;
 
     // Copy emitters
     newcircuit->emitted=emitted->clone();
@@ -259,6 +272,70 @@ qocircuit *qocircuit::clone(){
 
     //Return a pointer to the new circuit object.
     return newcircuit;
+}
+
+
+//----------------------------------------
+//
+//  Concatenates two circuits
+//
+//----------------------------------------
+int qocircuit::concatenate(qocircuit *qoc){
+//  qocircuit *qoc;      // Circuit to be appended
+//  Variables
+    int nclose;          // Total number of channels
+
+
+    // Check limitations
+    if(nch!=qoc->nch){
+        cout << "Concatenate error  #1: Circuits not compatible. Number of channels is different" << endl;
+        return -1;
+    }
+    if(nm!=qoc->nm){
+        cout << "Concatenate error  #2: Circuits not compatible. Number of polarization is different" << endl;
+        return -1;
+    }
+    if(ns!=qoc->ns){
+        cout << "Concatenate error  #3: Circuits not compatible. Number of packets is different" << endl;
+        return -1;
+    }
+    if(qoc->npack>0){
+        cout << "Concatenate error  #4: Input must be defined entirely on the first circuit! " << endl;
+        return -1;
+    }
+    if(ncond>0){
+        cout << "Concatenate error  #5: Detectors must be defined entirely on the last circuit!. " << endl;
+        return -1;
+    }
+
+    if (((losses==0)&&(qoc->losses>0))||((losses>0)&&(qoc->losses==0))){
+        cout << "Concatenate error  #6: Both circuits must have the same loss configuration!. " << endl;
+        return -1;
+    }
+
+    // Merges circuits (in a limited way)
+    circmtx=qoc->circmtx*circmtx;
+    ncond=qoc->ncond;
+    ndetc=qoc->ndetc;
+    nignored=qoc->nignored;
+    det_def=qoc->det_def;
+    det_par=qoc->det_par;
+    ch_ignored=qoc->ch_ignored;
+
+    // Last detector operations
+    // The total number of channels to put a detector
+    // is different depending if we are computing losses
+    if(losses==0) nclose=nch;
+    else nclose=nch/2;
+
+    // If this is the last detector compute losses if needed.
+    if((losses>0)&&(ndetc==nclose)) compute_losses();
+
+    // If this is the last detector add the emitter matrix
+    // at the beginning. (Otherwise computing the losses breaks the calculation)
+    if((emiss==1)&&(ndetc==nclose)) circmtx=circmtx*init_dmat;
+
+    return 0;
 }
 
 
@@ -285,20 +362,10 @@ void qocircuit:: beamsplitter(int i_ch1, int i_ch2, double d_theta, double d_phi
 //  Constants
     const int nbmch=2;        // U square matrix row/column dimension
 //  Variables
-    int    ch1;               // Channel evaluated 1
-    int    ch2;               // Channel evaluated 2
-    int    km;                // Mode of the channels
-    int    ks;                // Wavefunction/"Time" of the channels
     double theta;             // Angle theta in radians
     double phi;               // Angle phi in radians
     matc   U(nbmch,nbmch);    // Beamsplitter 2x2 matrix definitions
-    veci   V(nbmch);          // Channels to which U refers
-    matc   oelement;          // Extended nlevelxnlevel beamsplitter definition
-//  Auxiliary index.
-    int    i;                 // Aux index
-    int    j;                 // Aux index
-    int    k;                 // Aux index
-    int    l;                 // Aux index.
+    mati   V(1,nbmch);        // Channels to which U refers
 
 
     // Conversion to radians
@@ -310,29 +377,13 @@ void qocircuit:: beamsplitter(int i_ch1, int i_ch2, double d_theta, double d_phi
     U(0,1)=-exp( jm*phi)*sin(theta);
     U(1,0)= exp(-jm*phi)*sin(theta);
     U(1,1)= cos(theta);
-    V(0)  = i_ch1;
-    V(1)  = i_ch2;
 
-    //Conversion to nlevelxnlevel matrix
-    oelement.resize(nlevel,nlevel);
-    oelement=matc::Identity(nlevel,nlevel);
-    for(k=0;k<nbmch;k++){
-        ch1=V(k);
-        for(l=0;l<nbmch;l++){
-            ch2=V(l);
-            for(km=0;km<nm;km++){
-            for(ks=0;ks<ns;ks++){
-                if((ch1<nch)&&(ch2<nch)){
-                    i=i_idx[ch1][km][ks];
-                    j=i_idx[ch2][km][ks];
-                    oelement(i,j)=U(k,l);
-                }
-            }}
-        }
-    }
+    // Channels
+    V(0,0)  = i_ch1;
+    V(0,1)  = i_ch2;
 
-    // Update circuit with new element
-    circmtx=oelement*circmtx;
+    // Compute gate
+    custom_gate(V,U);
 }
 
 
@@ -349,22 +400,12 @@ void qocircuit:: dielectric(int i_ch1, int i_ch2, cmplx t, cmplx r){
 //  Constants
     const int nbmch=2;        // U square matrix row/column dimension
 //  Variables
-    int   ch1;                // Channel evaluated 1
-    int   ch2;                // Channel evaluated 2
-    int   km;                 // Mode of the channels
-    int   ks;                 // Wavefunction/"Time" of the channels
     cmplx rmt;                // r-t
     cmplx rpt;                // r+t
     cmplx rmt2;               // |r-t|^2
     cmplx rpt2;               // |r+t|^2
     matc  U(nbmch,nbmch);     // Dielectric 2x2 matrix definitions
-    veci  V(nbmch);           // Channels to which U refers
-    matc  oelement;           // Extended nlevelxnlevel dielectric definition
-//  Auxiliary index.
-    int   i;                  // Aux index
-    int   j;                  // Aux index
-    int   k;                  // Aux index
-    int   l;                  // Aux index.
+    mati  V(1,nbmch);         // Channels to which U refers
 
 
     // Check physicality of the input
@@ -372,8 +413,8 @@ void qocircuit:: dielectric(int i_ch1, int i_ch2, cmplx t, cmplx r){
     rpt=r+t;
     rmt2=conj(rmt)*rmt;
     rpt2=conj(rpt)*rpt;
-    if(real(abs(rmt2))>1.0) cout << "Warning! Beamsplitter: t-r condition broken. The result aren't physical." << endl;
-    if(real(abs(rpt2))>1.0) cout << "Warning! Beamsplitter: t+r condition broken. The result aren't physical." << endl;
+    if(real(abs(rmt2))>1.0) cout << "Dielectric warning: t-r condition broken. The result aren't physical." << endl;
+    if(real(abs(rpt2))>1.0) cout << "Dielectric warning: t+r condition broken. The result aren't physical." << endl;
 
     // Dielectric matrix
     U(0,0)= t;
@@ -382,29 +423,12 @@ void qocircuit:: dielectric(int i_ch1, int i_ch2, cmplx t, cmplx r){
     U(1,1)= t;
 
     // Channels
-    V(0)  = i_ch1;
-    V(1)  = i_ch2;
+    V(0,0)  = i_ch1;
+    V(0,1)  = i_ch2;
 
-    //Conversion to nlevelxnlevel matrix
-    oelement.resize(nlevel,nlevel);
-    oelement=matc::Identity(nlevel,nlevel);
-    for(k=0;k<nbmch;k++){
-        ch1=V(k);
-        for(l=0;l<nbmch;l++){
-            ch2=V(l);
-            for(km=0;km<nm;km++){
-            for(ks=0;ks<ns;ks++){
-                if((ch1<nch)&&(ch2<nch)){
-                    i=i_idx[ch1][km][ks];
-                    j=i_idx[ch2][km][ks];
-                    oelement(i,j)=U(k,l);
-                }
-            }}
-        }
-    }
+    // Compute gate
+    custom_gate(V,U);
 
-    // Update circuit with new element
-    circmtx=oelement*circmtx;
 }
 
 
@@ -419,7 +443,7 @@ void qocircuit::compute_losses(){
     int  nchm;   // Half the number of channels
     int  ch;     // Channel
     int  m;      // Polarization
-    int  s;      // "Time"
+    int  s;      // Wavepacket
     matc D;      // Diagonal matrix S=U D U^*
     matc U;      // Unitary  matrix S=U D U^*
     ComplexEigenSolver<matc> es; // Eigensolver
@@ -445,8 +469,9 @@ void qocircuit::compute_losses(){
         ch=ch+nchm;
         if(ch<nch){
             k=i_idx[ch][m][s];
-            D(i,k)=sqrt(1.0-abs(conj(D(i,i))*D(i,i)));
-            D(k,i)=sqrt(1.0-abs(conj(D(i,i))*D(i,i)));
+            if((1.0-abs(conj(D(i,i))*D(i,i)))>0) D(i,k)=sqrt(1.0-abs(conj(D(i,i))*D(i,i)));
+            else D(i,k)=0.0;
+            D(k,i)=D(i,k);
             D(k,k)=0.0;
 
             // Second we write the proper unitary transformation
@@ -511,18 +536,8 @@ void qocircuit:: NSX(int i_ch1, int i_ch2, int i_ch3){
 //  Constants
     const int nbmch=3;       // U square matrix row/column dimension
 //  Variables
-    int   ch1;               // Channel evaluated 1
-    int   ch2;               // Channel evaluated 2
-    int   km;                // Mode of the channels
-    int   ks;                // Wavefunction/"Time" of the channels
     matc  U(nbmch,nbmch);    // NSX 2x2 matrix definitions
-    veci  V(nbmch);          // Channels to which U refers
-    matc  oelement;          // Extended nlevelxnlevel NSX definition
-//  Auxiliary index.
-    int   i;                 // Aux index
-    int   j;                 // Aux index
-    int   k;                 // Aux index
-    int   l;                 // Aux index.
+    mati  V(1,nbmch);        // Channels to which U refers
 
 
     // 3x3 Matrix initialization
@@ -537,30 +552,12 @@ void qocircuit:: NSX(int i_ch1, int i_ch2, int i_ch3){
     U(2,2)= sqrt(2.0)-1.0/2.0;
 
     // Channels
-    V(0)  = i_ch1;
-    V(1)  = i_ch2;
-    V(2)  = i_ch3;
+    V(0,0)  = i_ch1;
+    V(0,1)  = i_ch2;
+    V(0,2)  = i_ch3;
 
-    //Conversion to nlevelxnlevel matrix
-    oelement.resize(nlevel,nlevel);
-    oelement=matc::Identity(nlevel,nlevel);
-    for(k=0;k<nbmch;k++){
-        ch1=V(k);
-        for(l=0;l<nbmch;l++){
-            ch2=V(l);
-            for(km=0;km<nm;km++){
-            for(ks=0;ks<ns;ks++){
-                if((ch1<nch)&&(ch2<nch)){
-                    i=i_idx[ch1][km][ks];
-                    j=i_idx[ch2][km][ks];
-                    oelement(i,j)=U(k,l);
-                }
-            }}
-        }
-    }
-
-    // Update circuit with new element
-    circmtx=oelement*circmtx;
+    // Compute gate
+    custom_gate(V,U);
 }
 
 
@@ -576,19 +573,10 @@ void qocircuit:: rotator(int i_ch, double d_theta, double d_phi){
 //  Constants
     const  int nbmch=2;       // U square matrix row/column dimension
 //  Variables
-    int    km1;               // Mode of the channel i_ch
-    int    km2;               // Mode of the channel i_ch
-    int    ks;                // Wavefunction/"Time" of the channels
     double theta;             // Angle theta in radians
     double phi;               // Angle phi in radians
     matc   U(nbmch,nbmch);    // Rotator 2x2 matrix definitions
-    veci   P(nbmch);          // Channels to which U refers
-    matc   oelement;          // Extended nlevelxnlevel rotator definition
-//  Auxiliary index.
-    int    i;                 // Aux index.
-    int    j;                 // Aux index.
-    int    k;                 // Aux index
-    int    l;                 // Aux index.
+    mati   W(2,nbmch);        // Channels to which U refers
 
 
     // Conversion to radians
@@ -596,31 +584,19 @@ void qocircuit:: rotator(int i_ch, double d_theta, double d_phi){
     phi  =d_phi*pi  /180.0;
 
     // 2x2 Matrix initialization
-    U(0,0)= cos(theta);
-    U(0,1)=-exp( jm*phi)*sin(theta);
-    U(1,0)= exp(-jm*phi)*sin(theta);
-    U(1,1)= cos(theta);
-    P(0)  = H;
-    P(1)  = V;
+    U(0,0) =  cos(theta);
+    U(0,1) = -exp( jm*phi)*sin(theta);
+    U(1,0) =  exp(-jm*phi)*sin(theta);
+    U(1,1) =  cos(theta);
 
-    //Conversion to nlevelxnlevel matrix
-    oelement.resize(nlevel,nlevel);
-    oelement=matc::Identity(nlevel,nlevel);
-    for(k=0;k<nbmch;k++){
-        km1=P(k);
-        for(l=0;l<nbmch;l++){
-            km2=P(l);
-            for(ks=0;ks<ns;ks++){
-                i=i_idx[i_ch][km1][ks];
-                j=i_idx[i_ch][km2][ks];
-                oelement(i,j)=U(k,l);
+    // Channels
+    W(0,0) = i_ch;
+    W(0,1) = i_ch;
+    W(1,0) = H;
+    W(1,1) = V;
 
-            }
-        }
-    }
-
-    // Update circuit with new element
-    circmtx=oelement*circmtx;
+    // Compute gate
+    custom_gate(W,U);
 }
 
 
@@ -636,20 +612,8 @@ void qocircuit:: polbeamsplitter(int i_ch1, int i_ch2, int pol){
 //  Constants
     const int nbmch=4;        // U square matrix row/column dimension
 //  Variables
-    int   ch1;                // Channel evaluated 1
-    int   ch2;                // Channel evaluated 2
-    int   km1;                // Mode of the channel i_ch1
-    int   km2;                // Mode of the channel i_ch2
-    int   ks;                 // Wavefunction/"Time" of the channels
     matc  U(nbmch,nbmch);     // Polarized beamsplitter 4x4 matrix definitions
-    veci  CH(nbmch);          // Channels to which U refers
-    veci  P(nbmch);           // Channels to which U refers
-    matc  oelement;           // Extended nlevelxnlevel polarized beamsplitter definition
-//  Auxiliary index.
-    int   i;                  // Aux index.
-    int   j;                  // Aux index.
-    int   k;                  // Aux index
-    int   l;                  // Aux index.
+    mati  W(2,nbmch);         // Channels to which U refers
 
 
     // 4x4 Matrix initialization
@@ -669,35 +633,19 @@ void qocircuit:: polbeamsplitter(int i_ch1, int i_ch2, int pol){
     U(3,1) =  0;
     U(3,2) =  0;
     U(3,3) =  1;
-    CH(0)  =  i_ch1;
-    CH(1)  =  i_ch1;
-    CH(2)  =  i_ch2;
-    CH(3)  =  i_ch2;
-    P(0)   =  pol;
-    P(1)   = (pol+1)%2;
-    P(2)   =  pol;
-    P(3)   = (pol+1)%2;
 
-    //Conversion to nlevelxnlevel matrix
-    oelement.resize(nlevel,nlevel);
-    oelement=matc::Identity(nlevel,nlevel);
-    for(k=0;k<nbmch;k++){
-        ch1=CH(k);
-        km1=P(k);
-        for(l=0;l<nbmch;l++){
-            ch2=CH(l);
-            km2=P(l);
-            for(ks=0;ks<ns;ks++){
-                i=i_idx[ch1][km1][ks];
-                j=i_idx[ch2][km2][ks];
-                oelement(i,j)=U(k,l);
+    // Channels
+    W(0,0) =  i_ch1;
+    W(0,1) =  i_ch1;
+    W(0,2) =  i_ch2;
+    W(0,3) =  i_ch2;
+    W(1,0) =  pol;
+    W(1,1) = (pol+1)%2;
+    W(1,2) =  pol;
+    W(1,3) = (pol+1)%2;
 
-            }
-        }
-    }
-
-    // Update circuit with new element
-    circmtx=oelement*circmtx;
+    // Compute gate
+    custom_gate(W,U);
 }
 
 
@@ -713,19 +661,10 @@ void qocircuit:: waveplate(int i_ch, double d_alpha, double d_gamma){
 //  Constants
     const  int nbmch=2;       // U square matrix row/column dimension
 //  Variables
-    int    km1;               // Mode of the channel i_ch
-    int    km2;               // Mode of the channel i_ch
-    int    ks;                // Wavefunction/"Time" of the channels
     double alpha;             // Angle alpha in radians
     double gamma;             // Angle gamma in radians
     matc   U(nbmch,nbmch);    // Waveplate 2x2 matrix definitions
-    veci   P(nbmch);          // Channels to which U refers
-    matc   oelement;          // Extended nlevelxnlevel waveplate definition
-//  Auxiliary index.
-    int    i;                 // Channel 1 matrix index
-    int    j;                 // Channel 2 matrix index
-    int    k;                 // Aux index
-    int    l;                 // Aux index.
+    mati   W(2,nbmch);        // Channels to which U refers
 
 
     // Conversion to radians
@@ -737,27 +676,15 @@ void qocircuit:: waveplate(int i_ch, double d_alpha, double d_gamma){
     U(0,1)= jm*sin(gamma)*sin(2.0*alpha);
     U(1,0)= jm*sin(gamma)*sin(2.0*alpha);
     U(1,1)=-jm*sin(gamma)*cos(2.0*alpha)+cos(gamma);
-    P(0)  = H;
-    P(1)  = V;
 
-    //Conversion to nlevelxnlevel matrix
-    oelement.resize(nlevel,nlevel);
-    oelement=matc::Identity(nlevel,nlevel);
-    for(k=0;k<nbmch;k++){
-        km1=P(k);
-        for(l=0;l<nbmch;l++){
-            km2=P(l);
-            for(ks=0;ks<ns;ks++){
-                i=i_idx[i_ch][km1][ks];
-                j=i_idx[i_ch][km2][ks];
-                oelement(i,j)=U(k,l);
+    // Channels
+    W(0,0)  = i_ch;
+    W(0,1)  = i_ch;
+    W(1,0)  = H;
+    W(1,1)  = V;
 
-            }
-        }
-    }
-
-    // Update circuit with new element
-    circmtx=oelement*circmtx;
+    // Compute gate
+    custom_gate(W,U);
 }
 
 
@@ -801,6 +728,35 @@ void qocircuit:: MMI2(int i_ch1, int i_ch2){
     dielectric(i_ch1,i_ch2,1/sqrt(2.0),jm/sqrt(2.0));
 }
 
+//------------------------------------------------
+//
+// Rewires / swaps two channels (of the same mode)
+//
+//------------------------------------------------
+void qocircuit:: rewire(int i_ch1,int i_ch2){
+//  int    i_ch1;             // Channel 1
+//  int    i_ch2;             // Channel 2
+//  Constants
+    const int nbmch=2;        // U square matrix row/column dimension
+//  Variables
+    matc   U(nbmch,nbmch);    // Beamsplitter 2x2 matrix definitions
+    mati   V(1,nbmch);        // Channels to which U refers
+
+
+    // 2x2 Matrix initialization
+    U(0,0)= 0.0;
+    U(0,1)= 1.0;
+    U(1,0)= 1.0;
+    U(1,1)= 0.0;
+
+    // Channels
+    V(0,0)  = i_ch1;
+    V(0,1)  = i_ch2;
+
+    // Compute gate
+    custom_gate(V,U);
+}
+
 
 //----------------------------------------
 //
@@ -814,9 +770,10 @@ void qocircuit:: custom_gate(mati iodef, matc U){
     int  nbmch;       // U square matrix row/column dimension
     int  ch1;         // Channel evaluated 1
     int  ch2;         // Channel evaluated 2
+    int  km;          // Mode of the channel i_ch
     int  km1;         // Mode of the channel i_ch
     int  km2;         // Mode of the channel i_ch
-    int  ks;          // Wavefunction/"Time" of the channels
+    int  ks;          // Wavepacket index
     veci CH;          // Channels to which U refers
     veci P;           // Channels to which U refers
     matc oelement;    // Extended nlevelxnlevel custom gate definition
@@ -836,7 +793,7 @@ void qocircuit:: custom_gate(mati iodef, matc U){
         if(iodef.rows()>1){
             P(i)   = iodef(1,i);
         }else{
-            P(i)   = 0;
+            P(i)   = -1;
         }
     }
 
@@ -849,13 +806,101 @@ void qocircuit:: custom_gate(mati iodef, matc U){
         for(l=0;l<nbmch;l++){
             ch2=CH(l);
             km2=P(l);
-            for(ks=0;ks<ns;ks++){
-                i=i_idx[ch1][km1][ks];
-                j=i_idx[ch2][km2][ks];
-                oelement(i,j)=U(k,l);
+            if(iodef.rows()>1){
+                for(ks=0;ks<ns;ks++){
+                    i=i_idx[ch1][km1][ks];
+                    j=i_idx[ch2][km2][ks];
+                    oelement(i,j)=U(k,l);
+                }
+            }else{
+                for(km=0;km<nm;km++){
+                for(ks=0;ks<ns;ks++){
+                    i=i_idx[ch1][km][ks];
+                    j=i_idx[ch2][km][ks];
+                    oelement(i,j)=U(k,l);
+                }}
 
             }
         }
+    }
+
+    // Update circuit with new element
+    circmtx=oelement*circmtx;
+}
+
+
+//----------------------------------------
+//
+//  Adds a phase to the photons in a channel
+//  depending on the optical path dt and the
+//  frequency of the photon packets
+//
+//----------------------------------------
+void qocircuit:: dispersion(int ch, double dt){
+//  int ch;           // Channel
+//  double dt;        // Time
+//  Variables
+    int    km;        // Mode of the channel i_ch
+    int    ks;        // Wavepacket index
+    int    iw;        // Frequency index
+    double w;         // Frequency
+    matc oelement;    // Extended nlevelxnlevel custom gate definition
+//  Auxiliary index.
+    int    i;         // Aux index
+    int    j;         // Aux index
+
+
+    //Conversion to nlevelxnlevel matrix
+    oelement.resize(nlevel,nlevel);
+    oelement=matc::Identity(nlevel,nlevel);
+
+    for(km=0;km<nm;km++){
+    for(ks=0;ks<ns;ks++){
+        i=i_idx[ch][km][ks];
+        j=i_idx[ch][km][ks];
+        iw=emitted->pack_def(1,ks);
+        w=emitted->freq(0,iw);
+        oelement(i,j)=exp(jm*dt*w);
+    }}
+
+    // Update circuit with new element
+    circmtx=oelement*circmtx;
+}
+
+
+//----------------------------------------
+//
+//  Adds a phase to the photons in a channel
+//  depending on the optical path dt and the
+//  frequency of the photon packets for the
+//  photons with a selected polarization
+//
+//----------------------------------------
+void qocircuit:: dispersion(int ch, int P, double dt){
+//  int ch;           // Channel
+//  in P;             // Photon polarization required to apply a phase shift
+//  double dt;        // Time
+//  Variables
+    int    ks;        // Wavepacket index
+    int    iw;        // Frequency index
+    double w;         // Frequency
+    matc oelement;    // Extended nlevelxnlevel custom gate definition
+//  Auxiliary index.
+    int    i;         // Aux index
+    int    j;         // Aux index
+
+
+    //Conversion to nlevelxnlevel matrix
+    oelement.resize(nlevel,nlevel);
+    oelement=matc::Identity(nlevel,nlevel);
+
+
+    for(ks=0;ks<ns;ks++){
+        i=i_idx[ch][P][ks];
+        j=i_idx[ch][P][ks];
+        iw=emitted->pack_def(1,ks);
+        w=emitted->freq(0,iw);
+        oelement(i,j)=exp(jm*dt*w);
     }
 
     // Update circuit with new element
@@ -891,25 +936,20 @@ void qocircuit:: phase_shifter(int i_ch, double d_phi){
 void qocircuit:: phase_shifter(int i_ch, cmplx t){
 //  int   i_ch                // Phase shifter input channel
 //  cmplx t                   // Phase shifter transmission amplitude of probability.
+//  Constants
+    const  int nbmch=1;       // U square matrix row/column dimension
 //  Variables
-    int   km;                 // Mode of the channels
-    int   ks;                 // Wavefunction/"Time" of the channels
-    matc  oelement;           // nlevelxnlevel phase shifter definition
-//  Auxiliary index.
-    int   i;                  // Aux index.
+    matc   U(nbmch,nbmch);    // Waveplate 2x2 matrix definitions
+    mati   V(1,nbmch);        // Channels to which U refers
 
+    // Matrix
+    U(0,0)=t;
 
-    // Conversion to nlevelxnlevel matrix
-    oelement.resize(nlevel,nlevel);
-    oelement=matc::Identity(nlevel,nlevel);
-    for(km=0;km<nm;km++){
-    for(ks=0;ks<ns;ks++){
-        i=i_idx[i_ch][km][ks];
-        oelement(i,i)=t;
-    }}
+    // Channel
+    V(0,0)=i_ch;
 
-    // Update circuit with new element
-    circmtx=oelement*circmtx;
+    // Compute gate
+    custom_gate(V,U);
 }
 
 
@@ -992,7 +1032,7 @@ void qocircuit:: emitter(matc D){
 // Emitter configured using a packet model.
 //
 //--------------------------------------------------
-void qocircuit:: emitter(photon_mdl *mdl){
+int qocircuit:: emitter(photon_mdl *mdl){
 //  photon_mdl *mdl; // Photon model/definition
 //  Variables
     int    nP;       // Number of packets
@@ -1016,7 +1056,10 @@ void qocircuit:: emitter(photon_mdl *mdl){
     //Calculate packet matrix
     P=mdl->create_packet_mtx();
     nP=P.cols();
-    if(nP>ns) cout << "Emitter(photon model): Not enough ns degrees of freedom! Needed: "<< nP << endl;
+    if(nP>ns){
+        cout << "Emitter(photon model) error: Not enough ns degrees of freedom! Needed: "<< nP << endl;
+        return -1;
+    }
 
 
     // Calculate coupling coefficients
@@ -1043,6 +1086,8 @@ void qocircuit:: emitter(photon_mdl *mdl){
 
     // Set up the emitter using the calculated Gram-Schmidt coefficients
     emitter(c);
+
+    return 0;
 }
 
 
@@ -1052,53 +1097,64 @@ void qocircuit:: emitter(photon_mdl *mdl){
 // in a matrix.
 //
 //--------------------------------------------------
-void qocircuit::emitter(int npack, matd packets, char ckind, int rand){
-//  int  npack;     // Number of packets defined.
-//  matd packets;   // Matrix that contains the definition of the packets.
-//  matd packets;   // Kind of packets  'G': Gaussian/'E': Exponential
+veci qocircuit::emitter(int npack, matd packets){
+//  int  npack;       // Number of packets defined.
+//  matd packets;     // Matrix that contains the definition of the packets.
 //  Variables
-    vecd longtimes; // List with the times defined
-    matd longfreq;  // List with the frequencies defined
-    vecd times;     // List with the times to create the photon model. Same size as entries
-    matd freq;      // List with the frequencies to create the photon model. Same number of columns as entries
-    mati defs;      // List with packet definitions. (Equal to pack unless timed=1)
-    mati pack;      // Packet definition matrix to create the photon model.
-    int  ntimes;    // Number of times in longtimes
-    int  nfreq;     // Number of frequencies in long freq
+    veci conversion;  // Returns the new packet numbers if they are re-arranged
+    matd longtimes;   // List with the times defined
+    matd longfreq;    // List with the frequencies defined
+    matd times;       // List with the times to create the photon model. Same size as entries
+    matd freq;        // List with the frequencies to create the photon model. Same number of columns as entries
+    mati defs;        // List with packet definitions. (Equal to pack unless timed=1)
+    mati pack;        // Packet definition matrix to create the photon model.
+    int  ntimes;      // Number of times in longtimes
+    int  nfreq;       // Number of frequencies in long freq
 //  Aux index
-    int i;          // Aux index
-    int j;          // Aux index
-    int k;          // Aux index
+    int i;            // Aux index
+    int j;            // Aux index
+    int k;            // Aux index
+    int ip;           // Aux index
 
+
+    //Check number of packets
+    if(npack>ns){
+        cout << "Emitter(npack) error: Not enough ns degrees of freedom! Needed: "<< npack << endl;
+        return conversion;
+    }
 
     // Perform the format conversion
     ntimes=0;
     nfreq=0;
-    longtimes.resize(npack);
+    longtimes.resize(2,npack);
     longfreq.resize(2,npack);
     defs.resize(3,npack);
     for(i=0;i<npack;i++){
         j=0;
-        while((j<ntimes)&&(abs(packets(1,i)-longtimes(j))>xcut)) j++;
+        ip=packets(0,i);
+        while((j<ntimes)&&(abs(packets(1,ip)-longtimes(0,j))>xcut)) j++;
         if (j==ntimes){
-            longtimes(ntimes)=packets(1,i);
+            longtimes(0,ntimes)=packets(1,ip);
+            longtimes(1,ntimes)=packets(4,ip);
             ntimes=ntimes+1;
         }
 
         k=0;
-        while((k<nfreq)&&((abs(packets(2,i)-longfreq(0,k))>xcut)
-                       ||(abs(packets(3,i)-longfreq(1,k))>xcut))) k++;
+        while((k<nfreq)&&((abs(packets(2,ip)-longfreq(0,k))>xcut)
+                       || (abs(packets(3,ip)-longfreq(1,k))>xcut))) k++;
         if (k==nfreq){
-            longfreq(0,nfreq)=packets(2,i);
-            longfreq(1,nfreq)=packets(3,i);
+            longfreq(0,nfreq)=packets(2,ip);
+            longfreq(1,nfreq)=packets(3,ip);
             nfreq=nfreq+1;
         }
 
-        defs(0,i)=(int) packets(0,i);
+        defs(0,i)=(int) packets(0,ip);
         defs(1,i)=j;
         defs(2,i)=k;
     }
 
+    // If timed create extra packets and their translations
+    conversion.resize(npack);
     if(timed==1){
         pack.resize(3,ntimes*nfreq);
         k=0;
@@ -1110,14 +1166,24 @@ void qocircuit::emitter(int npack, matd packets, char ckind, int rand){
                 k=k+1;
             }
         }
+        for(i=0;i<npack;i++){
+                j=0;
+                while((pack(1,j)!=defs(1,i))||(pack(2,j)!=defs(2,i))) j++;
+                conversion(i)=j;
+        }
     }else{
         pack=defs;
+        for(i=0;i<npack;i++) conversion(i)=i;
     }
 
 //  Adjust sizes
-    times.resize(ntimes);
+    times.resize(2,ntimes);
     freq.resize(2,nfreq);
-    for(i=0;i<ntimes;i++) times(i)=longtimes(i);
+    for(i=0;i<ntimes;i++){
+        times(0,i)=longtimes(0,i);
+        times(1,i)=longtimes(1,i);
+    }
+
     for(i=0;i<nfreq;i++){
         freq(0,i) = longfreq(0,i);
         freq(1,i) = longfreq(1,i);
@@ -1125,10 +1191,13 @@ void qocircuit::emitter(int npack, matd packets, char ckind, int rand){
 
     // Create the photon model
     delete emitted;
-    emitted= new photon_mdl(pack, times, freq, ckind, rand);
+    emitted= new photon_mdl(pack, times, freq, ckind);
 
     // Set up the emitter using the photon model
     emitter(emitted);
+
+    // Return converted packets
+    return conversion;
 }
 
 
@@ -1142,14 +1211,91 @@ void qocircuit::def_packet(int n, double t, double f, double w){
 //  double t;    // Emission time
 //  double f;    // Emission frequency
 //  double w;    // Emission width/or decay length depending on packet shape model.
+//  double phi;  // Initial phase
 
+    this->def_packet(n, t, f, w, t, 0.0, 0.0 ,0);
+}
+
+
+//--------------------------------------------------
+//
+// Define wave packet
+//
+//--------------------------------------------------
+cfg_rnd qocircuit::def_packet(int n, double t, double f, double w, double tp, double val1, double val2 ,int rand){
+//  int    n;    // Number of packet
+//  double t;    // Emission time
+//  double f;    // Emission frequency
+//  double w;    // Emission width/or decay length depending on packet shape model.
+//  doulbe val1; // Value 1: Meaning depends on rand configuration
+//  doulbe val2; // Value 2: Meaning depends on rand configuration
+//  int rand;    // Phase computation mode
+//  Variables
+    double dt1;  // "Visibility time"
+    double dt2;  // "Phase time"
+    cfg_rnd dt;  // Configuration of the random times. Value to be returned
+
+
+    if(n>=pack_list.cols()){
+        cout << "def_packet error!: n > nd. We need to initialize the circuit with more packets." << endl;
+        return dt;
+    }
+
+    // Random numbers generation
+    // Gaussian   : In cascade configuration val1 dwxx and val2 is T2*
+    // Exponential: In cascade configuration val1  txx and val2 is T2*
+    if(ckind=='G'){ // Gaussian
+        dt1=erfi(2*urand()-1)/val1;
+        dt2=2*w*erfi(2*urand()-1)/(val2*val1);
+    }else{         // Exponential
+        dt1=val1*expi(urand());
+        dt2=val1*val2*expi(urand())/(2.0*w); //(val1/w)*(T*/2)*u
+    }
 
     // Adds a new entry to the matrix of definitions of packets
     pack_list(0,npack)=(double) n;
-    pack_list(1,npack)=         t;
     pack_list(2,npack)=         f;
     pack_list(3,npack)=         w;
+    switch(rand) {
+        case 0: // No cascade
+            pack_list(1,npack)= t;
+            pack_list(4,npack)= tp;
+            dt.dt1=val1;
+            dt.dt2=0.0;
+            break;
+
+        case 1: // Cascade *fully* automatic
+            pack_list(1,npack)= t+dt1;
+            pack_list(4,npack)= tp+dt1;
+            dt.dt1=dt1;
+            dt.dt2=dt2;
+            break;
+        case 2: // Cascade automatic
+            pack_list(1,npack)= t+dt1;
+            pack_list(4,npack)= tp+dt2;
+            dt.dt1=dt1;
+            dt.dt2=dt2;
+            break;
+        case 3: // Cascade manual
+            pack_list(1,npack)= t+val1;//+val;
+            pack_list(4,npack)= tp+val2;
+            dt.dt1=val1;
+            dt.dt2=val2;
+            break;
+        case 4: // Cascade semi-manual
+            pack_list(1,npack)= t;
+            pack_list(4,npack)= tp+dt2;
+            dt.dt1=0;
+            dt.dt2=dt2;
+            break;
+        default:
+            cout << "def_packet error: rand goes form 0 to 4. Invalid configuration." << endl;
+            return dt;
+            break;
+    }
     npack=npack+1;
+
+    return dt;
 }
 
 
@@ -1158,12 +1304,13 @@ void qocircuit::def_packet(int n, double t, double f, double w){
 // Define an emitter
 //
 //--------------------------------------------------
-void qocircuit:: emitter(char ckind, int rand){
-//  char ckind;          // Kind of wave packets 'G': Gaussian / 'E': Exponential
-//  int  rand;           //  How we consider the phases. 0=Not consider/1=Synchronized with the emission/2=Random (according to distribution)
+veci qocircuit:: emitter(){
+//  Variables
+    veci conversion;    // Returns the new packer numbers if they are re-arranged
 
 
-    emitter(npack,pack_list,ckind,rand);
+    conversion=emitter(npack,pack_list);
+    return conversion;
 }
 
 
@@ -1172,12 +1319,17 @@ void qocircuit:: emitter(char ckind, int rand){
 // Adds a delay
 //
 //--------------------------------------------------
-void qocircuit:: delay(int ch, double dt){
+int qocircuit:: delay(int ch, double dt){
 //  int    ch;   // Channel to be delayed
 //  double dt;   // Amount of time to be delayed
 //  Variables
     photon_mdl *new_mdl;  // New photon that consider the new packet definitions created by the delay.
 
+
+    if(emiss==0){
+        cout << "Delay error: No emitter set therefore no photon packets available to be delayed" << endl;
+        return -1;
+    }
 
     // Apply the delay and create the new photon model
     new_mdl=delay(ch,dt, emitted);
@@ -1185,6 +1337,11 @@ void qocircuit:: delay(int ch, double dt){
     // Update the photon model
     delete emitted;
     emitted=new_mdl;
+
+    // Compute the phase shift due the delay
+    dispersion(ch,dt);
+
+    return 0;
 }
 
 
@@ -1225,7 +1382,10 @@ photon_mdl *qocircuit:: delay(int ch, double dt, photon_mdl *mdl){
     //Calculate new packet matrix
     P=new_mdl->create_packet_mtx();
     nP=P.cols();
-    if(nP>ns) cout << "Delay(photon model): Not enough ns degrees of freedom! Needed: "<< nP << endl;
+    if(nP>ns){
+        cout << "Delay(photon model) error: Not enough ns degrees of freedom! Needed: "<< nP << endl;
+        return new_mdl;
+    }
 
     // Calculate coupling coefficients
     // It is better to recalculate everything again
@@ -1330,12 +1490,12 @@ void qocircuit:: delay(int i_ch, matc T, int nT){
 //  Adds a virtual circuit element to define a detector
 //
 //--------------------------------------------------
-void qocircuit:: detector(int i_ch, int cond, double eff, double blnk, double gamma){
+int qocircuit:: detector(int i_ch, int cond, double eff, double blnk, double gamma){
 //  int    i_ch;        // Chanel where detection is performed
 //  int    cond;        // Post selection condition. If cond<0 there is none.
 //  double eff;         // Efficiency of the detector
 //  double blnk;        // Fraction of time blinking
-//  double ganna;       // Dark counts rate
+//  double gamma;       // Dark counts rate
 //  Variables
     int nclose;         // Total number of channels
 
@@ -1343,13 +1503,27 @@ void qocircuit:: detector(int i_ch, int cond, double eff, double blnk, double ga
     // Adds a new detector definition entry to the corresponding matrices
     // If cond>=0 Adds a new entry to the matrix of post-selection condition.
     ndetc=ndetc+1;
-    if(ndetc>nch)              cout << "Detector warning!: More detectors than channels are being declared." << endl;
-    if((i_ch>=nch)||(i_ch<0))  cout << "Detector warning!: This channel does not exist." << endl;
+    if(ndetc>nch){
+        cout << "Detector error: More detectors than channels are being declared." << endl;
+        return -1;
+    }
+    if((i_ch>=nch)||(i_ch<0)){
+        cout << "Detector error: This channel does not exist." << endl;
+        return -1;
+    }
+
     if(cond>=0){
         det_def(0,ncond)=i_ch;
         det_def(1,ncond)=cond;
         ncond=ncond+1;
     }
+    // If cond==-1 There is no condition
+    // If cond==-2 The channel is ignored in the output
+    if(cond==-2){
+        ch_ignored(nignored)=i_ch;
+        nignored=nignored+1;
+    }
+
     // Adds a new entry to the matrix of detector parameters
     det_par(0,i_ch)=blnk;
     det_par(1,i_ch)=gamma;
@@ -1366,12 +1540,36 @@ void qocircuit:: detector(int i_ch, int cond, double eff, double blnk, double ga
     if(losses==0) nclose=nch;
     else nclose=nch/2;
 
-    // If this is the last detector compute losses if needed
+    // If this is the last detector compute losses if needed.
     if((losses==1)&&(ndetc==nclose)) compute_losses();
 
     // If this is the last detector add the emitter matrix
     // at the beginning. (Otherwise computing the losses breaks the calculation)
     if((emiss==1)&&(ndetc==nclose)) circmtx=circmtx*init_dmat;
+
+    return 0;
+}
+
+
+//--------------------------------------------------
+//
+//  Remaining not defined detectors.
+//
+//--------------------------------------------------
+int qocircuit::remdec(){
+//  Variables
+    int nclose;
+    int remaining;
+
+    // Last detector operations
+    // The total number of channels to put a detector
+    // is different depending if we are computing losses
+    if(losses==0) nclose=nch;
+    else nclose=nch/2;
+
+    remaining=nclose-ndetc;
+
+    return remaining;
 }
 
 
@@ -1380,24 +1578,38 @@ void qocircuit:: detector(int i_ch, int cond, double eff, double blnk, double ga
 //  Adds a virtual circuit element to define a detector
 //
 //--------------------------------------------------
-void qocircuit:: detector(int i_ch){
+int qocircuit:: detector(int i_ch){
 //  int    i_ch;        // Chanel where detection is performed
 
 
-    detector(i_ch,-1,1.0,0.0,0.0);
+    return detector(i_ch,-1,1.0,0.0,0.0);
 }
+
 
 //--------------------------------------------------
 //
 //  Adds a virtual circuit element to define a detector
 //
 //--------------------------------------------------
-void qocircuit:: detector(int i_ch, int cond){
+int qocircuit:: detector(int i_ch, int cond){
 //  int    i_ch;        // Chanel where detection is performed
 //  int    cond;        // Post selection condition. If cond<0 there is none.
 
 
-    detector(i_ch,cond,1.0,0.0,0.0);
+    return detector(i_ch,cond,1.0,0.0,0.0);
+}
+
+
+//--------------------------------------------------
+//
+//  Adds a virtual circuit element to flag a channel to be ignored.
+//
+//--------------------------------------------------
+int qocircuit:: ignore(int i_ch){
+//  int    i_ch;        // Chanel where detection is performed
+
+
+    return detector(i_ch,-2,1.0,0.0,0.0);
 }
 
 
@@ -1421,14 +1633,14 @@ void qocircuit::noise(double stdev2){
 //  Print circuit matrix
 //
 //----------------------------------------
-void qocircuit:: prnt(){
+void qocircuit:: prnt(int format){
 //  Variables
     int ch1;       // Channel 1
     int ch2;       // Channel 2
     int m1;        // Mode 1
     int m2;        // Mode 2
-    int s1;        // Spatial wavefunction/"Time" 1
-    int s2;        // Spatial wavefunction/"Time" 2
+    int s1;        // Packet 1
+    int s2;        // Packet 2
     int firstline; // Is this the first line? 1=Yes/0=No
 //  Auxiliary index
     int i;         // Aux index
@@ -1444,8 +1656,8 @@ void qocircuit:: prnt(){
 
         //Print LHS
         cout<< i <<" :| " << ch1;
-        if(flag_prnt==0){
-            if(nm>1) cout << ",-log(1-urand()) "<< m1;
+        if(format==0){
+            if(nm>1) cout << ", "<< m1;
             if(ns>1) cout << ", "<< s1;
         }else{
             if(nm>1) cout << ", "<< pl[m1];
@@ -1465,7 +1677,7 @@ void qocircuit:: prnt(){
                 }
                 firstline=0;
                 cout << circmtx(j,i) << " * | "<< ch2;
-                if(flag_prnt==0){
+                if(format==0){
                     if(nm>1) cout << ", "<< m2;
                     if(ns>1) cout << ", "<< s2;
                 }else{
@@ -1498,18 +1710,6 @@ double qocircuit:: emitted_vis(int i,int j){
     return emitted->visibility(i,j);
 }
 
-//----------------------------------------
-//
-//  Sets the flag that controls the print style.
-//
-//----------------------------------------
-void qocircuit::set_prnt_flag(int flag){
- // int flag;   // Value of the flag to be adopted
-
-
-    flag_prnt=flag;
-}
-
 
 //----------------------------------------
 //
@@ -1526,32 +1726,19 @@ photon_mdl::photon_mdl(){
 //  Creates a photon model from parameters
 //
 //----------------------------------------
-photon_mdl::photon_mdl(mati i_pack_def, vecd i_times, matd i_freq, char ckind, int i_rand){
+photon_mdl::photon_mdl(mati i_pack_def, matd i_times, matd i_freq, char ckind){
 //  mati pack_def       // Packet definition
-//  matd times          // Times definition for each index /enumeration
+//  matd times          // Times and phase times for each index/enumeration
 //  matd freq           // Frequency definition for each index/enumeration
 //  char ckind          // Kind of wave packets 'G': Gaussian / 'E': Exponential
-//  int  rand           //  How we consider the phases. 0=Not consider/1=Synchronized with the emission/2=Random (according to distribution)
-//  Variables
-    matd times_plus;    // Times plus phase times referred in the packets definitions
-//  Auxiliary index
-    int  i;             // Aux index
 
-
-    // Extend the times definition to include phase times (in case they are needed)
-    times_plus.resize(TD,i_times.size());
-    for(i=0;i<i_times.size();i++){
-        times_plus(0,i)=i_times(i);
-        times_plus(1,i)=-log(1-urand());
-    }
 
     // Configure the distribution of the packets
     pack_def=create_packet_idx(i_pack_def);
-    times=times_plus;
+    times=i_times;
     freq=i_freq;
     kind=0;
     if(ckind=='E') kind=1;
-    rand=i_rand;
 }
 
 
@@ -1580,7 +1767,6 @@ photon_mdl *photon_mdl::clone(){
     new_mdl->times=times;
     new_mdl->freq=freq;
     new_mdl->kind=kind;
-    new_mdl->rand=rand;
 
     return new_mdl;
 }
@@ -1606,8 +1792,8 @@ void photon_mdl::update(double dt){
     // Reserve memory
     nP=pack_def.cols();
     nT=times.cols();
-    new_def.resize(PT,2*nP);
-    newtimes.resize(TD,2*nT);
+    new_def.resize(2,2*nP);
+    newtimes.resize(2,2*nT);
 
     // Copy elements of the old model
     for(i=0;i<nP;i++){
@@ -1628,7 +1814,8 @@ void photon_mdl::update(double dt){
 
     for(i=0;i<nT;i++){
         newtimes(0,nT+i)=times(0,i)+dt;
-        newtimes(1,nT+i)=times(1,i);
+        if(times(1,i)>xcut) newtimes(1,nT+i)=times(1,i)+dt;
+        else                newtimes(1,nT+i)=times(1,i);
     }
 
     // Assemble the model
@@ -1650,27 +1837,14 @@ matd photon_mdl:: create_packet_mtx(){
 
 
     //Reserve memory
-    P.resize(PD,pack_def.cols());
+    P.resize(4,pack_def.cols());
 
     // Create model
     for(i=0;i<pack_def.cols();i++){
             P(0,i)=times(0,pack_def(0,i));
             P(1,i)=freq(0,pack_def(1,i));
             P(2,i)=freq(1,pack_def(1,i));
-            switch (rand){
-                case 0: // Turn off
-                    P(3,i)=0;
-                    break;
-                case 1: // Fix
-                    P(3,i)=times(0,pack_def(0,i));
-                    break;
-                case 2: // Random
-                    P(3,i)=times(0,pack_def(0,i))+times(1,pack_def(0,i));
-                    break;
-                default:
-                    cout << "create_packet_mtx: Something went wrong." << endl;
-                    break;
-            }
+            P(3,i)=times(1,pack_def(0,i));
     }
 
     //Returns the matrix model
@@ -1826,7 +2000,6 @@ void photon_mdl::prnt(){
 
     if(kind==0) cout << "Kind of packet: Gaussian" << endl;
     else        cout << "Kind of packet: Exponential" << endl;
-    cout << "Random phase configuration: " << rand <<endl;
     cout << "---------------------------------------------------------------------------------" << endl;
     cout << endl;
 }
@@ -1849,7 +2022,7 @@ mati create_packet_idx(mati pack_def){
 
 
     //Reserve memory
-    pack_idx.resize(PT,pack_def.cols());
+    pack_idx.resize(2,pack_def.cols());
     //Transform representation
     for(i=0;i<pack_def.cols();i++){
         pack_idx(0,pack_def(0,i))=pack_def(1,i);

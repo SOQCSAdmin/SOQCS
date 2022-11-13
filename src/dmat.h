@@ -1,7 +1,5 @@
 /**************************************************************************
 * @file dmat.h
-* @version 3.7
-* @date 9/06/2022
 * @author Javier Osca
 * @author Jiri Vala
 *
@@ -22,51 +20,58 @@
 class dmatrix{
 public:
     // Management functions
-    dmatrix();                                              // Create density matrix. The quantity of reserved memory is set by default.
-    dmatrix(int i_mem);                                     // Create density matrix. The matrix row number is specified.
-    ~dmatrix();                                             // Destroy density matrix
-    dmatrix *clone();                                       // Copies a density matrix
+    dmatrix();                                                    // Create density matrix. The quantity of reserved memory is set by default.
+    dmatrix(int i_mem);                                           // Create density matrix. The matrix row number is specified.
+    ~dmatrix();                                                   // Destroy density matrix
+    dmatrix *clone();                                             // Copies a density matrix
+    void clear();                                                 // Clears a density matrix
 
 
     // Basic matrix operations
-    double trace();                                         // Calculates trace of the density matrix
-    void   normalize();                                     // Normalize to trace=1 density matrix
-    void   add(dmatrix *addm);                              // Sum two compatible density matrix
-    double fidelity(state* input);                          // Calculate the Fidelity of a density matrix with respect to a state.
-    double get_result(mati def,qocircuit *qoc);             //Gets the probability of an event defined by def.
-    p_bin *get_pbin();                                      // Returns the diagonal elements of a density matrix as a set of probability bins
+    double trace();                                               // Calculates trace of the density matrix
+    void   normalize();                                           // Normalize to trace=1 density matrix
+    void   add(dmatrix *addm);                                    // Sum two compatible density matrix
+    double fidelity(state* input);                                // Calculate the Fidelity of a density matrix with respect to a state.
+    double get_result(mati def,qocircuit *qoc);                   //Gets the probability of an event defined by def.
+    p_bin *get_pbin();                                            // Returns the diagonal elements of a density matrix as a set of probability bins
 
     // Update matrix operations
-    void add_state(state *newrun, qocircuit *qoc);          // Adds new state to the density matrix according with the detector definitions in qoc
-    void sum_state(state *newstate);                        // Adds new state to the density matrix
-    void add_state_cond(int ndec, mati def,state *in_state,qocircuit *qoc);       // Adds a conditional detection
-    void add_state_loss(int ndec, mati def,state *in_state, qocircuit *qoc);      // Adds a conditional detection from sampling results.
-    dmatrix *calc_measure(qocircuit *qoc);                  // Adds a conditional detection from sampling results.
-    dmatrix *get_counts(int npack,qocircuit *qoc);          // Returns a density matrix independent of the wave packet degrees of freedom
-    dmatrix *partial_trace(mati pack_def,qocircuit *qoc);   // Calculates the partial trace of the density matrix (the result is another matrix)
+    void add_state(state *newrun, qocircuit *qoc);                // Adds new state to the density matrix according with the detector definitions in qoc
+    void add_state(state *newrun, qodev *dev);                    // Adds new state to the density matrix according with the detector definitions in dev
+    void add_reduced_state(int ndec,mati def,veci chlist,state* input, qocircuit *qoc); // Adds a conditional detection and traces out channels
+    void add_state_cond(int ndec, mati def,state *in_state,qocircuit *qoc);             // Adds a conditional detection
+    void sum_state(state *newstate);                              // Adds new state to the density matrix
+    dmatrix *calc_measure(qocircuit *qoc);                        // Adds a conditional detection from sampling results.
+    dmatrix *calc_measure(qodev *dev);                            // Adds a conditional detection from sampling results (uses qodev instead of qocircuit)
+    dmatrix *get_counts(int npack,qocircuit *qoc);                // Returns a density matrix independent of the wave packet degrees of freedom
+    dmatrix *partial_trace(mati pack_def,qocircuit *qoc);         // Calculates the partial trace of the density matrix (the result is another matrix)
 
     // Print functions
-    void prnt_mtx();                                        // Print the matrix ( numerically )
-    void prnt_mtx(qocircuit *qoc);                          // Print the matrix ( human readable form)
-    void prnt_mtx(double thresh, qocircuit *qoc);                   // Print the matrix ( human readable form). xcut value overriden by thresh.
-    void prnt_results(qocircuit *qoc);                      // Prints the diagonal elements of a density matrix
+    void prnt_mtx();                                              // Print the matrix ( numerically )
+    void prnt_mtx(double thresh);                                 // Print the matrix ( numerically ) xcut value overriden by thresh.
+    void prnt_mtx(int format,double thresh,qocircuit *qoc);       // Print the matrix ( human readable form)
+    void prnt_mtx(int format, double thresh, qodev *dev);         // Print the matrix ( human readable form) using qodev instead of qocircuit
+    void aux_prnt_mtx(int format, double thresh, qocircuit *qoc); // Auxiliary method to print matrix
+    void prnt_results();                                          // Prints the diagonal elements of a density matrix
+    void prnt_results(int format, qocircuit *qoc);                // Prints the diagonal elements of a density matrix
 
 protected:
     // Auxiliary function. (This ones can not be private).
-    void create_dmtx(int i_mem);                                                  // Create density matrix auxiliary function
-    int ketcompatible(state* A, state*B,mati pack_idx,qocircuit *qoc);            // Check ket "compatibility"
+    void create_dmtx(int i_mem);                                                        // Create density matrix auxiliary function
+    int ketcompatible(state* A, state*B,mati pack_idx,qocircuit *qoc);                  // Check ket "compatibility"
 };
 ***********************************************************************************/
 
 
-#include "state.h"
+#include "pbin.h"
+
+const int DEFMATDIM= 100; ///< Default density matrix dimension
+const int DEFWIDTH = 6;   ///< Default number of spaces to print matrix entries
+
 
 /** @defgroup Dens Density matrix
 *   Density matrix classes and methods
 */
-
-const int DEFMATDIM=100;    ///< Default density matrix dimension
-const int DEFWIDTH=6;    ///< Default density matrix dimension
 
 /** \class dmatrix
 *   \brief Contains all the information
@@ -96,156 +101,175 @@ public:
     *   Creation and management of the density matrix object.
     */
     /**
-    *  Creates a density matrix object.
-    *  The quantity of reserved memory for the matrix is set by default.
+    *  Creates a density matrix object. The quantity of reserved memory for the matrix is set by default.
+    *
     *  @ingroup Dens_management
     */
     dmatrix();
     /**
-    *  Creates a density matrix object where the maximum dimension
-    *  of the density matrix is set by its number of rows.
-    *  @param int i_mem Row number of the density matrix.
+    *  Creates a density matrix object where the maximum dimension of the density matrix is set by its number of rows.
+    *
+    *  @param int i_mem Row number of the density matrix. (Internal memory).
     *  @ingroup Dens_management
     */
     dmatrix(int i_mem);
     /**
     *  Destroys a density matrix object.
+    *
     *  @ingroup Dens_management
     */
     ~dmatrix();
     /**
     *  Copies a density matrix object.
+    *
     *  @ingroup Dens_management
     */
     dmatrix *clone();
+    /**
+    *   Re-initializes a density matrix to zero entries.
+    *
+    *  @ingroup Dens_management
+    */
+    void clear();
 
     // Basic matrix operations
     /** @defgroup Dens_basic Density matrix basic operations
     *   @ingroup Dens
-    *   Basic operations of the density matrix
+    *   Basic operations of the density matrix.
     */
     /**
     *  Calculates the trace of the density matrix.
+    *
     *  @return Returns the trace of the density matrix.
     *  @ingroup Dens_basic
     */
     double trace();
     /**
     *  Normalizes the density matrix to trace = 1.
+    *
     *  @ingroup Dens_basic
     */
-
     void   normalize();
     /**
     *  Sums two compatible density matrices. In this context compatible means
     *  that they are built with states related to the same circuit ( and with
     *  the same post-selection procedures if any).
+    *
     *  @param dmatrix *addm Density matrix to be added.
     *  @ingroup Dens_basic
     */
     void   add(dmatrix *addm);
     /**
     *  Calculates the fidelity of a density matrix with respect a reference state.
+    *
     *  @param state *input Reference state to calculate the fidelity of the density matrix.
     *  @return Fidelity value.
     *  @ingroup Dens_basic
     */
     double fidelity(state* input);
     /**
-    *  Gets the probability of a counting event defined by def. In other words, we obtain the probability
-    *  to find a specific number of photons, in a specific channel, polarization and with a determined frequency
-    *  and time characteristics.
-    *  @param mati def  Is a 4xn matrix with the definition of the counting event of which the probability wants to be obtained where in each column:<br>
-    *  <br>
-    *           1st-Row: Is the channels definition. <br>
-    *           2nd-Row: Is the polarization definition. <br>
-    *           3rd-Row: The wavepacket numbers. To obtain the probability of a counting event in a counter density matrix the packet index must be zero.<br>
-    *           4th-Row: The number of photons (or counting events from a detector point of view).<br>
-    *  <br>
-    *  Example:
-    *  @code
-        in_term <<  0, 1,
-                    H, H,
-                    0, 0,
-                    3, 3;
-
-        prob=matrix->get_prob(in_term,example);
-    * @endcode
-    * @param qocircuit *qoc Circuit where we want to perform detection.
+    *  Returns the probability of an outcome stored in the density matrix described by the provided definition.
+    *
+    *  @param mati def  Matrix that defines the outcome. Each column defines the configuration of one level.<br>
+    *                            There are four different ways to create a definition depending on the number of rows
+    *                            of the matrix: <br>
+    *                            <br>
+    *                            4-Row: Channels, polarization, wavepacket and occupation in this order.<br>
+    *                            3-Row: Channels, polarization and occupation in this order. Wavepackets are assumed to be the same in all cases.<br>
+    *                            2-Row: Channels and occupation in this order. Polarization and wavepackets are assumed to be the same in all cases.<br>
+    *                            1-Row: Occupation. In this case the user must provide just a list of occupations for each channel in level ordering.<br>
+    *                            <br>
+    * @param qocircuit *qoc Circuit to which the outcomes are referred.
     * @return It is returned the probability of the event defined by mati def.
-    * @see dmatrix *get_counter(int npack,qocircuit *qoc);
+    * @see get_counts(int npack,qocircuit *qoc);
     * @ingroup Dens_basic
     */
     double get_result(mati def,qocircuit *qoc);
     /**
     *  Returns the diagonal elements of a density matrix as a set of probability bins.
-    *  @return A set of probability bins with the values of the diaginal elements of the density matrix.
-    *  @ingroup Dens_operation
+    *
+    *  @return A set of probability bins with the values of the diagonal elements of the density matrix.
+    *  @ingroup Dens_basic
     */
     p_bin *get_pbin();
 
     // Update matrix operations
-    /** @defgroup Dens_update Operations to update the density matrix
+    /** @defgroup Dens_update Density matrix update operations
     *   @ingroup Dens
     *   Update operations of the density matrix.
     */
     /**
-    *  Adds a new state to the density matrix calculation according with detector definitions in qoc.
-    *  @param state *newrun State to be added to the set of states used to calculate the density matrix entries.
+    *  Adds a new state to the density matrix using the post-selection condition defined by the circuit detectors.
+    *
+    *  @param state *newrun State to be added to the density matrix.
     *  @param qocircuit *qoc Circuit where the detectors are defined.
     *  @ingroup Dens_update
     */
     void add_state(state *newrun, qocircuit *qoc);
     /**
-    *  Adds a new state to the density matrix just summing the new state and increasing the amount of accounted states in one.
-    *  This routine is the core of the process of adding states.
-    *  @param state *newrun State to be added to the set of states used to calculate the density matrix entries.
+    *  Adds a new state to the density matrix using the post-selection condition defined by the device detectors.
+    *
+    *  @param state *newrun State to be added to the density matrix.
+    *  @param qodev *dev Device where the detectors are defined.
     *  @ingroup Dens_update
     */
-    void sum_state(state *newstate);
+    void add_state(state *newrun, qodev *dev);
     /**
-    *  Adds a new state only if the detection conditions in def are fulfilled. The degrees of freedom where the detection takes places are not stored like
-    *  in a post-selection  process. This is and "advanced" form of post-selection where the characteristics
-    *  of the detector to carry on the post-selection are considered. This is an auxiliary function, intended only for internal use of the library.
-    *  @param mati def Definition of the conditional detection. "def" is a 2xn matrix where in the first
-    *  row are defined the channels where the detection takes place while in the second row is the number
-    *  of photons to be detected.
-    *  @code
-        dec_def << 1, 2,
-                   1, 1;
-
-        detector_matrix->add_state_cond(dec_def.col(),dec_def,a_state,example);
-    *  @endcode
+    *  Adds a new state only if the detector conditions in def are fulfilled. The resulting states are then reduced by tracing out
+    *  the channels in chlist. <br>
+    *  <b> Intended for internal use of the library </b>.
     *
     *  @param int ndec Number of detectors. It has to be the number of columns in def.
-    *  @param mati def Detection condition table.
-    *  @param state *newrun State to be added to the set of states used to calculate the density matrix entries.
+    *  @param mati def Definition of the conditional detection. "def" is a 2xn matrix where in the first
+    *  row are defined the channels where the conditional detection takes place while in the second row is the number
+    *  of photons to be detected.
+    *  @param veci chlist. List of channels to be traced out from the states added to the density matrix.
+    *  @param state *input State to be added to the density matrix.
+    *  @param qocircuit *qoc Circuit to which the state is related.
+    *  @ingroup Dens_update
+    */
+    void add_reduced_state(int ndec,mati def,veci chlist,state* input, qocircuit *qoc);
+    /**
+    *  Adds a new state only if the detection conditions in def are fulfilled. <br>
+    *  <b> Intended for internal use of the library </b>.
+    *
+    *  @param int ndec Number of detectors. It has to be the number of columns in def.
+    *  @param mati def Definition of the conditional detection. "def" is a 2xn matrix where in the first
+    *  row are defined the channels where the conditional detection takes place while in the second row is the number
+    *  of photons to be detected.
+    *  @param state *in_state State to be added to the density matrix.
     *  @param qocircuit *qoc Circuit to which the state is related.
     *  @ingroup Dens_update
     */
     void add_state_cond(int ndec, mati def,state *in_state,qocircuit *qoc);
     /**
-    *  Adds a new state only if the detection conditions in def are fulfilled. Furthermore it removes the extra loss channels
-    *  in the appropriate way to obtain physical measurements. Internally it uses  dmatrix::add_state_cond.
-    *  Auxiliary function, intended only for internal use of the library.
-    *  @param int ndec Number of detectors. It has to be the number of columns in def.
-    *  @param mati def Detection condition table.
-    *  @param state *newrun State to be added to the set of states used to calculate the density matrix entries.
-    *  @param qocircuit *qoc Circuit to which the state is related.
-    *  @see dmatrix::add_state_cond(int ndec, mati def,state *in_state,qocircuit *qoc);
+    *  Adds a new state to the density matrix just summing the new state and increasing the amount of accounted states in one.
+    *  This routine is the core of the process of adding states.
+    *
+    *  @param state *newstate State to be added to the density matrix.
     *  @ingroup Dens_update
     */
-    void add_state_loss(int ndec, mati def,state *in_state, qocircuit *qoc);
+    void sum_state(state *newstate);
     /**
-    *  Calculate measure. It means to integrate/trace out the frequency degrees of freedom or both the frequency and time degrees of freedom in case there
-    *  is no clock associated with the detectors.
+    *  Calculate measure. It means to trace out the frequency degrees of freedom or both the frequency and time degrees of freedom depending on the circuit configuration of the detectors.
+    *
     *  @param qocircuit *qoc Circuit to which the density matrix is related.
     *  @return A new smaller matrix with the integrated degrees of freedom.
     *  @ingroup Dens_update
     */
     dmatrix *calc_measure(qocircuit *qoc);
     /**
-    *  Integrates the frequency and time degrees of freedom to have only the total probability count by channel (and polarization)
+    *  Calculate measure. It means to trace out the frequency degrees of freedom or both the frequency and time degrees of freedom depending on the device configuration of the detectors.
+    *
+    *  @param qodev *dev Device to which the density matrix is related.
+    *  @return A new smaller matrix with the integrated degrees of freedom.
+    *  @ingroup Dens_update
+    */
+    dmatrix *calc_measure(qodev *dev);
+    /**
+    *  Integrates the frequency and time degrees of freedom to have only the total probability count by channel (and polarization).
+    *
+    *  @param int npack Number of defined packets. Note that the actual number of defined packets may be inferior to the circuit maximum of them.
     *  @param qocircuit *qoc Circuit to which the density matrix is related.
     *  @return A new smaller matrix with the integrated degrees of freedom.
     *  @ingroup Dens_update
@@ -254,6 +278,7 @@ public:
     /**
     *  Calculates the partial trace of the elements of the density matrix. Usually is used to integrate the frequency degree of
     *  freedom to have only the total probability count by channel, polarization and time.
+    *
     *  @param mati pack_def Integer matrix of three rows and as many columns as photon packets where:<br>
     *               1st-Row: is the packet number.<br>
     *               2nd-Row: is the number assigned to designate the collective set of degrees of freedom not traced out. <br>
@@ -265,73 +290,101 @@ public:
     dmatrix *partial_trace(mati pack_def,qocircuit *qoc);
 
     // Print functions
-    /** @defgroup Dens_print Output information of the density matrix
+    /** @defgroup Dens_print Density matrix output
     *   @ingroup Dens
     *   Methods to print the content of the density matrix.
     */
 
     /**
     *  Prints a density matrix. States are printed as a list of occupations by level.
-    *  @see qocircuit::flag_prnt
-    *  @see void state::prnt_ket()
+    *
+    *  @see state::prnt_ket(int iket, int format, bool loss,qocircuit *qoc);
     *  @ingroup Dens_print
     */
     void prnt_mtx();
     /**
-    *  Prints a density matrix in human readable from. The base states corresponding with each row are printed in
-    * the same format than state::prnt_ket depending on qocircuit::flag_prnt for the given circuit.
-    *  @param qocircuit *qoc Circuit to which the density matrix is related (to translate from numeric to human form).
-    *  @see qocircuit::flag_prnt
-    *  @see void state::prnt_ket()
-    *  @ingroup Dens_print
-    */
-    void prnt_mtx(qocircuit *qoc);
-    /**
-    *  Prints a relevant density submatrix in human readable from. Only the rows and columns with sum values
-    *  greater than "thresh" are printed. This is a way to filter very small entries. The base states of each
-    *  row are printed in the same format than state::prnt_ket depending on qocircuit::flag_prnt for the given circuit.
+    *  Prints a relevant density submatrix. Only the rows and columns with sum values
+    *  greater than "thresh" are printed.
+    *
     *  @param double thresh Threshold value to print.
-    *  @param qocircuit *qoc    Circuit to which the density matrix is related (to translate from numeric to human form).
-    *  @see qocircuit::flag_prnt
-    *  @see void state::prnt_ket()
+    *  @see state::prnt_ket(int iket, int format, bool loss,qocircuit *qoc);
     *  @ingroup Dens_print
     */
-    void prnt_mtx(double thresh, qocircuit *qoc);
+    void prnt_mtx(double thresh);
+    /**
+    *  Prints a relevant density submatrix. Only the rows and columns with sum values
+    *  greater than "thresh" are printed. ( Circuit version ).
+    *
+    *  @param format Specifies the format in which the ket is printed. The formats are the same than in prnt_ket.
+    *  @param double thresh Threshold value to print.
+    *  @param qocircuit *qoc Circuit to which the density matrix is related.
+    *  @see state::prnt_ket(int iket, int format, bool loss,qocircuit *qoc);
+    *  @ingroup Dens_print
+    */
+    void prnt_mtx(int format, double thresh, qocircuit *qoc);
+    /**
+    *  Prints a relevant density submatrix. Only the rows and columns with sum values
+    *  greater than "thresh" are printed. ( Device version ).
+    *
+    *  @param format Specifies the format in which the ket is printed. The formats are the same than in prnt_ket.
+    *  @param double thresh Threshold value to print.
+    *  @param qodev *dev Device to which the density matrix is related.
+    *  @see state::prnt_ket(int iket, int format, bool loss,qocircuit *qoc);
+    *  @ingroup Dens_print
+    */
+    void prnt_mtx(int format, double thresh, qodev *dev);
     /**
     *  Prints the diagonal elements of the density matrix.
-    *  @see void state::prnt_ket()
+    *
+    *  @see state::prnt_ket(int iket, int format, bool loss,qocircuit *qoc);
     *  @ingroup Dens_print
     */
     void prnt_results();
     /**
-    *  Prints the diagonal elements of the density matrix in human readable form.
-    *  @param qocircuit *qoc    Circuit to which the density matrix is related (to translate from numeric to human form).
-    *  @see qocircuit::flag_prnt
-    *  @see void state::prnt_ket()
+    *  Prints the diagonal elements of the density matrix.
+    *
+    *  @param format Specifies the format in which the ket is printed. The formats are the same than in prnt_ket.
+    *  @param qocircuit *qoc    Circuit to which the density matrix is related.
+    *  @see state::prnt_ket(int iket, int format, bool loss,qocircuit *qoc);
     *  @ingroup Dens_print
     */
-    void prnt_results(qocircuit *qoc);
+    void prnt_results(int format, qocircuit *qoc);
 
 protected:
     // Auxiliary functions.
-    /** @defgroup Dens_aux Auxiliary protected methods
+    /** @defgroup Dens_aux Density matrix auxiliary methods
     *   @ingroup Dens
     *   Auxiliary methods not intended for external use.
     */
 
     /**
-    *  Auxiliary method to create a density matrix.
-    *  @param int i_mem Row number of the density matrix.
+    *  Auxiliary method to create a density matrix. <br>
+    *  <b> Intended for internal use of the library. </b>
+    *
+    *  @param int i_mem Row number of the density matrix. (Internal memory).
     *  @ingroup Dens_aux
     */
     void create_dmtx(int i_mem);
     /**
-    *  Auxiliary method to check if a density matrix element has an non-zero partial trace.
+    *  Auxiliary method to check if a density matrix element has an non-zero partial trace.<br>
+    *  <b> Intended for internal use of the library. </b>
+    *
     *  @param state *A Row dictionary state.
     *  @param state *B Column dictionary state.
     *  @param qocircuit *qoc    Circuit to which the density matrix is related.
-    *  @see dmatrix *partial_trace(mati pack_def,qocircuit *qoc);
+    *  @see partial_trace(mati pack_def,qocircuit *qoc);
     *  @ingroup Dens_aux
     */
     int ketcompatible(int A, int B,mati pack_idx,qocircuit *qoc);
+    /**
+    *  Auxiliary method to print density matrix. <br>
+    *  <b> Intended for internal use of the library. </b>
+    *
+    *  @param format Specifies the format in which the ket is printed. The formats are the same than in prnt_ket
+    *  @param double thresh Threshold value to print.
+    *  @param qocircuit *qoc Circuit to which the density matrix is related.
+    *  @see state::prnt_ket(int format, int column, bool loss, qocircuit *qoc)
+    *  @ingroup Dens_aux
+    */
+    void aux_prnt_mtx(int format, double thresh, qocircuit *qoc);
 };

@@ -1,7 +1,5 @@
 /**************************************************************************
 * @file sim.h
-* @version 3.7
-* @date 9/06/2022
 * @author Javier Osca
 * @author Jiri Vala
 *
@@ -30,6 +28,7 @@ public:
     simulator(const char* i_back,int i_mem);        // Create a circuit simulator. Memory quantity and backend by name set explicitly.
     ~simulator();                                   // Destroy circuit simulator
 
+    // Simulation execution functions
     p_bin *run(ph_bunch *input,qocircuit *qoc );                      // Calculate output outcome as obtained from physical detector from an input photon bunch
     state *run(state *istate,qocircuit *qoc );                        // Calculate output state as function of the input state
     state *run( state *istate, ket_list *olist, qocircuit *qoc );     // Calculates the output amplitudes of the kets specified
@@ -42,7 +41,7 @@ protected:
     state *GlynnF( state *istate,qocircuit *qoc );                    // Glynn  full distribution
     state *GlynnR( state *istate,qocircuit *qoc );                    // GlynnR restricted distribution
 
-    state *DirectS( state *istate, ket_list *olist, qocircuit *qoc );  // Direct single set of kets
+    state *DirectS( state *istate, ket_list *olist, qocircuit *qoc ); // Direct single set of kets
     state *GlynnS( state *istate, ket_list *olist, qocircuit *qoc );  // Glynn single set of keys
 };
 ***********************************************************************************/
@@ -52,23 +51,17 @@ protected:
 #include <thread>
 #include <future>
 
-#define NUM_THREADS 10
-
-// Alias
-typedef Matrix<int, Dynamic, Dynamic, RowMajor> matiR;  ///< Simplified type for an integer matrix in row major
-
 // Constant defaults
-const int DEFSIMMEM=1000;                               ///< Default simulator reserved memory for output (in bytes).
+const int DEFSIMMEM=1000;          ///< Default simulator reserved memory for output (in bytes).
 
 
 /** @defgroup Simulator
- *  Simulation classes and methods
+ *  Simulator classes and methods
  */
 
 /** \class simulator
-*   \brief Contains all the information
-*    and methods to calculate an output state
-*    of a circuit from an initial state.
+*   \brief Contains all the information the perform simulations of devices and circuits.
+*
 *   \author Javier Osca
 *   \author Jiri Vala
 *
@@ -90,20 +83,20 @@ public:
 
     // Public functions
     // Management functions
-    /** @defgroup Simulation_management Simulation management
+    /** @defgroup Simulation_management Simulator management
     *   @ingroup Simulator
     *   Creation and management of the simulation object.
     */
 
     /**
     *  Creates a simulator object.
-    *  The maximum quantity of memory reserved for the output is set by default.
+    *
     *  @ingroup Simulation_management
     */
     simulator();
     /**
     *  Creates a simulator object.
-    *  The maximum quantity of memory reserved for the output is set explicitly. The backend/core is selected using an integer.
+    *
     *  @param int i_backend  Backend/core. There are four to choose:
     *                            <br>
     *                            <b style="color:blue;">0</b> = <b>Direct method</b>: The calculation is performed similarly on how it is done analytically.<br>
@@ -111,14 +104,14 @@ public:
     *                            <b style="color:blue;">2</b> = <b>Glynn method</b>:  The calculation is performed using permanents. We use the Balasubramanian/Bax/Franklin/Glynn formula implemented in gray code to calculate the permanents.<br>
     *                            <b style="color:blue;">3</b> = <b>Glynn restricted</b>: Same as the Glynn method but considering only output states of occupations by level zero or one. This restricts but speeds up the output. <br>
     *                            <br>
-    *  @param int i_mem Reserved memory for the output expressed as a maximum number of kets.
+    *  @param int i_mem Reserved memory for the output expressed as a maximum number of terms.
     *  @ingroup Simulation_management
     * \xrefitem know "KnowIss" "Known Issues" If the quantity of memory reserved is too large it is possible to see certain slow down due the time to reserve and initialize memory.
     */
     simulator(int i_backend,int i_mem);
     /**
     *  Creates a simulator object.
-    *  The maximum quantity of memory reserved for the output is set explicitly. The backend/core is selected using an string.
+    *
     *  @param const char* i_back Name of the selected backend/core. There are four to choose:
     *                            <br>
     *                            <b style="color:blue;">"Direct"</b>  = <b>Direct method</b>: The calculation is performed similarly on how it is done analytically.<br>
@@ -126,35 +119,35 @@ public:
     *                            <b style="color:blue;">"Glynn"</b>   = <b>Glynn method</b>:  The calculation is performed using permanents. We use the Balasubramanian/Bax/Franklin/Glynn formula implemented in gray code to calculate the permanents.<br>
     *                            <b style="color:blue;">"GlynnR"</b>  = <b>Glynn restricted</b>: Same as the Glynn method but considering only output states of occupations by level zero or one. This restricts but speeds up the output. <br>
     *                            <br>
-    *  @param int i_mem Reserved memory for the output expressed as a maximum number of kets.
+    *  @param int i_mem Reserved memory for the output expressed as a maximum number of terms.
     *  @ingroup Simulation_management
     * \xrefitem know "KnowIss" "Known Issues" If the quantity of memory reserved is too large it is possible to see certain slow down due the time to reserve and initialize memory.
     */
     simulator(const char* i_back,int i_mem);
     /**
-    *  Destroys a simulator object.
+    *  Destroys the simulator object.
+    *
     *  @ingroup Simulation_management
     */
     ~simulator();
 
 
     // Simulation execution functions
-    /** @defgroup Simulation_execution Simulation run
+    /** @defgroup Simulation_execution Simulator execution
     *   @ingroup Simulator
     *   Methods to run a simulation.
     */
 
     /**
-    *  Calculates an output outcome as obtained from physical detectors from an input photon bunch according to the rules established by a quantum circuit using the selected backend/core.
+    *  Calculates an output outcome from a device using the selected backend/core and the physical detectors definitions established in that device description.
     *
-    *  @param ph_bunch  *input  Initial bunch of photons.
-    *  @param qocircuit *qoc    Circuit to be simulated.
+    *  @param qodev  *circuit  Device to be simulated.
     *  @return Returns the final outcomes and their probabilities.
     *  @ingroup Simulation_execution
     */
-    p_bin *run(ph_bunch *input,qocircuit *qoc );
+    p_bin *run(qodev *circuit);
     /**
-    *  Calculates an output state as a function of an input initial state according to the rules established by a quantum circuit using the selected backend/core.
+    *  Calculates an output state as a function of an input initial state using the selected backend/core according to the rules established by a quantum circuit .
     *
     *  @param state     *istate Initial state.
     *  @param qocircuit *qoc    Circuit to be simulated.
@@ -165,42 +158,32 @@ public:
     state *run(state *istate,qocircuit *qoc );
 
     /**
-    *  Calculates the output amplitudes for a given list of kets as a function of an input initial state according to the rules established by a quantum circuit using the selected backend/core.
+    *  Calculates the output amplitudes for a given list of kets as a function of an input initial state using the selected backend/core according to the rules established by a quantum circuit .
     *  In this case the backends available are "Direct" and "Glynn".
     *
     *  @param state     *istate Initial state.
     *  @param ket_list  *olist List of the kets whose output amplitude we intend to calculate.
     *  @param qocircuit *qoc    Circuit to be simulated.
-    *  @return Returns a final state that only contains kets of the provided list with amplitudes obtained from the application of the circuit rules to the
+    *  @return Returns a final state that only contains terms with kets of the provided list with the amplitudes obtained from the application of the circuit rules to the
     *  initial state.
     *  @ingroup Simulation_execution
     */
     state *run( state *istate, ket_list *olist, qocircuit *qoc );
     /**
-    *  Sampling using Clifford A algorithm. Calculates a sample as obtained from physical detectors from an input photon bunch.<br>
-    *  <b>Warning!</b> In principle Clifford A is defined to be used with a single input ket. The implemented methods allows for a
-    *  list of various kets and one of them is selected with the corresponding probability each time we calculate one sample.
-    *  Note however that if various kets are considered in the input the result will not be correct unless
-    *  the set of kets that can be obtained at the output for each of the inputs form non-overlapping ensembles.
-    *  Note also that this limitation prevents in principle the use of Clifford sampling for the partial distinguishability calculation
-    *  because each input ket will be expressed in an automatic fashion as a linear superposition of others.
+    *  Sampling of a device using Clifford A algorithm. <br>
+    *  <b>Warning!</b> Clifford A is defined to be used with a single input term. Therefor neither Bell or QD initializations are recommended.
     *
-    *  @param ph_bunch  *input  Initial bunch of photons.
-    *  @param qocircuit *qoc    Circuit to be simulated.
+    *  @param qodev  *input  Device to be simulated.
     *  @param int N Number of samples.
     *  @return Returns a set of probability bins with the number of samples for each state.
     *  @ingroup Simulation_execution
     *  \xrefitem know "KnowIss" "Known Issues" Clifford sampling can not be used in conjunction with partial distinguishability because of intrinsic limitations of the sampling method.
     */
-    p_bin *sample( ph_bunch *input, qocircuit *qoc, int N );
+    p_bin *sample( qodev *input, int N );
     /**
-    *  Sampling using Clifford A algorithm. Calculates a sample from an input state.<br>
-    *  <b>Warning!</b> In principle Clifford A is defined to be used with a single input ket. The implemented methods allows for a
-    *  list of various kets and one of them is selected with the corresponding probability each time we calculate one sample.
-    *  Note however that if various kets are considered in the input the result will not be correct unless
-    *  the set of kets that can be obtained at the output for each of the inputs form non-overlapping ensembles.
-    *  Note also that this limitation prevents in principle the use of Clifford sampling for the partial distinguishability calculation
-    *  because each input ket will be expressed in an automatic fashion as a linear superposition of others.
+    *  Sampling of a circuit using Clifford A algorithm.<br>
+    *  <b>Warning!</b> Clifford A is defined to be used with a single input term. Input states with multiple terms are not recommended.
+    *
     *  @param state     *istate Initial state.
     *  @param qocircuit *qoc    Circuit to be simulated.
     *  @param int N Number of samples.
@@ -211,7 +194,7 @@ public:
     p_bin *sample( state *istate,qocircuit *qoc, int N );
 
 protected:
-    /** @defgroup Simulation_auxiliary Auxiliary methods
+    /** @defgroup Simulation_auxiliary Simulator auxiliary methods
     *   @ingroup Simulator
     *   Auxiliary methods to run a simulation.
     */
@@ -219,11 +202,9 @@ protected:
     /**
     *  Calculates an output state as a function of an input initial state using the Direct method for a full output distribution.
     *  This is, calculating the amplitude of probability of every possible ket with the same number of photons that the input.
+    *  In the direct method the output is calculated in the same way to how it is done analytically. <br>
+    *  <b> Intended for internal use of the library. </b>
     *
-    *  In the direct method the output is calculated in the same way to how it is done
-    *  analytically. This version takes profit from the fact that all the levels occupied
-    *  must be the result of a selection sequence and the fact that all sequences
-    *  must be considered  (even with zero amplitude of probability).
     *  @param state     *istate Initial state.
     *  @param qocircuit *qoc    Circuit to be simulated.
     *  @return Returns the final state that correspond to an application of the circuit to the
@@ -234,21 +215,22 @@ protected:
     /**
     *  Calculates an output state as a function of an input initial state using the Direct method for a restricted output distribution.
     *  In this case the amplitudes of probability are calculated only for kets with 0 or 1 number of photons in each level. The rest
-    *  is the same than in the DirectF method.
+    *  is the same than in the DirectF method. <br>
+    *  <b> Intended for internal use of the library. </b>
     *
     *  @param state     *istate Initial state.
     *  @param qocircuit *qoc    Circuit to be simulated.
     *  @return Returns the final state that correspond to an application of the circuit to the
     *  initial state.
-    *  @see state *DirectF(state *istate,qocircuit *qoc );
+    *  @see DirectF(state *istate,qocircuit *qoc );
     *  @ingroup Simulation_auxiliary
     */
     state *DirectR( state *istate,qocircuit *qoc );
     /**
     *  Calculates an output state as a function of an input initial state using a permanent calculation method for a full output distribution.
     *  This is, calculating the amplitude of probability of every possible ket with the same number of photons that the input.
-    *  We use the Balasubramanian/Bax/Franklin/Glynn formula implemented in gray code to calculate the permanents.
-    *
+    *  We use the Balasubramanian/Bax/Franklin/Glynn formula implemented in gray code to calculate the permanents. <br>
+    *  <b> Intended for internal use of the library. </b>
     *
     *  @param state     *istate Initial state.
     *  @param qocircuit *qoc    Circuit to be simulated.
@@ -260,15 +242,15 @@ protected:
     /**
     *  Calculates an output state as a function of an input initial state using a permanent calculation method for a restricted output distribution.
     *  In this case the amplitudes of probability are calculated only for kets with 0 or 1 number of photons in each level. The rest
-    *  is the same than in the GlynnF method. We use the Balasubramanian/Bax/Franklin/Glynn formula implemented in gray code to calculate the permanent.
-    *
+    *  is the same than in the GlynnF method. We use the Balasubramanian/Bax/Franklin/Glynn formula implemented in gray code to calculate the permanent. <br>
+    *  <b> Intended for internal use of the library. </b>s
     *
     *  @param state     *istate Initial state.
     *  @param qocircuit *qoc    Circuit to be simulated.
     *  @return Returns the final state that correspond to an application of the circuit to the
     *  initial state.
     *  @ingroup Simulation_auxiliary
-    *  @see state *GlynnF(state *istate,qocircuit *qoc );
+    *  @see GlynnF( state *istate,qocircuit *qoc );
     */
     state *GlynnR( state *istate,qocircuit *qoc );
 
@@ -276,7 +258,9 @@ protected:
 
     /**
     *  Calculates the output amplitudes of the specified list of kets as a function of an input initial state according to the rules established by a quantum circuit using the Direct method.
-    *  In the direct method we calculate the output in the same way we would do it analytically.
+    *  In the direct method we calculate the output in the same way we would do it analytically. <br>
+    *  <b> Intended for internal use of the library. </b>
+    *
     *  @param state     *istate Initial state.
     *  @param ket_list  *olist List of the kets whose output amplitude we intend to calculate.
     *  @param qocircuit *qoc    Circuit to be simulated.
@@ -287,7 +271,9 @@ protected:
     state *DirectS( state *istate, ket_list *olist, qocircuit *qoc );
     /**
     *  Calculates the output amplitudes of the specified list of kets as a function of an input initial state according to the rules established by a quantum circuit using a permanent calculation.
-    *  We use the Balasubramanian/Bax/Franklin/Glynn formula implemented in gray code to calculate the permanent.
+    *  We use the Balasubramanian/Bax/Franklin/Glynn formula implemented in gray code to calculate the permanent. <br>
+    *  <b> Intended for internal use of the library. </b>
+    *
     *  @param state     *istate Initial state.
     *  @param ket_list  *olist List of the kets whose output amplitude we intend to calculate.
     *  @param qocircuit *qoc    Circuit to be simulated.

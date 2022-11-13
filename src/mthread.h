@@ -1,7 +1,5 @@
 /**************************************************************************
 * @file mthread.h
-* @version 1.0
-* @date 16/01/2022
 * @author Javier Osca
 * @author Jiri Vala
 *
@@ -11,8 +9,6 @@
 *            terms of the licence in LICENCE.TXT.
 *
 * @title Multi thread server library
-* @brief In this library it is found the definition of a server of works that allows for simulations to be executed
-* in parallel. Each work is a simulation with an input and an output.
 *
 ***************************************************************************/
 
@@ -42,7 +38,6 @@ void new_thread(state *input, simulator *sim, qocircuit *qoc, promise<qelem> p);
 
 #include "sim.h"
 
-
 /** @defgroup Mt_sim Multi-thread server
  *  Multi-thread server
  */
@@ -60,8 +55,8 @@ struct qelem{
 
 
 /** \class mthread
-*   \brief This object is a server of works. Different works may be executed in parallel provided
-*   that we provide to the server, the input state, the simulator and the circuit to which both are referred
+*   \brief This object is a server of works. Different works can be executed in parallel if an input state, a simulator and a circuit are provided to the works server.
+*
 *   \author Javier Osca
 *   \author Jiri Vala
 *
@@ -86,11 +81,13 @@ public:
 
     /**
     *  Creates a server object.
+    *
     *  @ingroup Serv_management
     */
     mthread();
     /**
     *  Destroys a server object.
+    *
     *  @ingroup Serv_management
     */
     ~mthread();
@@ -112,9 +109,10 @@ public:
     */
     void send_work(state *input, simulator *sim, qocircuit *qoc);
     /**
-    *  Receives a work form the "server" and returns the output value.
-    *  If no work has finished the main process is
-    *  suspended while waiting for a work to end.
+    *  Receives a work form the "server" and returns the output state.
+    *  If no work has finished then the main process is
+    *  suspended until a work ends.
+    *
     *  @return Returns the final state that corresponds to an application of the circuit to the
     *  initial state using a simulator.
     *  @ingroup Serv_handling
@@ -123,8 +121,9 @@ public:
 
 };
 
-/*
-*   Work to be carried by a thread. Not intended to be used outside the library.
+/**
+*   Work to be carried by a thread. <br>
+*   <b>Not intended to be used outside the library.</b>
 *
 *  @param state     *istate Initial state.
 *  @param simulator *sim    Simulator employed to perform the work.

@@ -76,14 +76,14 @@ dmatrix:: ~dmatrix(){
 }
 
 
-//---------------------------------------------------
+//----------------------------------------
 //
-//  Auxiliary private method to create a density matrix.
+//  Copy a density matrix
 //
-//---------------------------------------------------
+//----------------------------------------
 dmatrix *dmatrix:: clone(){
-//  int      i_mem;       // Number of rows of the density matrix.
-    dmatrix *aux;
+//  Variables
+    dmatrix *aux;      // New copy of this density matrix.
 
 
     // Initialize configuratin
@@ -99,6 +99,28 @@ dmatrix *dmatrix:: clone(){
     aux->dicc=dicc->clone();
 
     return aux;
+}
+
+
+//---------------------------------------------------
+//
+//  Clear a density matrix
+//
+//---------------------------------------------------
+void dmatrix:: clear(){
+
+
+    // Initialize configuration
+    N=0;
+
+    // Reserve memory for density matrix
+    dens.setZero(mem,mem);
+
+    // Crete placeholder dictionary.
+    // The good one will be created with the first element.
+    // Important data extracted from the first added state.
+    delete dicc;
+    dicc=new ket_list(1,1);
 }
 
 
@@ -175,21 +197,21 @@ void dmatrix::normalize(){
 void dmatrix::prnt_mtx(){
 
 
-    prnt_mtx(xcut,0);
+    aux_prnt_mtx(DEFFORMAT,xcut,nullptr);
 }
 
 
 //----------------------------------------
 //
 //  Print the matrix
-//  (human readable form)
+//  (numerically)
 //
 //----------------------------------------
-void dmatrix::prnt_mtx(qocircuit *qoc){
-//  qocircuit *qoc   // Circuit to which the density matrix is related (to translate from numeric to human form)
+void dmatrix::prnt_mtx(double thresh){
+//  double thresh    // Threshold value to print
 
 
-    prnt_mtx(xcut,qoc);
+    aux_prnt_mtx(DEFFORMAT,thresh,nullptr);
 }
 
 
@@ -197,10 +219,43 @@ void dmatrix::prnt_mtx(qocircuit *qoc){
 //
 //  Print the matrix
 // (human readable form)
-//  xcut value overriden by thresh.
 //
 //----------------------------------------
-void dmatrix::prnt_mtx(double thresh, qocircuit *qoc){
+void dmatrix::prnt_mtx(int format, double thresh, qocircuit *qoc){
+//  int format       // Format of the index ket to be printed
+//  double thresh    // Threshold value to print
+//  qocircuit *qoc   // Circuit to which the density matrix is related (to translate from numeric to human form)
+
+
+    aux_prnt_mtx(format, thresh, qoc);
+}
+
+
+//----------------------------------------
+//
+//  Print the matrix
+// (human readable form)
+//  Uses qodev instead of qocircuit
+//
+//----------------------------------------
+void dmatrix::prnt_mtx(int format, double thresh, qodev *dev){
+//  int format       // Format of the index ket to be printed
+//  double thresh    // Threshold value to print
+//  qodev *dev       // Device to which the density matrix is related (to translate from numeric to human form)
+
+
+    if(dev > (qodev *)nullptr) aux_prnt_mtx(format, thresh, dev->circ);
+    else aux_prnt_mtx(format, thresh, nullptr);
+}
+
+//----------------------------------------
+//
+//  Auxiliary print matrix method
+//
+//----------------------------------------
+void dmatrix::aux_prnt_mtx(int format, double thresh, qocircuit *qoc){
+//  int format       // Format of the index ket to be printed
+//  double thresh    // Threshold value to print
 //  qocircuit *qoc   // Circuit to which the density matrix is related (to translate from numeric to human form)
 //  Variables
     int  nbase;      // nbase->dicc->nket Number of dictionary entries
@@ -230,7 +285,7 @@ void dmatrix::prnt_mtx(double thresh, qocircuit *qoc){
    // Print non-zero rows and columns of the density matrix (to avoid screen cluttering)
     for(i=0;i<nbase;i++){
         if(rowsum(i)>thresh){
-            dicc->prnt_ket(i,qoc);
+            dicc->prnt_ket(i,format,qoc);
             cout << " ";
             for(j=0;j<nbase;j++){
                 if(colsum(j)>thresh){
@@ -250,18 +305,8 @@ void dmatrix::prnt_mtx(double thresh, qocircuit *qoc){
 //
 //----------------------------------------
 void dmatrix::prnt_results(){
-//  qocircuit *qoc   // Circuit to which the density matrix is related (to translate from numeric to human form)
-//  Auxiliary index
-    int i;           // Aux index
 
-
-   // Print diagonal elements of the density matrix.
-    for(i=0;i<dicc->nket;i++){
-        dicc->prnt_ket(i,0);
-        cout << ": ";
-        cout << std::fixed << std::setprecision(4) << dens(i,i)/N <<endl;
-
-    }
+    prnt_results(DEFFORMAT,nullptr);
 }
 
 
@@ -270,7 +315,8 @@ void dmatrix::prnt_results(){
 // Prints the diagonal elements of a density matrix
 //
 //----------------------------------------
-void dmatrix::prnt_results(qocircuit *qoc){
+void dmatrix::prnt_results(int format,qocircuit *qoc){
+//  int format       // Format of the index ket to be printed
 //  qocircuit *qoc   // Circuit to which the density matrix is related (to translate from numeric to human form)
 //  Auxiliary index
     int i;           // Aux index
@@ -278,7 +324,7 @@ void dmatrix::prnt_results(qocircuit *qoc){
 
    // Print diagonal elements of the density matrix.
     for(i=0;i<dicc->nket;i++){
-        dicc->prnt_ket(i,qoc);
+        dicc->prnt_ket(i,format,qoc);
         cout << ": ";
         cout << std::fixed << std::setprecision(4) << dens(i,i)/N <<endl;
 
@@ -378,87 +424,104 @@ double dmatrix::fidelity(state* input){
 }
 
 
-//----------------------------------------
+//----------------------------------------------------
 //
-//  Add detection considering losses
+//  Adds conditional detection defined in the circuit.
 //
-//----------------------------------------
+//----------------------------------------------------
 void dmatrix:: add_state(state* input, qocircuit *qoc){
 //  state     *in_input;            // New state to be added to the density matrix
 //  qocircuit *qoc;                 // Circuit where the detector is placed
+//  Variables
+    int  fchloss;                   // First loss channel
+    int  nchloss;                   // Number of loss channels
+    int  nignore;                   // Number of ignored channels
+    int  nchtotal;                  // Total number of channels to be traced out
+    veci chlist;                    // List of channels to trace out
+//  Auxiliary index
+    int  i;                         // Aux index
 
 
-    if(qoc->losses==1){
-        this->add_state_loss(qoc->ncond,qoc->det_def,input,qoc);
-    }else{
-        this->add_state_cond(qoc->ncond,qoc->det_def,input,qoc);
-    }
+    // Init variables
+    if(qoc->losses==1) nchloss=qoc->nch/2;
+    else nchloss=0;
+    nignore=qoc->nignored;
+    nchtotal=nchloss+nignore;
+    fchloss=qoc->nch/2;
+
+    // Create list
+    chlist.resize(nchtotal);
+    for(i=0;i<nchloss;i++) chlist(i)=fchloss+i;
+    for(i=0;i<nignore;i++) chlist(i+nchloss)=qoc->ch_ignored(i);
+
+    // Obtain reduced state
+    this->add_reduced_state(qoc->ncond,qoc->det_def,chlist,input,qoc);
     N++;
 }
 
 
-//----------------------------------------
+//----------------------------------------------------
 //
-//  Add conditional detection considering losses
+//  Adds conditional detection defined explicitly.
+//  Channels in chlist are traced out.
 //
-//----------------------------------------
-void dmatrix:: add_state_loss(int ndec,mati def,state* input, qocircuit *qoc){
+//----------------------------------------------------
+void dmatrix::add_reduced_state(int ndec,mati def,veci chlist,state* input, qocircuit *qoc){
 //  int        ndec;                // Number of detector <= number of channels
 //  mati       def;                 // Definition of the conditions of detection
+//  veci       chlist;              // List of channels to be traced out
 //  state     *input;               // New state to be added to the density matrix
 //  qocircuit *qoc;                 // Circuit where the detector is placed
 //  Variables
-    int  nloss;                     // Number of photons lost;
-    int  fchloss;                   // First loss channel
-    int  nchloss;                   // Number of loss channels
-    int  nsel;                      // Number of post-selection conditions
-    int  isnotfinished;             // Is not finished flag
-    veci chloss;                    // In which channel is each lost photon
-    veci occ;                       // Occupation of the channels with losses
-    mati select;                    // Post-selection condition of the losses
-    mati selectfull;                // Full post-selection condition
+    int        nph;                 // Max number of photons to be considered in the trace
+    int        ntrace;              // Number of photons to be traced in the trace.
+    int        nchtotal;            // Total number of channels to be traced out
+    int        nsel;                // Number of post-selection conditions
+    veci       chrem;               // In which channel are the traced photons
+    veci       occ;                 // Occupation of the channels with losses
+    mati       select;              // Post-selection condition of the losses
+    mati       selectfull;          // Full post-selection condition
 //  Hash table
-    int *keysel;                    // Key of the projector
-    long int selvalue;              // Projector definition index
-    thash  selhash;                 // Definitions hash table
+    int       *keysel;              // Key of the projector
+    long int   selvalue;            // Projector definition index
+    thash      selhash;             // Definitions hash table
     thash::const_iterator vselhash; // Row hash value.
 //  Auxiliary index
-    int i;                          // Aux index
-    int j;                          // Aux index
-    int k;                          // Aux index
+    int         i;                  // Aux index
+    int         j;                  // Aux index
+    int         k;                  // Aux index
 
 
-    // Init variables
-    nchloss=qoc->nch/2;
-    fchloss=qoc->nch/2;
 
+//  Init variables
+    nchtotal=chlist.size();
+    if(nchtotal>0) nph=maxnph;
+    else nph=0;
 
     // Reserve memory
-    keysel=new int(nchloss);
+    keysel=new int(nchtotal);
     // For any number of photon loss
-    for(nloss=0;nloss<=base;nloss++){
+    for(ntrace=0;ntrace<=nph;ntrace++){
         selhash.clear();
         nsel=0;
         // We initialize in which channel is each photon
-        if(nloss>0) chloss.setZero(nloss);
+        chrem.setZero(ntrace+1);
 
-        // We post_select all the configurations of nloss photons
-        isnotfinished=1;
-        while(isnotfinished){
+        // We post_select all the configurations of ntrace photons
+        while(chrem(ntrace)==0){
             // First calculate the occupations
-            occ.setZero(nchloss);
-            for(i=0;i<nloss;i++) occ(chloss(i))=occ(chloss(i))+1;
+            occ.setZero(nchtotal);
+            for(i=0;i<ntrace;i++) occ(chrem(i))=occ(chrem(i))+1;
 
-            select.resize(2,nchloss);
-            for(k=0;k<nchloss;k++){
-                select(0,k)=fchloss+k;
+            select.resize(2,nchtotal);
+            for(k=0;k<nchtotal;k++){
+                select(0,k)=chlist(k);
                 select(1,k)=occ(k);
                 keysel[k]=occ(k);
             }
 
-
             // Do post-selection but check if repeated
-            selvalue=hashval(keysel,nchloss,nloss);
+            selvalue=hashval(keysel,nchtotal,ntrace);
             vselhash=selhash.find(selvalue);
             // If the projector has not been created before
             if(vselhash==selhash.end()){
@@ -483,17 +546,12 @@ void dmatrix:: add_state_loss(int ndec,mati def,state* input, qocircuit *qoc){
 
 
             // Update in which channel is each photon to sweep them all.
-            if(nloss>0){
-                chloss(0)=chloss(0)+1;
-                for(j=0;j<nloss;j++){
-                    if(chloss(j)>=nchloss){
-                        chloss(j)=0;
-                        if((j+1)<nloss) chloss(j+1)=chloss(j+1)+1;
-                        else isnotfinished=0;
-                    }
+            chrem(0)=chrem(0)+1;
+            for(j=0;j<ntrace;j++){
+                if(chrem(j)>=nchtotal){
+                    chrem(j)=0;
+                    chrem(j+1)=chrem(j+1)+1;
                 }
-            }else{
-                isnotfinished=0;
             }
 
         }
@@ -503,9 +561,10 @@ void dmatrix:: add_state_loss(int ndec,mati def,state* input, qocircuit *qoc){
     delete[] keysel;
 }
 
+
 //----------------------------------------
 //
- // Adds a conditional detection
+ // Adds a conditional detection defined explicitly
 //
 //----------------------------------------
 void dmatrix:: add_state_cond(int ndec, mati def,state *in_state,qocircuit *qoc){
@@ -514,22 +573,6 @@ void dmatrix:: add_state_cond(int ndec, mati def,state *in_state,qocircuit *qoc)
 //  state *in_state;                 // New state to be added to the density matrix
 //  qocircuit *qoc;                  // Circuit where the detector is placed
 //  Variables
-    int    isnotfinished1;           // Is finished polarization loop? 1=Yes/0=No
-    int    isnotfinished2;           // Is finished time loop? 1=Yes/0=No
-    hterm  select;                   // Post-selection condition
-    state *newstate;                 // New post-selected state
-    projector *prj;                  // Projector
-    int   *tim;                      // "Time" configuration vector
-    int   *pol;                      // Polarization configuration vector
-    int    key[3];                   // Key of the projector definition
-    int   *keyprj;                   // Key of the projector
-    long   int selvalue;             // Projector definition index
-    long   int prjvalue;             // Projector index
-    thash  selhash;                  // Definitions hash table
-    thash  prjhash;                  // Projectors hash table.
-    thash::const_iterator vselhash;  // Row hash value.
-    thash::const_iterator vprjhash;  // Row hash value.
-    veci   ch;                       // List of channels by photons
     int    nph;                      // Number of photons
     int    maxch;                    // Larger channel number
     int    selbase;                  // Base of the projector definition hash table
@@ -540,6 +583,21 @@ void dmatrix:: add_state_cond(int ndec, mati def,state *in_state,qocircuit *qoc)
     int    ich;                      // Channel index
     int    im;                       // Mode index
     int    is;                       // "Time" index
+    int   *tim;                      // "Time" configuration vector
+    int   *pol;                      // Polarization configuration vector
+    veci   ch;                       // List of channels by photons
+    hterm  select;                   // Post-selection condition
+    state *newstate;                 // New post-selected state
+    projector *prj;                  // Projector
+//  Hash table
+    int    key[3];                   // Key of the projector definition
+    int   *keyprj;                   // Key of the projector
+    long   int selvalue;             // Projector definition index
+    long   int prjvalue;             // Projector index
+    thash  selhash;                  // Definitions hash table
+    thash  prjhash;                  // Projectors hash table.
+    thash::const_iterator vselhash;  // Row hash value.
+    thash::const_iterator vprjhash;  // Row hash value.
 //  Auxiliary index
     int    i;                        // Aux index.
     int    j;                        // Aux index
@@ -588,18 +646,14 @@ void dmatrix:: add_state_cond(int ndec, mati def,state *in_state,qocircuit *qoc)
         // From the detector definition of conditional detection create
         // all the projections necessary considering all the possible
         // polarizations and times.
+
         // LOOP Polarization¡
-        isnotfinished1=1;
-        if(nph>0) pol=new int[nph]();
-        else pol=new int[1]();
+        pol=new int[nph+1]();
+        while(pol[nph]==0){
 
-        while(isnotfinished1==1){
             // LOOP "Time"
-            isnotfinished2=1;
-            if(nph>0) tim=new int[nph]();
-            else tim=new int[1]();
-
-            while(isnotfinished2==1){
+            tim=new int[nph+1]();
+            while(tim[nph]==0){
                 // Create Projector definition
                 nentry=0;
                 selhash.clear();
@@ -628,9 +682,7 @@ void dmatrix:: add_state_cond(int ndec, mati def,state *in_state,qocircuit *qoc)
                     select(1,k)=im;
                     select(2,k)=is;
 
-                    if(iph<nph){
-                        if((im==pol[iph])&&(is==tim[iph])) select(3,k)=select(3,k)+1;
-                    }
+                    if((iph<nph)&&(im==pol[iph])&&(is==tim[iph])) select(3,k)=select(3,k)+1;
                 }}}
 
                 // Create projector.
@@ -663,32 +715,22 @@ void dmatrix:: add_state_cond(int ndec, mati def,state *in_state,qocircuit *qoc)
                 }
 
                 // ADVANCE "Time" in LOOP
-                if(nph>0){
-                    tim[0]=tim[0]+1;
-                    for(j=0;j<nph;j++){
-                        if(tim[j]>=qoc->ns){
-                            tim[j]=0;
-                            if((j+1)<nph) tim[j+1]=tim[j+1]+1;
-                            else isnotfinished2=0;
-                        }
+                tim[0]=tim[0]+1;
+                for(j=0;j<nph;j++){
+                    if(tim[j]>=qoc->ns){
+                        tim[j]=0;
+                        tim[j+1]=tim[j+1]+1;
                     }
-                }else{
-                    isnotfinished2=0;
                 }
             }
 
             // ADVANCE Polarization in LOOP
-            if(nph>0){
-                pol[0]=pol[0]+1;
-                for(j=0;j<nph;j++){
-                    if(pol[j]>=qoc->nm){
-                        pol[j]=0;
-                        if((j+1)<nph) pol[j+1]=pol[j+1]+1;
-                        else isnotfinished1=0;
-                    }
+            pol[0]=pol[0]+1;
+            for(j=0;j<nph;j++){
+                if(pol[j]>=qoc->nm){
+                    pol[j]=0;
+                    pol[j+1]=pol[j+1]+1;
                 }
-            }else{
-                isnotfinished1=0;
             }
             // At the end of the loop free memory
             delete[] tim;
@@ -776,7 +818,7 @@ dmatrix *dmatrix::calc_measure(qocircuit *qoc){
                 break;
             default: // Default: Error
                 cout << "Dmatrix calc_measure: Error. Timed has a non valid value" << endl;
-                aux=this->clone();
+                exit(0);
                 break;
         }
 
@@ -906,7 +948,7 @@ dmatrix *dmatrix::get_counts(int npack,qocircuit *qoc){
 
 
     // Create the packet definition
-    new_pack_def.resize(PTE,npack);
+    new_pack_def.resize(3,npack);
     for(i=0;i<npack;i++){
         new_pack_def(0,i)=i;
         new_pack_def(1,i)=0;
@@ -937,65 +979,86 @@ int dmatrix::ketcompatible(int A, int B,mati pack_idx,qocircuit *qoc){
 //  mati pack_idx      // Packet index of the degrees of freedom
 //  qocircuit *qoc     // Circuit to which the density matrix is referred.
 //  Variables
+    veci    flistA;    // List of the index to be traced out in ket A
+    veci    flistB;    // List of the index to be traced out in ket B
+    int     maxA;      // Maximum number of elements in flist A
+    int     maxB;      // Maximum number of elements in flist B
     int    compatible; // Are A an B compatible 0=No/1=Yes
-    int    ismirrored; // Is a state "mirrored" 0=No/1=Yes
-    int    prev;       // Previous state mirrored
-    int    levA;       // Level of state A
-    int    levB;       // Level of state B
-    int    s1;         // Level 1 wave packet
-    int    s2;         // Level 2 wave packet
-    int    w1;         // Degree of freedom to be traced of level 1. Usually frequency.
-    int    w2;         // Degree of freedom to be traced of level 2. Usually frequency.
+    int    lev;        // Level of state A
+    int    s;          // Level 2 wave packet
+    int    w;          // Degree of freedom to be traced of level 1. Usually frequency.
     // Auxiliary index
     int    i;          // Aux index
     int    j;          // Aux index
 
 
-    // Set up variables
-    i=0;
-    prev=-1;           // Last level where we find out a "mirror".
-    compatible=1;      // We assume the kets are compatible. We revoke the compatibility if we found a reason for it.
+    // Reserve memory
+    flistA.resize(maxnph);
+    flistB.resize(maxnph);
 
-    // Check compatibility
-    while((compatible==1)&&(i<dicc->nlevel)){
-        if(dicc->ket[A][i]>0){
-            // If the level is occupied we check compatibility. How we do that?
-            // We check if there is other level in B with the same degree of freedom to be traced out.
-            // I will call it "mirror" level. It is not necessarily the same level. Off diagonal entries
-            // of the matrix maybe compatible.
-            ismirrored=0;  // We assume it is not true until we find out a "mirror".
-            j=prev+1;      // Explained below.
-            // Search for a "mirror"
-            while((ismirrored==0)&&(j<dicc->nlevel)){
-                // Occupation has to be the same. More on this below.
-                if((dicc->ket[A][i]==dicc->ket[B][j])){
-                    // Read the level
-                    levA=dicc->vis[i];
-                    levB=dicc->vis[j];
-                    // Read the level wave packet
-                    s2=qoc->idx[levB].s;
-                    s1=qoc->idx[levA].s;
-                    // Obtain the number of degree of freedom to be traced out. (Usually frequency w, therefore the notation).
-                    w1=pack_idx(1,s1);
-                    w2=pack_idx(1,s2);
-                    // If there is a level with the same number therefore we have found a "mirror".
-                    if(w1==w2){
-                        ismirrored=1;
-                        prev=j; // It has to be j instead of levelB because is the index in the loop. LevB may not be ordered.
-                        // Photons are checked in order. Any order is valid provided we are consistent.
-                    }
-                }
-                j=j+1;
+    // Initialize lists an variables
+    maxA=0;
+    maxB=0;
+    flistA.setZero(maxnph);
+    flistB.setZero(maxnph);
+
+    // Create list of indexes to compatibility comparison
+    for(i=0;i<dicc->nlevel;i++){
+        lev=dicc->vis[i];
+        s=qoc->idx[lev].s;
+        if(s<pack_idx.cols()){
+            w=pack_idx(1,s);
+            for(j=0;j<dicc->ket[A][i];j++){
+                flistA[maxA]=w;
+                maxA=maxA+1;
             }
-        }else{
-            // If the level is not occupied we assume compatibility has not been altered.
-            ismirrored=1;
+
+            for(j=0;j<dicc->ket[B][i];j++){
+                flistB[maxB]=w;
+                maxB=maxB+1;
+            }
         }
+    }
+
+    // Comparison between the lists.
+    // States are compatible if the list are compatible
+    i=0;
+    compatible=1;
+    if(maxA!=maxB) compatible=0;
+    while((compatible==1)&&(i<maxA)){
+        if(flistA[i]!=flistB[i]) compatible=0;
         i=i+1;
-        // If some level can not found its "mirror" then there is not compatibility.
-        if(ismirrored==0) compatible=0;
     }
 
     // Return compatibility.
     return compatible;
+}
+
+
+//----------------------------------------------------
+//
+//  Adds a conditional detection defined in the
+//  generalized metacircuit.
+//
+//----------------------------------------------------
+void dmatrix::add_state(state *newrun, qodev *dev){
+//  state *newrun;                  // New state to be added to the density matrix
+//  qodev *dev;                     // Generalized metacircuit where the detector is placed
+
+
+    add_state(newrun,dev->circ);
+}
+
+
+//----------------------------------------
+//
+//  Calculate measurement
+//  Uses qodev instead of qocircuit
+//
+//----------------------------------------
+dmatrix *dmatrix::calc_measure(qodev *dev){
+//  qodev *dev;                     // Generalized metacircuit to which the measurements are referred
+
+
+    return this->calc_measure(dev->circ);
 }

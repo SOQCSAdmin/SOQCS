@@ -9,12 +9,11 @@
 // terms of the licence in LICENCE.TXT.
 //======================================================================================================
 #include "util.h"
-#include <limits>
 #include <chrono>
 
 
 // Initialization of extern variables
-int base=4;        // Maximum photon occupation by level. (default value 4).
+int maxnph=4;        // Maximum photon occupation by level. (default value 4).
 
 
 //-----------------------------------------------
@@ -115,7 +114,7 @@ void cfg_soqcs(int nph){
 //  int nph     // Number of photons by level
 
 
-    base=nph;
+    maxnph=nph;
     // Random seed for the random number generator that feeds the distributions
     gen.seed(std::chrono::system_clock::now().time_since_epoch().count());
 }
@@ -132,20 +131,36 @@ long long int hashval(int *chainv,int n){
 //  int n             // Length of chainv
 
 
-    return hashval(chainv,n,base);
+    return hashval(chainv,n,maxnph);
 }
 
 
 //--------------------------------------------
 //
 //  Calculate a hash value for a given vector of numbers in a
-//  specified base. (We get an unique number for a given occupation vector)
+//  for a maximum number of photons. (We get an unique number for a given occupation vector)
 //
 //--------------------------------------------
-long long int hashval(int *chainv,int n,int chbase){
+long long int hashval(int *chainv,int n,int nph){
 //  int *chainv       // List of numbers. For us occupations.
 //  int n             // Length of chainv
-//  int cnbase        // Base of the numbers in chainv
+//  int nph           // Maximum number of photons
+
+
+    return decval(chainv,n,nph+1);
+}
+
+
+//--------------------------------------------
+//
+//  Calculate a decimal value for a given vector of numbers in a
+//  specified base.
+//
+//--------------------------------------------
+long long int decval(int *chainv,int n,int base){
+//  int *chainv       // List of numbers. For us occupations.
+//  int n             // Length of chainv
+//  int base          // Base of the numbers in chainv
 //  Variables
     long long int value;   // Value to be returned
 //  Auxiliary index
@@ -155,12 +170,11 @@ long long int hashval(int *chainv,int n,int chbase){
     value=0;
     for(i=0;i<n;i++){
         if(chainv[i]>=0){
-            value=value*(chbase+1)+chainv[i];
+            value=value*base+chainv[i];
         }
     }
     return value;
 }
-
 
 //--------------------------------------------------
 //
@@ -168,10 +182,10 @@ long long int hashval(int *chainv,int n,int chbase){
 //
 //--------------------------------------------------
 cmplx gauss_coup(double ti,double wi,double dwi, double tj,double wj,double dwj, double tri,double trj){
-//  double ti;      // Packet i time
-//  double tj;      // Packet j time
-//  double wi;      // Packet i frequency
-//  double wj;      // Packet j frequency
+//  double ti;      // Packet i central time
+//  double tj;      // Packet j central time
+//  double wi;      // Packet i central frequency
+//  double wj;      // Packet j central frequency
 //  double dwi;     // Packet i width
 //  double dwj;     // Packet j width
 //  double tri;     // Packet i phase time
@@ -181,6 +195,8 @@ cmplx gauss_coup(double ti,double wi,double dwi, double tj,double wj,double dwj,
     cmplx dt2;      // Difference of time squared dt^2
     cmplx dwi2;     // Width of the packet i squared wi^2
     cmplx dwj2;     // Width of the packet i squared wj^2
+    cmplx ctri;     // Same than tri but if tri < 0 that means no phase configuration.
+    cmplx ctrj;     // Same than trj but if trj < 0 that means no phase configuration.
     cmplx dtr;      // Difference of phase time between packets
     cmplx coef;     // Coefficient/factor
     cmplx ce;       // Exponent
@@ -192,7 +208,11 @@ cmplx gauss_coup(double ti,double wi,double dwi, double tj,double wj,double dwj,
     dt2 = conj(dt)*dt;
     dwi2= conj(dwi)*dwi;
     dwj2= conj(dwj)*dwj;
-    dtr=tri-trj;
+    ctri=tri;
+    ctrj=trj;
+    if(tri<xcut) ctri=0.0;
+    if(trj<xcut) ctrj=0.0;
+    dtr=ctri-ctrj;
 
     // Expression calculation
     coef=(sqrt(2.0*dwi*dwj))/sqrt(dwi2 + dwj2);
@@ -211,40 +231,53 @@ cmplx gauss_coup(double ti,double wi,double dwi, double tj,double wj,double dwj,
 //
 //--------------------------------------------------
 cmplx exp_coup(double ti,double wi, double txi, double tj, double wj, double txj,double tri,double trj){
-//  double ti;      // Packet i time
-//  double tj;      // Packet j time
-//  double wi;      // Packet i frequency
-//  double wj;      // Packet j frequency
+//  double ti;      // Packet i characteristic time
+//  double tj;      // Packet j characteristic time
+//  double wi;      // Packet i characteristic frequency
+//  double wj;      // Packet j characteristic frequency
 //  double txi;     // Packet i characteristic decay time
 //  double txj;     // Packet j characteristic decay time
 //  double tri;     // Packet i phase time
 //  double trj;     // Packet j phase time
 //  Variables
     cmplx dt;       // Difference of time between packets
+    cmplx ctri;     // Same than tri but if tri < 0 that means no phase configuration.
+    cmplx ctrj;     // Same than trj but if trj < 0 that means no phase configuration.
     cmplx dtr;      // Difference of phase time between packets
     cmplx dw;       // Difference of frequency between packets
+    cmplx txm;      // Minimum characteristic time
     cmplx wm;       // Minimum frequency of the two packets
+    cmplx denom;    // Denominator value of the result
     int   sgn;      // Do we should return the complex conjugate? 1=Yes/0=No
     cmplx result;   // Final result
 
 
+    // Interpret and remove negative values.
+    ctri=tri;
+    ctrj=trj;
+    if(tri<xcut) ctri=0.0;
+    if(trj<xcut) ctrj=0.0;
+
     // Calculate derived variables
     if(tj>=ti){
-        dt  = (ti/txi)-(tj/txj);
-        dw  = txi*wi-txj*wj;
-        dtr = (tri/txi)-(trj/txj);
-        wm=txi*wi;
-        sgn=0;
+        dt  = tj-ti;
+        dw  = wj-wi;
+        dtr = ctrj-ctri;
+        txm = txi;
+        wm  = wi;
+        sgn =0;
     }else{
-        dt  = (tj/txj)-(ti/txi);
-        dw  = txj*wj-txi*wi;
-        dtr = (trj/txj)-(tri/txi);
-        wm=txj*wj;
+        dt  = ti-tj;
+        dw  = wi-wj;
+        dtr = ctri-ctrj;
+        txm = txj;
+        wm  = wj;
         sgn=1;
     }
 
     // Expression calculation
-    result=(exp(0.5*dt - jm*dtr*wm))/(1.0 - jm*dw);
+    denom=(txi+txj+2.0*jm*txi*txj*dw)/(2*sqrt(txi*txj));
+    result=(exp(-0.5*dt/txm + jm*txm*wm*dtr))/denom;
     if(sgn==1) result=conj(result);
     if(abs(result)<xcut) result=0.0;
 
@@ -264,7 +297,7 @@ matc GSP(matc S){
     matc L;     // Cholesky decomposed matrix S=LL^*
     matc D;     // Diagonal matrix S=U D U^*
     matc U;     // Unitary  matrix S=U D U^*
-    matc SA;    // Aproximate positive definite coupling matrix
+    matc SA;    // Approximate positive definite coupling matrix
     ComplexEigenSolver<matc> es; // Eigensolver
 // Auxiliary index
     int i;      // Aux index.
@@ -312,13 +345,13 @@ cmplx glynn(matc M){
     cmplx total;        // Total value of the permanent.
     long int old_gray;  // Old gray codification
     long int new_gray;  // New gray codification
-    long int num_loops; // Numver of loops
+    long int num_loops; // Number of loops
     long int diff;      // old_gray - new_gray
     long int gray_diff; // old_gray^new_grays
     long int bin_index; // Binary index
     cmplx sign;         // Sing value
     cmplx direction;    // Direction of the difference.
-    cmplx reduce;       // Rei¡duced row combination
+    cmplx reduce;       // Reduced row combination
     cmplx *row_comb;    // Row combination
     cmplx *new_vector;  // New vector
     long int gray_diff_index;                   // Gray code index of differences
@@ -326,7 +359,7 @@ cmplx glynn(matc M){
     thash::const_iterator hash_gray_diff_index; // Iterator for the has table of binary power differences.
 //  Auxiliary index.
     long int i;         // Aux index
-    long int j;         // Aux index.
+    long int j;         // Aux index
 
 
     // Configuration
@@ -351,7 +384,7 @@ cmplx glynn(matc M){
     num_loops=pow(2,n-1);
 
 
-//  Main loop
+    //  Main loop
     for(bin_index=1;bin_index<=num_loops;bin_index++){
 
         reduce=1.0;
@@ -395,10 +428,15 @@ cmplx glynn(matc M){
 //
 //-----------------------------------------------
 double mat_confidence(matc L){
-    int i,j;
-    double norm;
-    double maxdev;
-    double conf;
+//  matc L;             // Matrix with the transformation between non-orthogonal to orthonormal states
+//  Variables.
+    double norm;        // Norm of a row
+    double maxdev;      // Deviation from the ideal value one
+    double conf;        // Confidence 1-norm between 0 an 1
+//  Auxiliary  index
+    int    i;           // Aux index
+    int    j;           // Aux index
+
 
     maxdev=0.0;
     for(i=0;i<L.rows();i++){
@@ -414,3 +452,48 @@ double mat_confidence(matc L){
     return conf;
 }
 
+
+//-----------------------------------------------
+//
+//  Inverse of the exponential function
+//
+//-----------------------------------------------
+double expi(double u){
+//  double u;   // Input value of the function.
+
+
+    return -log(1-u);
+}
+
+
+//-----------------------------------------------
+//
+//  Approximation of the inverse of the Error
+//  function (erfi) as read in:
+//  https://en.wikipedia.org/wiki/Error_function
+//
+//-----------------------------------------------
+double erfi( double u){
+//  double u;           // Input value of the function.
+//  Variables
+    double res;         // Approx to erfi(u) up to DEFLIMERF elements
+    vecd   c;           // Constants Cm
+//  Auxiliary index
+    int    k;           // Aux index
+    int    m;           // Aux index
+
+
+    res=0;
+    c.resize(DEFLIMERF);
+    for(k=0; k<DEFLIMERF;k++){
+        c(k)=0.0;
+        for(m=0; m<k-1;m++){
+            c(k)=c(k)+c(m)*c(k-1-m)/((m+1)*(2*m+1));
+        }
+
+        if(k<2) c(k)=1.0;
+        res=res+c(k)*pow(cerf*u,2*k+1)/(2*k+1);
+
+    }
+    return res;
+}

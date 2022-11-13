@@ -36,7 +36,7 @@ simulator::simulator(){
 //
 //----------------------------------------
 simulator::simulator(int i_backend,int i_mem){
-//  const char *i_back   // Method selected (in compilation time. Not dynamic!)
+//  int i_backend        // Method selection
 //  int i_mem            // Number of memory positions reserved.
 
 
@@ -72,7 +72,7 @@ simulator::simulator(const char *i_back,int i_mem){
             break;
         default:
             cout << "Simulator error: No recognized backend" << endl;
-            backend=-1;
+            exit(0);
             break;
     }
 }
@@ -86,29 +86,30 @@ simulator::simulator(const char *i_back,int i_mem){
 simulator::~simulator(){
 }
 
+
 //----------------------------------------
 //
-// Simulation of a photon bunch
+// Simulation of a device
 //
 //----------------------------------------
-p_bin *simulator::run(ph_bunch *input,qocircuit *qoc ){
-//  ph_buch    input;      // Initial photon bunch
-//  qocircuit *qoc;        // Circuit to which the bunch is emitted
+p_bin *simulator::run(qodev *circuit){
+//  qodev    circuit;      // Device to be simulated.
 //  Variables
     state *output;         // Output state
-    p_bin *outcome;        // Circuit outcomes and their probabilities
+    p_bin *outcome;        // Device outcomes and their probabilities
     p_bin *measured;       // Measured outcomes after going through physical detectors
 
 
     // Run simulation
-    output=run(input->bunch_state(),qoc);
+    output=run(circuit->inpt,circuit->circ);
 
     // Store the raw statistic in a probability bin
     outcome= new p_bin(output->nlevel,mem);
     outcome->add_state(output);
 
     // Calculate the measured outcome including possible detector errors, etc
-    measured=outcome->calc_measure(qoc);
+    measured=outcome->calc_measure(circuit->circ);
+
 
     // Free memory
     delete output;
@@ -174,7 +175,6 @@ state *simulator::run( state *istate, ket_list* olist, qocircuit *qoc ){
             break;
         case 2: // Glynn
             return GlynnS(istate,olist,qoc);
-//            GlynnS(istate,tstate,qoc);
             break;
         default:
             empty_state=new state(qoc->nlevel,mem);
@@ -400,7 +400,7 @@ state *simulator::GlynnF( state *istate, qocircuit *qoc ){
     int    irow;                 // Row index of Ust
     int    icol;                 // Col index of Ust
 //  Auxiliary index
-    int    i;                    // Aux idex
+    int    i;                    // Aux index
     int    j;                    // Aux index
 
 
@@ -791,22 +791,22 @@ state *simulator::GlynnS( state *istate, ket_list *olist, qocircuit *qoc ){
 
 //----------------------------------------
 //
-// Sampling of a photon bunch
+// Clifford A Sampling method. Sampling from a device.
 //
 //----------------------------------------
-p_bin *simulator::sample(ph_bunch *input,qocircuit *qoc, int N){
-//  ph_buch    input;      // Initial photon bunch
-//  qocircuit *qoc;        // Circuit to which the bunch is emitted
+p_bin *simulator::sample(qodev *circuit, int N){
+//  qodev    circuit;      // Device to be simulated
+//  int N;                 // Number of samples
 //  Variables
-    p_bin *outcome;        // Circuit outcomes and their probabilities
+    p_bin *outcome;        // Device outcomes and their probabilities
     p_bin *measured;       // Measured outcomes after going through physical detectors
 
 
     // Run simulation
-    outcome=sample(input->bunch_state(),qoc,N);
+    outcome=sample(circuit->inpt,circuit->circ,N);
 
     // Calculate the measured outcome including possible detector errors, etc
-    measured=outcome->calc_measure(qoc);
+    measured=outcome->calc_measure(circuit->circ);
 
     // Free memory
     delete outcome;
@@ -818,12 +818,13 @@ p_bin *simulator::sample(ph_bunch *input,qocircuit *qoc, int N){
 
 //--------------------------------------------------------------
 //
-// Clifford A Sampling method
+// Clifford A Sampling method. Sampling from a circuit.
 //
 //---------------------------------------------------------------
 p_bin *simulator::sample( state *istate, qocircuit *qoc ,int N){
 //  state     *istate;      // Input state
 //  qocircuit *qoc          // Circuit to be simulated
+//  int N;                  // Number of samples
 //  Variables
     int     maxnph;         // Maximum number of photons in the input kets
     int     nlevel;         // Number of levels (qoc has this information, but it is put in this variable for easy access)

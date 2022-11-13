@@ -1,7 +1,7 @@
 /**************************************************************************
 * @file soqcs.h
-* @version 3.7
-* @date 19/06/2022
+
+* @version 4.4
 * @author Javier Osca
 * @author Jiri Vala
 *
@@ -19,7 +19,7 @@
 
 /** \mainpage Introduction
  * \section SOQCS
- * <b>SOQCS is a C++ library (with a port in Python) to simulate optical circuits for quantum light modeled as Fock wavepackets.</b> Optical circuits are defined from non-ideal basic components connected by a lossy medium.
+ * <b>SOQCS is a C++ library (with a Python port) to simulate optical circuits for quantum light modeled as Fock wavepackets.</b> Optical circuits are defined from non-ideal basic components connected by a lossy medium.
  * The library also provides support for non-ideal emitters and physical detectors considering detection efficiency, dead time, dark counts and noise effects. Detectors can also be configured to establish post-selection
  * conditions on the circuit. Circuit measurements provide detection statistics in the form of probability outcomes and density matrices.<br>
  *
@@ -31,26 +31,28 @@
  *      - Perform detection using a model of <b>physical detectors</b> that considers effects of efficiency, dead time, dark counts and noise.
  *      - Establish <b>post-selection conditions</b> in the detector configuration.
  *      - Basic <b>boson sampling support</b>.
- *      - A <b>Python port</b> (early version, still in development).
+ *      - A <b>Python port</b>.
  *
  *
- * \image html FigIntro1.png  <br> * <br>
+ * \image html FigIntro1.png  <br>
+ * <br>
  *
  * \section Pub Related publications
  *  Please cite the most appropriate of these works if you make use of this library:<br>
  * <br>
- *  Javier Osca and Jiri Vala. <i style="color:blue;">Implementation of photon partial distinguishability in a quantum optical circuit simulation</i>.  <b>In preparation</b>. <br>
+ *  Javier Osca and Jiri Vala. <i style="color:blue;">Implementation of photon partial distinguishability in a quantum optical circuit simulation</i>. <b> arXiv:2208.03250 (2022)</b>. <br>
  * <br>
+ *
  * \section StructureP Library structure
  * \image html Public.png
  * <br>
  * - <a href="https://eigen.tuxfamily.org/index.php?title=Main_Page">Eigen 3</a>: External library for matrix manipulation required by SOQCS. <b>It is not part of the SOQCS code.</b>
  * - <b>util </b>: Module of utilities.
  * - <b>qocircuit</b>: Circuit definition.
- * - <b>state</b>:  Quantum states definition.
- * - <b>photons</b>: Abstract photon definition.
- * - <b>pbins</b>: Probability bins. Output statistics.
- * - <b>dmat</b>: Density matrix.
+ * - <b>state</b>:  Quantum bosonic state definition.
+ * - <b>qodev</b>: Quantum optical device definition. Quantum device=Input photons + Circuit definition.
+ * - <b>pbins</b>: Set if probability bins. Output statistics.
+ * - <b>dmat</b>: Density matrix. Output statistics.
  * - <b>simulator</b>: Simulator module. This is the core of SOQCS.
  * - <b>mthread</b>: Parallelism support for SOQCS simulations.
  * - <b>SOQCS</b>: The full C++ library
@@ -61,14 +63,14 @@
  *  \section FolderP Source tree structure
  *  Inside the main SOQCS folder the next subfolders can be found in alphabetical order:
  *  - <b>devel</b>: Here can be found templates for C++ and Python simulations. <br>
- *  - <b>doc</b>: Documentation folder. The files of the HTML documentation are stored here. <br>
- *  - <b>examples</b>: Some examples of SOQCS simulations can be found here. <br>
+ *  - <b>doc</b>: Documentation folder. Here can be found the HTML files of the documentation. <br>
+ *  - <b>examples</b>: Examples of SOQCS simulations can be found here. <br>
  *  - <b>py_src</b>: Source tree of the SOQCS Python interface. <br>
  *  - <b>src</b>: Source tree of the SOQCS library. <br>
  * <br>
  *
  *   \section HistoryP Version release history
- *   Version RV1.0:
+ *   Version <b>RV1.0</b>:
  *          - Framework for circuit simulation.<br>
  *          - Non-idealities in the emitter and detector statistics.<br>
  *          - Partial distinguishability of photons and photon shape model.<br>
@@ -77,6 +79,12 @@
  *          - Losses support. <br>
  *          - Basic Sampling. <br>
  *          - Basic python support. <br>
+ *
+ *   Version <b>RV1.1</b>:
+ *          - Various bugs solved.<br>
+ *          - Extended python support.<br>
+ *          - Various QOL improvements and simplified configuration. <br>
+ *          - Basic support to MacOsX. <br>
  * <br>
  *
  * \section lic License and copyright
@@ -85,14 +93,14 @@
  *  Use of SOQCS is only permitted under the terms of the licence in <a href="../assets/LICENCE.TXT">LICENCE.TXT</a>.<br>
  * <br>
  *
- *
  * \page install Compilation and installation
  * \section requisites Requirements
  *
- *  - <b>Linux/Unix operating system</b>. <br>
+ *  - <b>Linux/Unix or MacOsX operating system</b>. <br>
  *  - <b>C++ compiler</b>.
  *  - <b>GNU Make</b>.
- *  - <a href="https://eigen.tuxfamily.org/index.php?title=Main_Page"> Eigen 3</a> library. (Follow the  installation instructions below) <br>
+ *  - <a href="https://eigen.tuxfamily.org/index.php?title=Main_Page"> Eigen 3</a> library. (Follow the instruction installation below) <br>
+ *  - <b>wget</b> or <b>curl</b> ( to automatically download Eigen with the provided scripts)
  * <br>
  *
  * \section build How to build it?
@@ -105,20 +113,25 @@
  *  @endcode
  * and move the resulting library folder to the desired location.
  * \subsection step3 Step 3: Configure the library.
- *The configuration script automatically downloads and installs Eigen3 external library and creates symbolic links within the SOQCS source tree that
- *are needed to build SOQCS library. It also unzips the SOQCS HTML documentation stored in doc.zip. Note that you may need to give execution
- *permissions to the configuration script.
+ * The configuration script <i> config.sh </i> automatically downloads and installs Eigen3 external library and creates symbolic links within the SOQCS source tree that
+ * are needed to build SOQCS library. It also unzips the SOQCS HTML documentation stored in doc.zip. Note that you may need to give execution
+ * permissions to the scripts present in SOQCS root folder.
  * @code
-    chmod 744 config.sh
+    chmod 744 *.sh
 
     ./config.sh
  * @endcode
  *
  * <b>Note for advanced users</b>: The script is configured to download V3.4 of Eigen. If V3.4 becomes unavailable the script can be reconfigured for other versions changing the number in the configuration variable
- * <i>VER</i> within the script. <br>
+ * <i>VER</i> within the  <i>download.sh</i> script. <br>
  *
  * \subsection step4 Step 4: Build the library.
  * Inside the SOQCS library main folder type <i>make</i>. This will build the library and all the examples. The examples may be found in the subfolder <i>/SOQCS root folder/examples</i>.
+ *
+ * \subsection macinstall MacOsX Installation
+ * By default SOQCS is configured to work in a Linux environment. To build the library in MacOsX it is necessary to change the flags of the compiler in the compilers section of the configuration file <i>conf.inc</i> to those used by clang (the C++ compiler in Mac). Suggestions are already included in the form of
+ * commented text. Additionally, it is necessary to change in the file  <i>download.sh</i> the line of code labeled as Linux by the one labeled as MacOsX. This changes the automated downloader needed for the Eigen3 install
+ * from wget (in Linux) to curl (in MacOsX).
  *
  * \subsection Trouble Troubleshooting
  * If some of the previous steps fail it is recommended to check the configuration file <i>conf.inc</i> in SOQCS root directory. If the command of the compiler or the linker in your computer has a different name or some compilation
@@ -146,13 +159,12 @@
         "Your simulation instructions"
  *  @endcode
  *  Use your preferred editor or command line client to execute it. Alternatively the library can also be used in jupyter notebooks.<br>
- *  <b style="color:red;"> The python port is still under development</b> and it does not have yet all the same functionality than the parent C++ library.  We recommend
- *  to look at the python examples and follow the same guidelines than the C++ programs.
+ *  We recommend to look at the python examples and follow the same guidelines than the C++ programs.
  *
  *  \subsection advancedstart Importing SOQCS to a project
  *  SOQCS has two build targets:
- *  - libsoqcs.a  : Is the C++ library
- *  - libsoqcs.so : Is the C++ side of the connection of the SOQCS port into Python
+ *  - libsoqcs.a  : Is the C++ library.
+ *  - libSOQCS.so : Is the C++ side of the connection of the SOQCS port into Python.
  *
  *  <br>
  *  <b>Importing SOQCS C++ library.</b> <br>
@@ -171,35 +183,64 @@
  * <br>
  *
  * <b>Importing SOQCS port in Python </b>. <br>
- *  Copy pysoqcs.py and libsoqcs.so to your working folder and start your programs with,
+ *  Copy pysoqcs.py, libSOQCS.so and the configuration file pysoqcs.conf to your working folder and start your programs with,
  *  @code
         import pysoqcs
  *  @endcode
- * these files can be found in the <i>/SOQCS root folder/py_src</i> folder
+ * these files can be found in the <i>/SOQCS root folder/py_src</i> folder. pysoqcs.conf contains the path of libSOQCS.so .
  * <br>
  *
- * \page coding Programming with SOQCS
- * \section guidelines Guidelines to program with SOQCS
+ * \page coding Starting with SOQCS
+ * There are two ways of working with SOQCS. The first one is to define a device, set up its initial photons and then measure the outcomes of that circuit. The second one implies to calculate the output state of a circuit from
+ * its input state. Note that the next guidelines are given for ideal circuits. We refer the reader to the examples and the rest of the manual to see how partial distinguishability and other effects are declared.
+ *
+ * \section guidelines Simulating an elementary a circuit.
  * The basic steps to program in SOQCS are shown next. An example of a simple SOQCS simulation using these steps can be found in live1.cpp . Check the examples section of this documentation
  * for this and more examples. <br>
  *
  * - <b>Configure SOQCS</b>.<br>
- *   Set the maximum number of photons to be used in the simulation and create the circuit.
+ *   Create the circuit. A circuit is defined setting at least a maximum number of photons and the number of channels but more options are available depending the complexity of the simulation.
  *  @code
-        cfg_soqcs(2);
-        auto circuit = new qocircuit(2);
- *   @endcode
- *  <br>
- * - <b>Create a set of photons and send them to the circuit</b>.<br>
-    @code
-    auto photons= new ph_bunch(circuit->num_levels());
-    photons->add_photons(2, 1, circuit);
-    photons->send2circuit(circuit);
+    auto circuit = new qodev(2,2);
  *  @endcode
  *  <br>
- *  <b>Alternatively initialize an input state and configure an emitter</b>.<br>
- *  The state can be created manually (next) or automatically with a QD model like in live4.cpp
- *  Please check the section about states in the manual to know more about the addition of terms to a state.
+ * - <b>Create the initial set of photons (for example two photons in channel 1)</b>.<br>
+    @code
+    circuit->add_photons(2, 1);
+ *  @endcode
+ *  <br>
+ *
+ * - <b>Build the optical circuit</b>.<br>
+ *   It is possible to build an optical circuit from the elements in the catalog. Check the documentation for more information about how to configure them. Every circuit has to end with detectors.
+ *  @code
+        circuit->beamsplitter(0,1,theta,phi);
+        circuit->detector(0);
+        circuit->detector(1);
+ *  @endcode
+ *  <br>
+ * - <b>Create a simulator and run the simulation</b>.<br>
+ *   The simulator class is the core of this library. It converts the set of input photons of a circuit  into a set of outcomes and their probabilities. <br>
+ *  @code
+    auto sim= new simulator();
+    auto measured=sim->run(circuit);
+ *  @endcode
+ *  <br>
+ *  Various cores/backends are available when creating the simulator. <br>
+ *  <br>
+ * - <b>Print and analyze the output </b>.<br>
+ *  The most straightforward thing to do is to print an look at the output outcomes
+ *  @code
+        measured->prnt_bins();
+    @endcode
+ * <br>
+ *  There are many ways to configure the notation of this output in the library. We refer the attentive reader to our documentation. <br>
+ *  <br>
+ * - <b>Alternative: Use density matrices </b>.<br>
+ *  It is also possible to create and print density matrices with a more complete information about the outputs and to obtain the statistics of mixed states.
+ *  In live4.cpp can be found an example of the use of density matrices in SOQCS.
+ * <br>
+ * \section guidelines2 Performing an output state calculation.
+ *  Alternatively, we can simulate directly quantum bosonic states. Please, check the section about states in the manual to know more about the addition of terms to a state (see also live1.cpp).
  *  @code
         auto input= new state(circuit->num_levels());
         in_term.resize(4,2);
@@ -209,52 +250,16 @@
                    3, 2; // Occupation
         input->add_term(1.0,in_term,circuit);
  *  @endcode
- *  <br>
- *  Then the packets are defined manually (also like in live4.cpp) and a emitter is created in the circuit. Note that the final packet numbers may change from the user suggestion.
+ *
+ *  A simulation can be run with a similar syntax than in the example above. In this case, the output is a state. For example,
  *  @code
-        circuit->def_packet(0,        0.0, 10000.0, 1.0);
-        circuit->def_packet(1,       16.4, 10000.0, 1.0);
-        circuit->emitter('G',0);
- *  @endcode
- *  <br>
- * - <b>Build the optical circuit</b>.<br>
- *   It is possible to build an optical circuit from the elements in the catalog. Check the documentation for more information about how to configure them. Every circuit has to end with the detectors.
- *  @code
-        example->beamsplitter(0,1,theta,phi);
-        example->detector(0);
-        example->detector(1);
- *  @endcode
- *  <br>
- * - <b>Create a simulator and run the simulation</b>.<br>
- *   The simulator class is the core of this library. It converts a set of input photons into a set of outcomes and their probabilities. <br>
- *  @code
-    simulator *sim= new simulator();
-    auto measured=sim->run(photons,example);
- *  @endcode
- *  <br>
- *  It is also possible to run a simulation for an input state instead of a set of photons with the same syntax. In this case, the output is an output state. Detector effects may be calculated afterwards using the tools
- *  in the library.
- *  @code
-    simulator *sim= new simulator();
+    auto sim= new simulator();
     auto output=sim->run(input,example);
  *  @endcode
- *  Various cores/backends are available when creating the simulator. <br>
- *  <br>
- * - <b>Print and analyze the outptup </b>.<br>
- *  The most straightforward thing to do is to print an look at the output outcomes
- *  @code
-        measured->prnt_bins();
-    @endcode
- *  or the output state.
+ *  and then the output state is printed.
  *  @code
         output->prnt_state();
-    @endcode
- *  There are many ways to configure the notation of this output in the library. We refer the attentive reader to our documentation. <br>
- *  <br>
- * - <b>Alternative: Use density matrices </b>.<br>
- *  It is also possible to create and print density matrices with a more complete information about the outputs and to obtain the statistics of mixed states.
- *  In live4.cpp can be found an example of the use of density matrices in SOQCS.
- * <br>
+ *  @endcode
  *
  * \section Examples Examples of SOQCS programs
  * Five examples in C++ can be found in the <i>/SOQCS root folder/examples/</i> subfolder. They can be compiled with the whole library following the instructions above or
@@ -266,16 +271,17 @@
  * - Live4.cpp: A simulation of the entanglement swapping protocol. Example of use of density matrices in SOQCS. <br>
  * - Live5.cpp: A boson sampling example. <br>
  *
- * Additionally, there are also versions of those same examples in Python that can be found in the same folder as Jupyter notebooks. The Python port is still in development
- * and it does not contain yet all the functionality of the parent C++ library therefore, currently not all examples in C++ have their Python counterpart.
+ * <b> All the examples have their corresponding version in Python</b> that can be found in the same folder as Jupyter notebooks.
  *
  * \section catalog Circuit elements catalog.
  * This section is a brief summary of the catalog of optical circuit elements available in SOQCS. We refer to the documentation of each one of them for details.
- * This list is not exhaustive therefore we also refer the user to the circuit class documentation in the modules section for more information.<br>
+ * This list is not exhaustive therefore we also refer the user to the circuit or device classes documentation in the modules section for more information.<br>
  *
  * * <b>Basic elements:</b>
  *     - <b style="color:blue;">beamsplitter</b>(int i_ch1, int i_ch2, double theta, double phi): Adds an ideal beamsplitter to the circuit. <br>
- *     - <b style="color:blue;">phase_shifter</b>(int i_ch, double phi): Adds a phase_shifter to the circuit. <br>
+ *     - <b style="color:blue;">phase_shifter</b>(int i_ch, double phi): Adds a phase shifter to the circuit. <br>
+ *     - <b style="color:blue;">delay(ch,dt) </b>: Adds a delay in a channel. <br>
+ *     - <b style="color:blue;">rewire</b>(int i_ch1, int ch2): Swaps to channels. <br>
  *     - <b style="color:blue;">dielectric</b>(int i_ch1, int i_ch2, cmplx t, cmplx r): Adds a physical dielectric beamsplitter. <br>
  *     - <b style="color:blue;">loss</b>(int i_ch, double l): Adds a lossy medium. <br>
  *     - <b style="color:blue;">MMI2</b>(int i_ch1, int ch2): Adds a 2x2 ideal MMI beamsplitter. <br>
@@ -289,16 +295,11 @@
  *     - <b style="color:blue;">quarter</b>(int i_ch, int P, double alplha, double gamma): Adds a quarter-waveplate. <br>
  * <br>
  * * <b>Detection elements:</b>
+ *     - <b style="color:blue;">ignore</b>(int i_ch): Ignores a channel and removes it from the output. <br>
  *     - <b style="color:blue;">detector</b>(int i_ch): Adds a detector. <br>
  *     - <b style="color:blue;">detector</b>(int i_ch, int cond): Adds a conditional detection. <br>
  *     - <b style="color:blue;">detector</b>(int i_ch, int cond, double eff, double blnk, double gamma): Adds a general physical detector. <br>
  *     - <b style="color:blue;">noise</b>(double stdev2): Adds noise to the output. <br>
- * <br>
- * * <b>Emitter and distinguishability model:</b>
- *      In general is better to create the photons and send them to the circuit. But the emitter can also be configured manually.
- *     - <b style="color:blue;">def_packet</b>(int n, double t, double f, double w): Creates a new packet definition.  <br>
- *     - <b style="color:blue;">emitted_vis</b>(int i,int j): Returns the probability of two wave packets to overlap. <br>
- *     - <b style="color:blue;">emitter</b> (char ckind, int rand): Adds an emitter to the circuit using the packet definitions given by def_packet. <br>
  *
  * \section cores Simulator cores/backends
  *   The simulator can be configured to use four different cores/backends:
@@ -313,6 +314,4 @@
  *     It is possible to know more about how to configure these backends in the simulator manual page. Additionally SOQCS provide basic support for boson sampling with an implementation of the Clifford A algorithm [1]. <br>
  *   <br>
  *   [1] Peter Clifford and Raphael Clifford. <i>The Classical Complexity of Boson Sampling</i>, pages 146 to 155.
- *
- * @see simulator::simulator(const char* i_back,int i_mem) .
  */
