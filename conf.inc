@@ -20,7 +20,15 @@ LIBP= pthread
 # %---------------------------------%
 
 GPP = g++
-FLAGS= -O2 -std=c++17 -fopenmp -fPIC
+
+# LINUX
+  FLAGS= -O2 -Wall -pedantic -std=c++17 -fPIC
+  
+# MACOSX - NATIVE
+# FLAGS= -O2 -Wall -pedantic -std=c++1z -arch arm64
+
+# MACOSX - CONDA
+# FLAGS= -O2 -Wall -pedantic -std=c++1z -arch x86_64 
 
 #  %--------------------------------%
 #  |  SECTION 3: THE ARCHIVER AR    |

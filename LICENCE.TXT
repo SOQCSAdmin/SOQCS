@@ -35,7 +35,7 @@ You may not, without written permission from us at the NUIM technology transfer 
 
 (b) Use any back-up or archival copies of the Software (or allow anyone else to use such copies) for any purpose other than to replace the original copy in the event it is destroyed or becomes defective; or
 
-(c) Where applicable, disassemble, decompile or "unlock", reverse translate, or in any manner decode the Software for any reason.
+(c) Where appliciable, disassemble, decompile or "unlock", reverse translate, or in any manner decode the Software for any reason.
 
 4. Warranty Disclaimer.
 (a) Disclaimer. The Software has been developed for research purposes only. You acknowledge that we are providing the Software to You 'as-is' under this licence agreement free of charge and on condition that the disclaimer set out below shall apply. NUIM does not represent or warrant that the Software as to: (i) the quality, accuracy or reliability of the Software; (ii) the suitability of the Software for any particular use or for use under any specific conditions; and (iii) whether use of the Software will infringe third-party rights.

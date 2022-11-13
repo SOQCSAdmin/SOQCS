@@ -7,7 +7,7 @@ all:
 	cd ..;\
 	cd $(EPATH);\
 	make;\
-	cd ..;
+	cd ..;  
 	     
 clean:
 	cd $(PPATH);\

@@ -17,14 +17,35 @@
 # Related Publications #
 Please cite the most appropriate of these works if you make use of this library:
 
-* **<span style="color:blue"> Implementation of photon partial distinguishability in a quantum optical circuit simulation</span>**. <i>Javier Osca and Jiri Vala</i>.  In preparation. 
+* **<span style="color:blue"> Implementation of photon partial distinguishability in a quantum optical circuit simulation</span>**. <i>Javier Osca and Jiri Vala</i>.  **arXiv:2208.03250 (2022)**
 
+# Version release history #
+
+* Version RV1.0:
+
+    * Framework for circuit simulation.
+    * Non-idealities in the emitter and detector statistics.
+    * Partial distinguishability of photons and photon shape model.
+    * Parallel execution support.
+    * Density matrix and fidelity measurements.
+    * Losses support.
+    * Basic Sampling.
+    * Basic python support.
+
+* Version RV1.1:
+
+    * Various bugs solved.
+    * Extended python support.
+    * Various QOL improvements and simplified configuration. 
+    * Basic support to MacOsX. 
+    
 # 1. Requirements #
 
-* Linux operating system
+* Linux or MaxOsX operating system
 * C++ Compiler
 * GNU Make
 * [Eigen 3](https://eigen.tuxfamily.org/index.php?title=Main_Page)
+* **wget** or **curl** ( to automatically download Eigen with the provided scripts)
 
 
 # 2. Quick Start #
@@ -36,32 +57,35 @@ Download SOQCS library from the github folder.
 Decompress the zip file with your favorite decompressor.
 
 **Step 3**: Configure the library. <br>
-The configuration script automatically downloads and installs Eigen3 external library and creates symbolic links within the SOQCS source tree that are needed to build SOQCS library.
-It also unzips the SOQCS HTML documentation stored in doc.zip. Note that you may need to give execution permissions to the configuration script.
+The configuration script *config.sh* automatically downloads and installs Eigen3 external library and creates symbolic links within the SOQCS source tree that are 
+needed to build SOQCS library. It also unzips the SOQCS HTML documentation stored in doc.zip. Note that you may need to give execution permissions to the scripts present in SOQCS root folder.
 
 ```bash
-chmod 744 config.sh
+chmod 744 *.sh
 ./config.sh
 ```  
 
 **Step 4**: Build the library. <br>
 Inside the library main SOQCS folder type <i>make</i>. This will build the library and all the examples. 
 
+**MacOsX installation** <br>
+By default SOQCS is configured to work in a Linux environment. To build the library in MacOsX it is necessary to change the flags of the compiler in the compilers section of the configuration file conf.inc to those used by clang (the C++ compiler in Mac). Suggestions are already included in the form of commented text. Additionally, it is necessary to change in the file download.sh the line of code labeled as Linux by the one labeled as MacOsX. This changes the automated downloader needed for the Eigen3 install from wget (in Linux) to curl (in MacOsX).
+
 # 2.2 How to use it? #
 <p align="justify"> Five examples in C++ can be found in the <i>examples</i> subfolder. They can be compiled with the whole library following the instructions above or typing <i>make</i> within the examples folder after compiling the library.
-Additionally, there are also versions of those same examples in Python that can be found in the same folder as Jupyter notebooks. The Python port is still in development and it does not contain yet all the functionality of the parent C++ library
-therefore, currently not all examples in C++ have their Python counterpart.
+Additionally, there are also versions of those same examples in Python that can be found in the same folder as Jupyter notebooks. 
 </p>
 
 * **Example 1  [C++] [Python]**: Elementary example program to show a basic simulation in SOQCS.
 * **Example 2  [C++] [Python]**: An example of HOM visibility using a beamsplitter and physical detectors.
 * **Example 3  [C++] [Python]**: An example of the delay gate.
-* **Example 4  [C++]**: A simulation of the entanglement swapping protocol. Example of use of density matrices in SOQCS.
+* **Example 4  [C++] [Python]**: A simulation of the entanglement swapping protocol. Example of use of density matrices in SOQCS.
 * **Example 5  [C++] [Python]**: A boson sampling example.
 
 For extended information about how to use SOQCS library in your own projects check the documentation.
 # 3. Documentation #
-<p align="justify"> For more details about how to program with the SOQCS library, add it to your project or learn the details of the available methods and classes consult the available documentation that can be found in the root folder of SOQCS. It can be accessed by clicking on <b>Documentation.html</b> after downloading the library and executing the configuration script. Otherwise, it will be found compressed in the file doc.zip .</p>
+<p align="justify"> For more details about how to program with SOQCS library, add it to your project or learn the details of the available methods and classes consult the available documentation that can be found in the root folder of SOQCS
+after executing the configuration script. Otherwise, it will be found compressed in the file doc.zip. The documentation consists in two manuals, one for the C++ library that can be accessed by clicking on <b>SOQCS_cpp.html</b> and one for the Python port that can be accesed by clicking on <b>SOQCS_phy.html</b>.</p>
 
 # 4. Authorship #
 <b>Javier Osca</b> <br>
