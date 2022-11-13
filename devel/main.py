@@ -5,15 +5,11 @@ import pysoqcs as soqcs
 #
 #
 
+# Create circuit
+example = soqcs.qodev(2,2);
 
-# Configure SOQCS
-soqcs.cfg_soqcs(2)
 
-# Create circuit and photon bunches
-example = soqcs.qocircuit(2);
-photons = soqcs.ph_bunch(example.num_levels(),1)
 #Build a circuit
-
 #
 # BUILD YOUR CIRCUIT HERE
 #    
@@ -22,7 +18,7 @@ photons = soqcs.ph_bunch(example.num_levels(),1)
 # Create a simulator
 simulator=soqcs.simulator()
 # Simulate
-measured=simulator.run(photons,example)
+measured=simulator.run(example)
 
 # Print measures
 measured.show()
