@@ -37,15 +37,10 @@ int main(){
 
     cout << "* Example 2: HOM Visibility simulation of a 2x2 MMI beamsplitter." << endl;
     cout << endl;
-
-    // Configure SOQCS
-    cfg_soqcs(2);
-
     // Create objects
     hterm in_term;
     in_term.resize(1,2);
-    auto example = new qocircuit(2,1,2,0,10000,true);
-    auto photons=new ph_bunch(example->num_levels(),1);
+    auto example = new qodev(2,2,1,2,0,10000,true,'G',1);
     auto sim= new simulator();
 
     // Create output file
@@ -58,10 +53,8 @@ int main(){
     for(int i=0;i<N;i++){
         // Create circuit
         example->reset();
-        photons->clear();
-        photons->add_photons(1,0, H, 0.0, 1.0, 1.0,example);
-        photons->add_photons(1,1, H,  dt, 1.0, 1.0,example);
-        photons->send2circuit('G',0,example);
+        example->add_photons(1,0, H, 0.0, 1.0, 1.0);
+        example->add_photons(1,1, H,  dt, 1.0, 1.0);
         example->loss(1,0.5*(dtm+dt)/(2*dtm));
         example->MMI2(0,1);
         example->detector(0, -1, 0.85, 0.1, 0.4);
@@ -69,7 +62,7 @@ int main(){
         example->noise(0.001);
 
         // Run
-        auto measured=sim->run(photons,example);
+        auto measured=sim->run(example);
 
         // Print result
         in_term << 1, 1;

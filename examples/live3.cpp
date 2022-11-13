@@ -42,7 +42,7 @@
 #include <fstream>
 
 const int    N      =  100;    // Number of points
-const double taum   =  9;      // Max delay
+const double taum   =  9;      // Max time
 const double dt     =  3.0;    // Max delay
 
 int main(){
@@ -50,14 +50,11 @@ int main(){
     cout << "* Example 3: Simulation of a delay in the middle of a circuit." << endl;
     cout << endl;
 
-    // Configure SOQCS
-    cfg_soqcs(2);
 
     // Create objects
     hterm in_term;
     in_term.resize(4,2);
-    auto example = new qocircuit(2,1,6,1,10000,false);
-    auto photons=new ph_bunch(example->num_levels(),1);
+    auto example = new qodev(2,2,1,6,1,10000,false,'E',1);
     auto sim= new simulator();
 
     // Create output file
@@ -69,11 +66,9 @@ int main(){
     for(int i=0;i<N;i++){
         // Create circuit
         example->reset();
-        photons->clear();
-        photons->add_photons(1,1,0, 0.0, 1.0, 0.5,example);
-        photons->add_photons(0,0,0, tau, 1.0, 0.5,example);
-        photons->add_photons(1,0,0,  dt, 1.0, 0.5,example);
-        photons->send2circuit('E',0,example);
+        example->add_photons(1,1,0, 0.0, 1.0, 0.5);
+        example->add_photons(0,0,0, tau, 1.0, 0.5);
+        example->add_photons(1,0,0,  dt, 1.0, 0.5);
         example->beamsplitter(0,1,45.0,0.0);
         example->delay(1,dt+0.001);
         example->beamsplitter(0,1,45.0,0.0);
@@ -81,7 +76,7 @@ int main(){
         example->detector(1);
 
         // Run
-        auto measured=sim->run(photons,example);
+        auto measured=sim->run(example);
 
         // Print result
         in_term << 0, 1,

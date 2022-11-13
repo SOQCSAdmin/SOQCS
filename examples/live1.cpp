@@ -30,16 +30,11 @@ int main()
     cout << "* Example 1: Elementary example program" << endl;
     cout << endl;
 
-    // Configure SOQCS
-    cfg_soqcs(2);
-
     // Create circuit and photon bunches
-    auto example = new qocircuit(2);
-    auto photons= new ph_bunch(example->num_levels());
-    // create and attach photons to circuit
-    photons->add_photons(2, 1, example);
-    photons->send2circuit(example);
+    auto example = new qodev(2,2);
+
     // Build circuit
+    example->add_photons(2, 1);
     example->beamsplitter(0,1,45.0,0.0);
     example->detector(0);
     example->detector(1);
@@ -47,7 +42,7 @@ int main()
     // Create a simulator
     simulator *sim= new simulator();
     // Simulate
-    auto measured=sim->run(photons,example);
+    auto measured=sim->run(example);
 
     // Print measures
     cout << "Probability outcome: " << endl << endl;

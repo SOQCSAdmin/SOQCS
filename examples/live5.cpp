@@ -23,15 +23,10 @@ int main()
     cout << "* Example 5:  Boson sampling example." << endl;
     cout << endl;
 
-    // Set the maximum number of photons above the default value.
-    cfg_soqcs(2);
-
     // Build circuit
-    auto example = new qocircuit(4);
-    auto photons=new ph_bunch(example->num_levels(),1);
-    photons->add_photons(1,0, example);
-    photons->add_photons(1,1, example);
-    photons->send2circuit('G',0,example);
+    auto example = new qodev(2,4);
+    example->add_photons(1,0);
+    example->add_photons(1,1);
     example->random_circuit();
     example->detector(0);
     example->detector(1);
@@ -39,17 +34,17 @@ int main()
 
     // Run exact simulation and sample
     auto sim= new simulator();
-    auto apdexact=sim->run(photons,example);
-    auto apdsample=sim->sample(photons,example,1000000);
+    auto apdexact=sim->run(example);
+    auto apdsample=sim->sample(example,1000000);
 
     // Print exact results
     cout << "Exact result:" << endl;
-    apdexact->prnt_bins(example,0.001);
+    apdexact->prnt_bins(3,0.001,example);
     cout << endl;
 
     // Print sampled results
     cout << "Sampled result" << endl;
-    apdsample->prnt_bins(example,0.001);
+    apdsample->prnt_bins(3,0.001,example);
     cout << endl;
 
 }

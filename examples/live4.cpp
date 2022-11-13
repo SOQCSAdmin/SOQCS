@@ -54,13 +54,8 @@ int main()
     cout << "* Example 4: Entanglement swapping protocol" << endl;
     cout << endl;
 
-    // Configure SOQCS
-    cfg_soqcs(4);
-
     // Create simulation structures
-    mati ch;
-    ch.resize(3,4);
-    auto example = new qocircuit(3,2,4,1);
+    auto example = new qodev(4,3,2,4,1,0,false,'E',4);
     auto sim= new simulator();
     auto apd=new dmatrix();
 
@@ -73,34 +68,23 @@ int main()
 
         // build circuit
         example->reset();
-        example->def_packet(0,        0.0, 10000.0, 1.0);    // XX1
-        example->def_packet(1,       16.4, 10000.0, 1.0);    // XX2
-        example->def_packet(2,      16.71, 10000.0, 1.0);    //  X1(+dt)
-        example->def_packet(3,       16.5, 10000.0, 1.0);    //  X2
-        example->emitter('E',0);
+        example->add_QD(0, 1,  0.0, 10000.0, 1.0, 46.71, 10000.0, 1.0, 0, 1.0, 0.8, 1.0, 1.0);
+        example->add_QD(0, 2, 16.0, 10000.0, 1.0,  46.5, 10000.0, 1.0, 0, 1.0, 0.8, 1.0, 1.0);
         example->beamsplitter(1,2,45.0,0.0);
         example->detector(0);
         example->detector(1,1);
         example->detector(2,1);
 
-        // QD emission configuration
-        ch  << 0, 1, 0, 2, // Channels
-               0, 2, 1, 3, // H Polarization packets
-               0, 2, 1, 3; // P Polarization packets
-        auto input=new state(example->num_levels());
-        input->QD(ch,0.8,1.0,1.0,1.0,example);
-
         //Run
-        auto output=sim->run(input,example);
+        auto output=sim->run(example->inpt,example->circ);
 
         // Conditional detection
         apd->add_state(output,example);
 
         //Average visibility calculation
-        V=V+example->emitted_vis(2,3);
+        V=V+example->emitted_vis(1,3);
 
         delete output;
-        delete input;
     }
     cout << "End run" << endl;
     cout << endl;
@@ -111,10 +95,9 @@ int main()
 
     // Print matrix
     cout << "Print matrix:" << endl<< endl;
-    example->set_prnt_flag(2);
     apd->normalize();
     auto partial=apd->calc_measure(example);
-    partial->prnt_mtx(0.01,example);
+    partial->prnt_mtx(2,0.01,example);
 }
 
 //*********************************************************************************************************

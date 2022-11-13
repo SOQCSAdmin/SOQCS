@@ -14,6 +14,8 @@ live3:
 live4:  
 	     $(GPP) live4.cpp $(CFLAGS) $(LDFLAGS) $(FLAGS) -o live4.x
 
+live4_old:  
+	     $(GPP) live4_old.cpp $(CFLAGS) $(LDFLAGS) $(FLAGS) -o live4_old.x
 live5:  
 	     $(GPP) live5.cpp $(CFLAGS) $(LDFLAGS) $(FLAGS) -o live5.x
 
