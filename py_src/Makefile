@@ -1,10 +1,10 @@
-# include ../conf.inc
+include ../conf.inc
 
 libsocs.so: interface soqcs
-	g++ -shared  pySOQCS.o ./src/libsoqcs.a -o libSOQCS.so
+	$(GPP) $(FLAGS) -shared  pySOQCS.o ./src/libsoqcs.a -o libSOQCS.so
 
 interface:
-	g++ -c -fPIC pySOQCS.cpp -o pySOQCS.o	
+	$(GPP)  $(FLAGS) -c pySOQCS.cpp -o pySOQCS.o	
 	
 soqcs:
 	cd src && make

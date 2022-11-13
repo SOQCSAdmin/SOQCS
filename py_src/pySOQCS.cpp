@@ -65,6 +65,51 @@ matd to_matrix(double *double_array, int n, int m){
 
 //----------------------------------------
 //
+//  Converter of array to vector of integers
+//
+//----------------------------------------
+veci to_veci(int *int_array, int n){
+    int i;
+    veci cnv;
+
+    cnv.resize(n);
+    for(i=0;i<n;i++){
+        cnv(i)=int_array[i];
+    }
+    return cnv;
+}
+
+
+//----------------------------------------
+//
+//  Converter of array to matrix of doubles
+//
+//----------------------------------------
+double *to_dptr(matc mtx){
+    int i;
+    int j;
+    int k;
+    double *cnv;
+
+    cnv=new double[2*mtx.rows()*mtx.cols()];
+//    cout << "Rows:" << mtx.rows() << endl;
+//    cout << "Cols:" << mtx.cols() << endl;
+
+    k=0;
+    for(i=0;i<mtx.rows();i++){
+        for(j=0;j<mtx.cols();j++){
+            cnv[k] = real(mtx(i,j));
+            cnv[k+1]=imag(mtx(i,j));
+            k=k+2;
+//            cout << "k:" << k << endl;
+        }
+    }
+    return cnv;
+}
+
+
+//----------------------------------------
+//
 //  Interface with Python. C++/C side.
 //
 //----------------------------------------
@@ -81,7 +126,7 @@ extern "C" {
     //--------------------------------------------------------------------------------------------------------------------------
     // QOCIRCUIT
     // Management functions
-    long int qoc_new_qocircuit(int i_nch, int i_nm, int i_ns, int clock, int i_R, bool loss){ return (long int)new qocircuit(i_nch,i_nm,i_ns, clock,i_R,loss);}
+    long int qoc_new_qocircuit(int i_nch, int i_nm, int i_ns, int clock, int i_R, bool loss, int ikind){ char ckind='G';if(ikind==1) ckind='E'; return (long int)new qocircuit(i_nch,i_nm,i_ns, clock,i_R,loss,ckind);}
     void qoc_destroy_qocircuit(long int qoc){qocircuit* aux=(qocircuit*)qoc; delete aux; }
     int qoc_num_levels(long int qoc){qocircuit* aux=(qocircuit*)qoc; return aux->num_levels();}
 
@@ -92,21 +137,32 @@ extern "C" {
     void qoc_beamsplitter(long int qoc, int i_ch1, int i_ch2, double theta, double phi){qocircuit* aux=(qocircuit*)qoc; aux->beamsplitter(i_ch1,i_ch2, theta, phi);}
     void qoc_dielectric(long int qoc, int i_ch1, int i_ch2, double ret, double imt, double rer, double imr){ cmplx t=ret+jm*imt; cmplx r=rer+jm*imr; qocircuit* aux=(qocircuit*)qoc; aux->dielectric(i_ch1,i_ch2,t,r);}
     void qoc_MMI2(long int qoc, int i_ch1, int i_ch2){ qocircuit* aux=(qocircuit*)qoc; aux->MMI2(i_ch1, i_ch2);}
+    void qoc_rewire(long int qoc,int i_ch1,int i_ch2){ qocircuit* aux=(qocircuit*)qoc; aux->rewire(i_ch1, i_ch2);}
     void qoc_phase_shifter(long int qoc, int i_ch, double ret, double imt){ cmplx t= ret+jm*imt; qocircuit* aux=(qocircuit*)qoc; aux->phase_shifter(i_ch,t);}
+
+    // Polarization elements
+    void qoc_rotator(long int qoc, int i_ch, double theta, double phi){ qocircuit* aux=(qocircuit*)qoc; aux->rotator(i_ch,theta,phi);}
+    void qoc_polbeamsplitter(long int qoc, int i_ch1, int i_ch2, int P){qocircuit* aux=(qocircuit*)qoc; aux->polbeamsplitter(i_ch1,i_ch2, P);}
+    void qoc_waveplate(long int qoc, int i_ch, double alpha, double gamma){qocircuit* aux=(qocircuit*)qoc; aux->waveplate(i_ch, alpha, gamma);}
 
     //      Detection elements
     void qoc_detector(long int  qoc, int i_ch, int cond, double eff, double blnk, double gamma){ qocircuit* aux=(qocircuit*)qoc; aux->detector(i_ch,cond,eff,blnk,gamma);}
     void qoc_noise(long int qoc, double stdev2){ qocircuit* aux=(qocircuit*)qoc; aux->noise(stdev2);}
 
     //      Emitter and distinguishability model.
-    void qoc_def_packet(long int qoc, int n, double t, double f, double w){ qocircuit* aux=(qocircuit*)qoc; aux->def_packet(n,t, f, w);}
-    double qoc_emitted_vis(long int qoc, int i,int j){ qocircuit* aux=(qocircuit*)qoc; aux->emitted_vis(i, j);}
-    void qoc_emitter(long int qoc, int ikind, int rand){char ckind='G';if(ikind==1) ckind='E'; qocircuit* aux=(qocircuit*)qoc; aux->emitter (ckind, rand);}
-    void qoc_delay(long int qoc, int ch, double dt){ qocircuit* aux=(qocircuit*)qoc; aux->delay(ch, dt);}
+    int *qoc_def_packet(long int qoc, int n, double t, double f, double w, double tp, double val1, double val2 ,int rand){ qocircuit* aux=(qocircuit*)qoc;
+                                                                                                                           cfg_rnd temp=aux->def_packet(n,t, f, w,tp, val1, val2, rand);
+                                                                                                                           int *val=new int[2];
+                                                                                                                           val[0]=temp.dt1;
+                                                                                                                           val[1]=temp.dt2;
+                                                                                                                           return val;
+                                                                                                                         }
+    double qoc_emitted_vis(long int qoc, int i,int j){ qocircuit* aux=(qocircuit*)qoc; return aux->emitted_vis(i, j);}
+    void   qoc_emitter(long int qoc){ qocircuit* aux=(qocircuit*)qoc; aux->emitter ();}
+    void   qoc_delay(long int qoc, int ch, double dt){ qocircuit* aux=(qocircuit*)qoc; aux->delay(ch, dt);}
 
     // Print functions
-    void qoc_prnt(long int qoc){ qocircuit* aux=(qocircuit*)qoc; aux->prnt(); cout << flush;}
-    void qoc_set_prnt_flag(qocircuit*qoc, int flag){qocircuit* aux=(qocircuit*)qoc; aux->set_prnt_flag(flag);}
+    void qoc_prnt(long int qoc, int format){ qocircuit* aux=(qocircuit*)qoc; aux->prnt(format); cout << flush;}
     //--------------------------------------------------------------------------------------------------------------------------
 
 
@@ -125,7 +181,7 @@ extern "C" {
     long int st_post_selection(long int st, long int prj){ state* auxst=(state *)st; projector* auxprj=(projector*)prj; return (long int)auxst->post_selection(auxprj); }
 
     //Print methods
-    void  st_prnt_state(long int st, long int qoc, bool loss,int column){  state* auxst=(state*)st; qocircuit* auxqoc=(qocircuit*)qoc; auxst->prnt_state(auxqoc,loss,column); cout << flush;}
+    void  st_prnt_state(long int st, int format, int column, bool loss, long int qoc){  state* auxst=(state*)st; qocircuit* auxqoc=(qocircuit*)qoc; auxst->prnt_state(format,column,loss,auxqoc); cout << flush;}
 
 
     // PROJECTOR
@@ -150,6 +206,8 @@ extern "C" {
 
     // Update pdate methods
     void pb_add_state(long int pbin, long int st){p_bin *auxpb=(p_bin*)pbin; state *auxst=(state*)st; auxpb->add_state(auxst);}
+    double pb_trace(long int pbin){p_bin *auxpb=(p_bin*)pbin; return auxpb->trace();}
+    void pb_normalize(long int pbin){p_bin *auxpb=(p_bin*)pbin; auxpb->normalize();}
 
     // Manipulation methods
     long int pb_calc_measure(long int pbin, long int qoc){p_bin *auxpb=(p_bin *)pbin; qocircuit *auxqoc=(qocircuit *)qoc; return (long int)auxpb->calc_measure(auxqoc);}
@@ -159,34 +217,116 @@ extern "C" {
     int pb_num_levels(long int pbin){p_bin *auxpb=(p_bin*)pbin; return auxpb->nlevel;}
     char *pb_tag(long int pbin, int index){p_bin *auxpb=(p_bin*)pbin; string value =auxpb->tag(index); char* char_array=new char[value.length()+1]; strcpy(char_array, value.c_str()); return char_array;}
     double pb_prob(long int pbin,  int index){p_bin *auxpb=(p_bin*)pbin; return auxpb->prob(index);}
-    double pb_prob_def(long int pbin, int *def,int n, int m, qocircuit *qoc){  p_bin *auxpb=(p_bin *) pbin;
-                                                                               qocircuit *auxqoc=(qocircuit*)qoc;
-                                                                               mati imat;
-                                                                               imat=to_mati(def,n,m);
-                                                                               auxpb->prob(imat,auxqoc);
-                                                                            }
+    double pb_prob_def_qoc(long int pbin, int *def,int n, int m, long int qoc){  p_bin *auxpb=(p_bin *) pbin;
+                                                                                 qocircuit *auxqoc=(qocircuit*)qoc;
+                                                                                 mati imat;
+                                                                                 imat=to_mati(def,n,m);
+                                                                                 return auxpb->prob(imat,auxqoc);
+                                                                              }
+
+    double pb_prob_def(long int pbin, int *def,int n, int m, long int dev){      p_bin *auxpb=(p_bin *) pbin;
+                                                                                 qodev *auxdev=(qodev*)dev;
+                                                                                 mati imat;
+                                                                                 imat=to_mati(def,n,m);
+                                                                                 return auxpb->prob(imat,auxdev);
+                                                                              }
+
     // Print bins
-    void  pb_prnt_bins(long int pbin, long int qoc, double thresh, bool loss){p_bin *auxpb=(p_bin*)pbin; qocircuit *auxqoc=(qocircuit*)qoc; auxpb->prnt_bins(auxqoc,thresh,loss); cout << flush;}
+    void  pb_prnt_bins_qoc(long int pbin, int format, double thresh, bool loss, long int qoc){p_bin *auxpb=(p_bin*)pbin; qocircuit *auxqoc=(qocircuit*)qoc; auxpb->prnt_bins(format,thresh,loss,auxqoc); cout << flush;}
+    void  pb_prnt_bins(long int pbin, int format, double thresh, bool loss, long int dev){p_bin *auxpb=(p_bin*)pbin; qodev *auxdev=(qodev*)dev; auxpb->prnt_bins(format,thresh,loss,auxdev); cout << flush;}
     //--------------------------------------------------------------------------------------------------------------------------
 
 
     //--------------------------------------------------------------------------------------------------------------------------
-    //PHOTONS
+    // DMAT
     // Management functions
-    long int ph_new_bunch(int i_level, int i_maxket){ return (long int)new ph_bunch(i_level,i_maxket);}
-    void ph_destroy_bunch(long int photons){ph_bunch *aux=(ph_bunch *)photons; delete aux; }
-    // Clone?
+    long int dm_new_dmat(int i_mem){ return (long int)new dmatrix(i_mem);}
+    void dm_destroy_dmat(long int dmat){dmatrix* aux=(dmatrix *)dmat; delete aux; }
 
-    // Manipulation methods
-    void ph_add_photons(long int photons, int N, int ch, int P, double t, double f, double w, long int qoc){  ph_bunch *auxph=(ph_bunch *) photons; qocircuit *auxqoc=(qocircuit*)qoc; auxph->add_photons(N,ch,P,t,f,w,auxqoc);
-                                                                                                           }
-    void ph_send2circuit(long int photons, int ikind, int rand, qocircuit *qoc){char ckind='G'; if(ikind==1) ckind='E'; ph_bunch *auxph=(ph_bunch *) photons; qocircuit *auxqoc=(qocircuit*)qoc; auxph->send2circuit(ckind,rand,auxqoc);}
-    void ph_weight(long int photons, double rA, double iA){ ph_bunch *auxph=(ph_bunch *) photons; cmplx A=rA+jm*iA; auxph->weight(A); }
-    void ph_alternative(long int photons){ ph_bunch *auxph=(ph_bunch *) photons; auxph->alternative(); }
-    long int ph_bunch_state(long int photons){ ph_bunch *auxph=(ph_bunch *) photons; return (long int) auxph->bunch_state();}
+    // Basic matrix operations
+    double dm_trace(long int dmat){dmatrix *auxdm=(dmatrix *) dmat; return auxdm->trace();}
+    void dm_normalize(long int dmat){dmatrix *auxdm=(dmatrix *) dmat; auxdm->normalize();}
+    double dm_fidelity(long int dmat, long int st){dmatrix *auxdm=(dmatrix *) dmat; state *auxst=(state*)st; return auxdm->fidelity(auxst);}
 
-    // Print methods
-    void  ph_prnt_state(long int photons, long int qoc, bool loss,int column){ ph_bunch  *auxph=(ph_bunch *) photons; qocircuit *auxqoc=(qocircuit*)qoc; auxph->prnt_state(auxqoc,loss,column); cout << flush;}
+
+    // Update pdate methods
+    void dm_add_state_qoc(long int dmat, long int st, long int qoc){dmatrix *auxdm=(dmatrix*)dmat; state *auxst=(state*)st;  qocircuit *auxqoc=(qocircuit *)qoc; auxdm->add_state(auxst,auxqoc);}
+    void dm_add_state(long int dmat, long int st, long int dev){dmatrix *auxdm=(dmatrix*)dmat; state *auxst=(state*)st;  qodev *auxdev=(qodev *)dev; auxdm->add_state(auxst,auxdev);}
+    long int dm_calc_measure_qoc(long int dmat, long int qoc){dmatrix *auxdm=(dmatrix *)dmat; qocircuit *auxqoc=(qocircuit *)qoc; return (long int)auxdm->calc_measure(auxqoc);}
+    long int dm_calc_measure(long int dmat, long int dev){dmatrix *auxdm=(dmatrix *)dmat; qodev *auxdev=(qodev *)dev; return (long int)auxdm->calc_measure(auxdev);}
+
+    // Print bins
+    void  dm_prnt_mtx_qoc(long int dmat, int format, double thresh, long int qoc){dmatrix *auxdm=(dmatrix*)dmat; qocircuit *auxqoc=(qocircuit*)qoc; auxdm->prnt_mtx(format,thresh,auxqoc); cout << flush;}
+    void  dm_prnt_mtx(long int dmat, int format, double thresh, long int dev){dmatrix *auxdm=(dmatrix*)dmat; qodev *auxdev=(qodev *)dev; auxdm->prnt_mtx(format,thresh,auxdev); cout << flush;}
+
+    //--------------------------------------------------------------------------------------------------------------------------
+    // QODEV
+    // Management functions
+    long int dev_new_qodev(int i_nph, int i_nch, int i_nm, int i_ns, int clock, int i_R, bool loss, int ikind, int i_maxket){ char ckind='G'; if(ikind==1) ckind='E';
+                                                                                  return (long int)new qodev(i_nph,i_nch,i_nm,i_ns,clock,i_R, loss, ckind, i_maxket);}
+    void dev_destroy_qodev(long int dev){qodev *aux=(qodev *)dev; delete aux; }
+    void dev_concatenate(long int dev1, long int dev2){qodev *auxdev1=(qodev *)dev1; qodev *auxdev2=(qodev *)dev2; auxdev1->concatenate(auxdev2);}
+
+
+    // Initial state definition
+    void dev_add_photons(long int dev, int N, int ch, int P, double t, double f, double w){  qodev *auxdev=(qodev *) dev; auxdev->add_photons(N,ch,P,t,f,w);}
+    void dev_add_QD(long int dev, int ch1, int ch2,double t1, double tp1, double f1, double w1, double t2, double tp2, double f2, double w2, int PW, double S, double k, double tss, double thv, double T2, int rand){
+                                                                                                                                        qodev *auxdev=(qodev *) dev;
+                                                                                                                                        auxdev->add_QD(ch1,ch2,t1,tp1,f1,w1,t2,tp2,f2,w2,PW,S,k,tss,thv,T2,rand); }
+
+
+    void dev_add_Bell(long int dev, int ch1, int ch2,int kind, double phi, double t1, double f1, double w1, double t2, double f2, double w2){
+                                                                                                                                    char ckind;
+                                                                                                                                    qodev *auxdev=(qodev *) dev;
+                                                                                                                                    switch (kind){
+                                                                                                                                        case 0: ckind='+'; break;
+                                                                                                                                        case 1: ckind='-'; break;
+                                                                                                                                        case 2: ckind='p'; break;
+                                                                                                                                        case 3: ckind='m'; break;
+                                                                                                                                        default: ckind='+'; break;
+                                                                                                                                    }
+                                                                                                                                    auxdev->add_Bell(ch1,ch2,ckind,phi,t1,f1,w1,t2,f2,w2); }
+
+    void dev_add_BellP(long int dev, int ch1, int ch2, int kind, double phi, double t1, double f1, double w1, double t2, double f2, double w2){
+                                                                                                                                    char ckind;
+                                                                                                                                    qodev *auxdev=(qodev *) dev;
+                                                                                                                                    switch (kind){
+                                                                                                                                        case 0: ckind='+'; break;
+                                                                                                                                        case 1: ckind='-'; break;
+                                                                                                                                        case 2: ckind='p'; break;
+                                                                                                                                        case 3: ckind='m'; break;
+                                                                                                                                        default: ckind='+'; break;
+                                                                                                                                    }
+                                                                                                                                    auxdev->add_BellP(ch1,ch2,ckind,phi,t1,f1,w1,t2,f2,w2);}
+    long int dev_input(long int dev){     qodev *auxdev=(qodev *) dev; return (long int) auxdev->input();}
+    long int dev_circuit(long int dev){   qodev *auxdev=(qodev *) dev; return (long int) auxdev->circuit();}
+    void dev_repack(long int dev, int* ipack, int n){   qodev *auxdev=(qodev *) dev; veci tmp=to_veci(ipack,n); auxdev->repack(tmp);}
+    double dev_emitted_vis(long int dev, int i, int j){ qodev *auxdev=(qodev *) dev; return auxdev->emitted_vis(i,j);}
+    void dev_prnt_packets(long int dev){ qodev *auxdev=(qodev *) dev; auxdev->prnt_packets(); cout << flush;}
+
+    // Circuit elements
+    //      Basic elements
+    void dev_random_circuit(long int dev){ qodev* aux=(qodev*)dev; aux->random_circuit();}
+    void dev_NSX(long int  dev, int i_ch1, int i_ch2, int i_ch3){ qodev* aux=(qodev*)dev; aux->NSX(i_ch1,i_ch2,i_ch3);}
+    void dev_beamsplitter(long int dev, int i_ch1, int i_ch2, double theta, double phi){qodev* aux=(qodev*)dev; aux->beamsplitter(i_ch1,i_ch2, theta, phi);}
+    void dev_dielectric(long int dev, int i_ch1, int i_ch2, double ret, double imt, double rer, double imr){ cmplx t=ret+jm*imt; cmplx r=rer+jm*imr; qodev* aux=(qodev*)dev; aux->dielectric(i_ch1,i_ch2,t,r);}
+    void dev_MMI2(long int dev, int i_ch1, int i_ch2){ qodev* aux=(qodev*)dev; aux->MMI2(i_ch1, i_ch2);}
+    void dev_rewire(long int dev, int i_ch1, int i_ch2){ qodev* aux=(qodev*)dev; aux->rewire(i_ch1, i_ch2);}
+    void dev_phase_shifter(long int dev, int i_ch, double phi){ qodev* aux=(qodev*)dev; aux->phase_shifter(i_ch,phi);}
+    void dev_loss(long int dev, int i_ch, double l){ qodev* aux=(qodev*)dev; aux->loss(i_ch,l);}
+    void dev_delay(long int dev, int i_ch, double dt){ qodev* aux=(qodev*)dev; aux->delay(i_ch,dt);}
+
+    // Polarization elements
+    void dev_rotator(long int dev, int i_ch, double theta, double phi){ qodev* aux=(qodev*)dev; aux->rotator(i_ch,theta,phi);}
+    void dev_polbeamsplitter(long int dev, int i_ch1, int i_ch2, int P){qodev* aux=(qodev*)dev; aux->polbeamsplitter(i_ch1,i_ch2, P);}
+    void dev_half(long int dev, int i_ch, double alpha, double gamma){qodev* aux=(qodev*)dev; aux->half(i_ch, alpha);}
+    void dev_quarter(long int dev, int i_ch, double alpha, double gamma){qodev* aux=(qodev*)dev; aux->quarter(i_ch, alpha);}
+
+    //      Detection elements
+    //      Detection elements
+    void dev_detector(long int  dev, int i_ch, int cond, double eff, double blnk, double gamma){ qodev* aux=(qodev*)dev; aux->detector(i_ch,cond,eff,blnk,gamma);}
+    void dev_noise(long int dev, double stdev2){ qodev* aux=(qodev*)dev; aux->noise(stdev2);}
+    long int dev_apply_condition(long int dev,long int st, bool ignore){ qodev *auxdev=(qodev *) dev; state  *auxst=(state *) st; return (long int) auxdev->apply_condition(auxst,ignore);}
     //--------------------------------------------------------------------------------------------------------------------------
 
 
@@ -197,10 +337,11 @@ extern "C" {
     void sim_destroy_simulator(long int sim){simulator *aux=(simulator *)sim; delete aux; }
 
     // Run methods
-    long int sim_run(long int sim,long int photons,long int qoc ){ simulator *auxsim=(simulator *) sim; ph_bunch  *auxph=(ph_bunch *) photons; qocircuit *auxqoc=(qocircuit*)qoc; return (long int) auxsim->run(auxph,auxqoc);}
+    long int sim_run(long int sim,long int dev){ simulator *auxsim=(simulator *) sim; qodev  *auxdev=(qodev *) dev; return (long int) auxsim->run(auxdev);}
     long int sim_run_state(long int sim,long int st,long int qoc ){ simulator *auxsim=(simulator *) sim; state  *auxst=(state *) st; qocircuit *auxqoc=(qocircuit*)qoc; return (long int) auxsim->run(auxst,auxqoc);}
     // Sampling methods
-    long int sim_sample(long int sim,long int photons,long int qoc, int N){ simulator *auxsim=(simulator *) sim; ph_bunch  *auxph=(ph_bunch *) photons; qocircuit *auxqoc=(qocircuit*)qoc; return (long int) auxsim->sample(auxph,auxqoc,N);}
+    long int sim_sample(long int sim,long int dev, int N){ simulator *auxsim=(simulator *) sim; qodev  *auxdev=(qodev *) dev; return (long int) auxsim->sample(auxdev,N);}
     long int sim_sample_state(long int sim,long int st,long int qoc, int N ){ simulator *auxsim=(simulator *) sim; state  *auxst=(state *) st; qocircuit *auxqoc=(qocircuit*)qoc; return (long int) auxsim->sample(auxst,auxqoc,N);}
     //--------------------------------------------------------------------------------------------------------------------------
+
 }
