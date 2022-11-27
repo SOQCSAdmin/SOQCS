@@ -277,7 +277,7 @@ cmplx exp_coup(double ti,double wi, double txi, double tj, double wj, double txj
 
     // Expression calculation
     denom=(txi+txj+2.0*jm*txi*txj*dw)/(2*sqrt(txi*txj));
-    result=(exp(-0.5*dt/txm + jm*txm*wm*dtr))/denom;
+    result=(exp(-0.5*dt/txm + jm*wm*dtr))/denom;
     if(sgn==1) result=conj(result);
     if(abs(result)<xcut) result=0.0;
 
