@@ -1,0 +1,53 @@
+# %---------------------------------%
+# |         CONFIGURATION           |
+# %---------------------------------%
+
+LPATH=./src
+PPATH=./py_src
+EPATH=./examples
+TPATH=./tests
+
+# %---------------------------------%
+# |  SECTION 1: PATHS AND LIBRARIES |
+# %---------------------------------%
+
+LIBN = soqcs
+LIBB = .$(LPATH)
+LIBINCLUDE = .$(LPATH)
+LIBP= pthread
+
+# %---------------------------------%
+# |  SECTION 2: COMPILERS C++       |
+# %---------------------------------%
+
+GPP = g++
+
+# LINUX
+  FLAGS= -O2 -Wall -pedantic -std=c++17 -fopenmp -fPIC
+
+# LINUX ( NO OPENMP SUPPORT)
+# FLAGS= -O2 -Wall -pedantic -std=c++17 -fPIC
+  
+# MACOSX - NATIVE
+# FLAGS= -O2 -Wall -pedantic -std=c++1z -arch arm64
+
+# MACOSX - CONDA
+# FLAGS= -O2 -Wall -pedantic -std=c++1z -arch x86_64 
+
+#  %--------------------------------%
+#  |  SECTION 3: THE ARCHIVER AR    |
+#  %--------------------------------%
+
+AR = ar
+ARFLAGS = rcs
+
+#  %--------------------------------%
+#  |  SECTION 4: DON'T TOUCH        |
+#  %--------------------------------%
+
+CFLAGS += -I$(LIBINCLUDE)
+LDFLAGS+= -L$(LIBB)
+LDFLAGS += -l$(LIBN)
+LDFLAGS += -l$(LIBP)
+
+
