@@ -11,16 +11,35 @@
 * Perform detection using a model of **physical detectors** that considers effects of efficiency, dead time, dark counts and noise.
 * Establish **post-selection** conditions in the detector configuration.
 * Basic **boson sampling support**.
-* A **Python port** (early version, still in development).
+* A **Python port**.
 
 
 # Related Publications #
 Please cite the most appropriate of these works if you make use of this library:
 
-* **<span style="color:blue"> Implementation of photon partial distinguishability in a quantum optical circuit simulation</span>**. <i>Javier Osca and Jiri Vala</i>.  **arXiv:2208.03250 (2022)**
+*  Javier Osca and Jiri Vala.  <span style="color:blue"> <i>Implementation of photon partial distinguishability in a quantum optical circuit simulation</span>. **arXiv:2208.03250 (2022)**
+*  Javier Osca and Jiri Vala.  <span style="color:blue"> <i>Implementation of a Stochastic Optical Quantum Circuit Simulator ( SOQCS ) </i></span>. **In preparation.**
+
 
 # Version release history #
+ 
+* Version RV1.2:
 
+    * Qubit codification.
+    * More examples.
+    * QOL improvements.
+    * Various bugs solved.
+    * Automated configuration.
+    * Extended MacOsX support.
+ 
+* Version RV1.1:
+
+    * Extended python support.
+    * QOL improvements
+    * Various bugs solved.
+    * Simplified configuration. 
+    * Basic MacOsX support.
+    
 * Version RV1.0:
 
     * Framework for circuit simulation.
@@ -32,13 +51,7 @@ Please cite the most appropriate of these works if you make use of this library:
     * Basic Sampling.
     * Basic python support.
 
-* Version RV1.1:
-
-    * Various bugs solved.
-    * Extended python support.
-    * Various QOL improvements and simplified configuration. 
-    * Basic support to MacOsX. 
-    
+ 
 # 1. Requirements #
 
 * Linux or MaxOsX operating system
@@ -68,8 +81,6 @@ chmod 744 *.sh
 **Step 4**: Build the library. <br>
 Inside the library main SOQCS folder type <i>make</i>. This will build the library and all the examples. 
 
-**MacOsX installation** <br>
-By default SOQCS is configured to work in a Linux environment. To build the library in MacOsX it is necessary to change the flags of the compiler in the compilers section of the configuration file conf.inc to those used by clang (the C++ compiler in Mac). Suggestions are already included in the form of commented text. Additionally, it is necessary to change in the file download.sh the line of code labeled as Linux by the one labeled as MacOsX. This changes the automated downloader needed for the Eigen3 install from wget (in Linux) to curl (in MacOsX).
 
 # 2.2 How to use it? #
 <p align="justify"> Five examples in C++ can be found in the <i>examples</i> subfolder. They can be compiled with the whole library following the instructions above or typing <i>make</i> within the examples folder after compiling the library.
@@ -77,10 +88,13 @@ Additionally, there are also versions of those same examples in Python that can 
 </p>
 
 * **Example 1  [C++] [Python]**: Elementary example program to show a basic simulation in SOQCS.
-* **Example 2  [C++] [Python]**: An example of HOM visibility using a beamsplitter and physical detectors.
-* **Example 3  [C++] [Python]**: An example of the delay gate.
-* **Example 4  [C++] [Python]**: A simulation of the entanglement swapping protocol. Example of use of density matrices in SOQCS.
-* **Example 5  [C++] [Python]**: A boson sampling example.
+* **Example 2  [C++] [Python]**: Example of a CNOT gate simulation in SOQCS.
+* **Example 3  [C++] [Python]**: Example of a CSign gate simulation in SOQCS.
+* **Example 4  [C++] [Python]**: An example of HOM visibility using a beamsplitter and physical detectors.
+* **Example 5  [C++] [Python]**: An example of partial distinguishability.
+* **Example 6  [C++] [Python]**: An example of the delay gate.
+* **Example 7  [C++] [Python]**: A boson sampling example.
+* **Example 8  [C++] [Python]**: A simulation of the entanglement swapping protocol. Example of use of density matrices in SOQCS.
 
 For extended information about how to use SOQCS library in your own projects check the documentation.
 # 3. Documentation #
