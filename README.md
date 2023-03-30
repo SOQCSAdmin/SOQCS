@@ -83,7 +83,7 @@ Inside the library main SOQCS folder type <i>make</i>. This will build the libra
 
 
 # 2.2 How to use it? #
-<p align="justify"> Five examples in C++ can be found in the <i>examples</i> subfolder. They can be compiled with the whole library following the instructions above or typing <i>make</i> within the examples folder after compiling the library.
+<p align="justify"> Eight examples in C++ can be found in the <i>examples</i> subfolder. They can be compiled with the whole library following the instructions above or typing <i>make</i> within the examples folder after compiling the library.
 Additionally, there are also versions of those same examples in Python that can be found in the same folder as Jupyter notebooks. 
 </p>
 
@@ -109,5 +109,5 @@ javier.oscacotarelo@mu.ie
 jiri.vala@mu.ie
 
 # 5. License and Copyright #
-Copyright (c) 2022 National University of Ireland Maynooth, Maynooth University. All rights reserved. This library and its related files are subject to the licence terms detailed in LICENCE.TXT .
+Copyright (c) 2023 National University of Ireland Maynooth, Maynooth University. All rights reserved. This library and its related files are subject to the licence terms detailed in LICENCE.TXT .
 Use of SOQCS is only permitted under the terms of the licence in [LICENCE.TXT](./LICENCE.TXT). 
