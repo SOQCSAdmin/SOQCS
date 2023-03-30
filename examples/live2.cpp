@@ -1,24 +1,15 @@
 /** \example live2.cpp
-*   \brief <b>EXAMPLE 2</b>: HOM Visibility simulation of a 2x2 MMI beamsplitter.<br>
-*   Example of a HOM visibility calculation using a physical beamsplitter and physical detectors. Losses in in the photon propagation are also considered.<br>
+*   \brief <b>EXAMPLE 2</b>: CNOT circuit.<br>
+*   Example of the calculation of the output of a CNOT. <br>
 *   <br>
-*
 *   <b>Description</b>:<br>
-*   We simulate a circuit made of a 2x2 MMI beamsplitter with two photons of Gaussian shape in each of the input channels and a set of detectors that work as photon counters. We consider the time, frequency and width
-*   given in random adimensional units. At  the output we print the probability of having two photons in two different channels depending on the delay time between them. For delay dt=0 both photons are
-*   indistinguishable and the probability at the output is zero in ideal conditions. We consider time dependent losses in one of the channels and physical detectors that incorporate effects of efficiency, detector dead time, and dark counts. Furthermore
-*   we also include the effect of the presence of a white Gaussian noise over the output. The result is printed in the file Results.txt in two columns {dt,Probability}. The output is similar to the experimental
-*   measurements that can be done for real MMI devices like the ones in ref. [1]. <br>
+*   We use SOQCS to simulate a CNOT circuit as described in ref. [1]. <br>
 *   <br>
+*   [1] J L O'Brien, G J Pryde, A G White, T C Ralph, D Branning <i>Demonstration of an all-optical quantum controlled-NOT gate.</i> <b> Nature 426:264</b> (2003) <br>
 *   <br>
-*   [1] Alberto Peruzzo, et Al. <i>Multimode quantum interference of photons in multiport integrated devices.</i> <b>Nature Communications, 2:224</b> (2011)<br>
-*   <br>
-*
-*   @param const int N Number of points in the plot.
-*   @param const double dtm The plot is printed in the range {-dtm,dtm} whit N points.
 *
 *   <b>Output example</b>:<br>
-*   | Output       |
+*   | ./live2.x |
 *   | :----------- |
 *   | \image html live2.png |
 *   <br>
@@ -26,60 +17,67 @@
 
 
 #include "soqcs.h"
-#include <fstream>
+#include <chrono>
 
 
-//  Configuration constants
-const int     N     = 100;   // Number of points
-const double dtm    =   4;   // Max delay
-
-int main(){
-
-    cout << "* Example 2: HOM Visibility simulation of a 2x2 MMI beamsplitter." << endl;
+int main()
+{
+    // Introduction message
+    cout << "* Example 2: CNOT circuit." << endl;
     cout << endl;
-    // Create objects
-    hterm in_term;
-    in_term.resize(1,2);
-    auto example = new qodev(2,2,1,2,0,10000,true,'G',1);
-    auto sim= new simulator();
 
-    // Create output file
-    ofstream file;
-    file.open ("Results.txt");
 
-    // Loop dephasing times
-    cout << "Calculating output" << endl;
-    auto dt=-dtm;
-    for(int i=0;i<N;i++){
-        // Create circuit
-        example->reset();
-        example->add_photons(1,0, H, 0.0, 1.0, 1.0);
-        example->add_photons(1,1, H,  dt, 1.0, 1.0);
-        example->loss(1,0.5*(dtm+dt)/(2*dtm));
-        example->MMI2(0,1);
-        example->detector(0, -1, 0.85, 0.1, 0.4);
-        example->detector(1, -1, 0.85, 0.1, 0.4);
-        example->noise(0.001);
+    // Input configuration
+    veci qinit;
+    qinit.resize(2);
+    qinit << 1, 0;
 
-        // Run
-        auto measured=sim->run(example);
+    // Qubit - channel modes mapping
+    mati qmap;
+    qmap.resize(2,2);
+    qmap << 1 , 3,
+            2 , 4;
 
-        // Print result
-        in_term << 1, 1;
-        auto prob=measured->prob(in_term,example);
-        file << setw(10) <<real(dt) << " "  << setw(10) << prob << endl;
+    // Create circuit and photon bunches
+    auto cnot = new qodev(2,6);
+    // Add photons. Qubit initialization (Path encoding)
+    cnot->qubits(qinit,qmap);
+    // Build circuit
+    //  First column of beamsplitters
+    cnot->beamsplitter(3,4, -45.0,0.0);
+    //  Second column of beamsplitters
+    cnot->beamsplitter(0,1,180*acos(1.0/sqrt(3.0))/pi,0.0);
+    cnot->beamsplitter(2,3,180*acos(1.0/sqrt(3.0))/pi,0.0);
+    cnot->beamsplitter(4,5,180*acos(1.0/sqrt(3.0))/pi,0.0);
+    //  Third column of beamsplitters
+    cnot->beamsplitter(3,4, -45.0,0.0);
+    //  Final column of phase shifters
+    cnot->phase_shifter(1, 180);
+    cnot->phase_shifter(3, 180);
+    // Detectors
+    cnot->detector(0,0);
+    cnot->detector(1);
+    cnot->detector(2);
+    cnot->detector(3);
+    cnot->detector(4);
+    cnot->detector(5,0);
 
-        // Advance
-        dt=dt+2.0*dtm/((double) (N-1));
+    // Create a simulator
+    simulator *sim= new simulator();
+    // Simulate
+    auto outcome=sim->run(cnot);
+    auto encoded=outcome->translate(qmap, cnot);
 
-        // Free memory
-        delete measured;
-    }
-    cout << "Finished. Output printed in Results.txt" << endl;
+    // Print measures
+    cout << "Input: "   << endl << endl;
+    cout << "| 1, 0 >"  << endl << endl;
+    cout << "Outcome: " << endl << endl;
+    encoded->prnt_bins();
+    cout << endl;
 }
 
 //*********************************************************************************************************
-// Copyright © 2022 National University of Ireland Maynooth, Maynooth University. All rights reserved.    *
+// Copyright © 2023 National University of Ireland Maynooth, Maynooth University. All rights reserved.    *
 // The contents of this file are subject to the licence terms detailed in LICENCE.TXT available in the    *
 // root directory of this source tree. Use of the source code in this file is only permitted under the    *
 // terms of the licence in LICENCE.TXT.                                                                   *

@@ -1,102 +1,90 @@
 /** \example live3.cpp
-*   \brief <b>EXAMPLE 3</b>: Simulation of a delay in the middle of a circuit.<br>
-*   Demonstration of the use of a delay as a circuit element.<br>
+*   \brief <b>EXAMPLE 3</b>: CSign circuit.<br>
+*   Example of the calculation of the output of a CSign. <br>
 *   <br>
-*
 *   <b>Description</b>:<br>
-*   We consider a circuit made of two ideal balanced beamsplitters with two photons of exponential shape in each of the input channels as a theoretical representation of the two photons interference
-*   experiment reported in ref.[1]. We consider a delay dt in one of the channels between the two beamsplitters and we print the probability of these two photons to
-*   be measured at different times in the circuit output. The result is printed in the file Results.txt int two columns {dt,Probability}. In this case we configure an ideal
-*   detector and circuit therefore the result only depends on the photon distinguishability. <br>
+*   We use SOQCS to simulate a CSign circuit as described in ref. [1]. <br>
 *   <br>
+*   [1] E. Knill, R. Laflamme, G. J. Milburn, <i>A scheme for efficient quantum computation with linear </i>, <b> Nature 409 46-52</b> (2001) <br>
 *   <br>
-*   [1] Santori, C., Fattal, D., Vučković, J. et al. <i>Indistinguishable photons from a single-photon device</i>. <b>Nature 419, 594:597</b> (2002) <br>
-*   <br>
-*
-*
-*   <b>Experimental device</b>:<br>
-*   | Experiment device as described in fig. 3a of ref. [1] |
-*   | :---------------------------------------------------- |
-*   | \image html live3_device.png width=500px              |
-*   <br>
-*
-*   <b>Simulated circuit</b>:<br>
-*   | Circuit      |
-*   | :----------- |
-*   | \image html live3_circuit.png width=700px |
-*   <br>
-*
-*
-*   @param const int N Number of points in the plot.
-*   @param const double dtm The plot is printed in the range {-dtm,dtm} whit N points.
 *
 *   <b>Output example</b>:<br>
-*   | ./example11b.x |
+*   | ./live3.x |
 *   | :----------- |
 *   | \image html live3.png |
-* <br>
+*   <br>
 */
 
 
 #include "soqcs.h"
-#include <fstream>
+#include <chrono>
 
-const int    N      =  100;    // Number of points
-const double taum   =  9;      // Max time
-const double dt     =  3.0;    // Max delay
 
-int main(){
-
-    cout << "* Example 3: Simulation of a delay in the middle of a circuit." << endl;
+int main()
+{
+    // Introduction message
+    cout << "* Example 3: CSign circuit." << endl;
     cout << endl;
 
 
-    // Create objects
-    hterm in_term;
-    in_term.resize(4,2);
-    auto example = new qodev(2,2,1,6,1,10000,false,'E',1);
-    auto sim= new simulator();
+    // Define the initial state directly
+    auto qubit= new state(2);
+    int occ1[2]={0,0};
+    qubit->add_term(0.5,occ1);
+    int occ2[2]={0,1};
+    qubit->add_term(0.5,occ2);
+    int occ3[2]={1,0};
+    qubit->add_term(0.5,occ3);
+    int occ4[2]={1,1};
+    qubit->add_term(0.5,occ4);
+    cout << "Input: "   << endl << endl;
+    qubit->prnt_state(1);
 
-    // Create output file
-    ofstream file;
-    file.open ("Results.txt");
+    // Qubit - channel modes mapping
+    mati qmap;
+    qmap.resize(2,2);
+    qmap << 0 , 2,
+            1 , 3;
 
-    // Loop dephasing times
-    auto tau=0.001;
-    for(int i=0;i<N;i++){
-        // Create circuit
-        example->reset();
-        example->add_photons(1,1,0, 0.0, 1.0, 0.5);
-        example->add_photons(0,0,0, tau, 1.0, 0.5);
-        example->add_photons(1,0,0,  dt, 1.0, 0.5);
-        example->beamsplitter(0,1,45.0,0.0);
-        example->delay(1,dt+0.001);
-        example->beamsplitter(0,1,45.0,0.0);
-        example->detector(0);
-        example->detector(1);
+    // Define the anzilla values
+    veci anzilla;
+    anzilla.resize(4);
+    anzilla << 1, 0, 1, 0;
 
-        // Run
-        auto measured=sim->run(example);
 
-        // Print result
-        in_term << 0, 1,
-                   H, H,
-                   1, 0,
-                   1, 1;
-        auto prob=measured->prob(in_term,example);
-        file << setw(10) <<real(tau) << " "  << setw(10) << prob << endl;
+    // Create circuit and photon bunches
+    auto csign = new qodev(3,8);
+    // Build circuit
+    csign->beamsplitter(0,2,45.0,0.0);
+    csign->NSX(0, 4, 5);
+    csign->NSX(2, 6, 7);
+    csign->beamsplitter(0,2,-45.0,0.0);
+    csign->detector(0);
+    csign->detector(1);
+    csign->detector(2);
+    csign->detector(3);
+    csign->detector(4,1);
+    csign->detector(5,0);
+    csign->detector(6,1);
+    csign->detector(7,0);
 
-        // Advance
-        tau=tau+taum/((double) (N-1));
+    // Create a simulator
+    simulator *sim= new simulator();
 
-        // Free memory
-        delete measured;
-    }
-    cout << "Finished. Output printed in Results.txt" << endl;
+    auto decoded=qubit->decode(qmap,anzilla,csign->circ);
+    auto raw_state=sim->run(decoded,csign->circ);
+    auto output=csign->apply_condition(raw_state);
+    auto encoded=output->encode(qmap,csign->circ);
+    encoded->normalize();
+
+    // Print measures
+    cout << "Outcome: " << endl << endl;
+    encoded->prnt_state(1);
+    cout << endl;
 }
 
 //*********************************************************************************************************
-// Copyright © 2022 National University of Ireland Maynooth, Maynooth University. All rights reserved.    *
+// Copyright � 2023 National University of Ireland Maynooth, Maynooth University. All rights reserved.    *
 // The contents of this file are subject to the licence terms detailed in LICENCE.TXT available in the    *
 // root directory of this source tree. Use of the source code in this file is only permitted under the    *
 // terms of the licence in LICENCE.TXT.                                                                   *

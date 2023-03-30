@@ -30,7 +30,7 @@ int main()
     cout << "* Example 1: Elementary example program" << endl;
     cout << endl;
 
-    // Create circuit and photon bunches
+    // Create the circuit
     auto example = new qodev(2,2);
 
     // Build circuit
@@ -51,7 +51,7 @@ int main()
 }
 
 //*********************************************************************************************************
-// Copyright © 2022 National University of Ireland Maynooth, Maynooth University. All rights reserved.    *
+// Copyright © 2023 National University of Ireland Maynooth, Maynooth University. All rights reserved.    *
 // The contents of this file are subject to the licence terms detailed in LICENCE.TXT available in the    *
 // root directory of this source tree. Use of the source code in this file is only permitted under the    *
 // terms of the licence in LICENCE.TXT.                                                                   *
