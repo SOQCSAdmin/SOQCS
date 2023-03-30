@@ -9,7 +9,7 @@ This library is a wrapper that provides the functionality of C++ SOQCS library i
 #  SOQCS interface with Python. Python side.                                                             #
 #                                                                                                        #
 #                                                                                                        #
-# Copyright © 2022 National University of Ireland Maynooth, Maynooth University. All rights reserved.    #
+# Copyright © 2023 National University of Ireland Maynooth, Maynooth University. All rights reserved.    #
 # The contents of this file are subject to the licence terms detailed in LICENCE.TXT available in the    #
 # root directory of this source tree. Use of the source code in this file is only permitted under the    #
 # terms of the licence in LICENCE.TXT.                                                                   #
@@ -23,19 +23,25 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from ctypes import cdll,c_char,c_int,c_long,c_double,POINTER
 
-# Read path configuration
+#------------------------------------------------------------------------------#      
+# Read path configuration                                                      #
+#---------------------------------------------------------------------------   #      
 path_file = open('./pysoqcs.conf',"r")
 path=path_file.readline()
 path=path.rstrip(path[-1]) # This just removes the eol \n
 path_file.close()
 
-# Open SOQCS C++ interface
+#------------------------------------------------------------------------------#      
+# Open SOQCS C++ interface                                                     #
+#------------------------------------------------------------------------------#      
 soqcs = cdll.LoadLibrary(path)
 
 
-# Memory management auxiliary methods.
-# Free the memory of an object created in C++
-# No valid for classes
+#------------------------------------------------------------------------------#     
+# Memory management auxiliary methods.                                         #
+# Free the memory of an object created in C++                                  #
+# Not valid for classes                                                        #
+#------------------------------------------------------------------------------#      
 def free_ptr(array):
     """
 
@@ -47,7 +53,9 @@ def free_ptr(array):
     array.restype=POINTER(c_char)
     soqcs.free_ptr(array)
 
-# Converter MTX->int*
+#------------------------------------------------------------------------------#      
+# Converter MTX->int*                                                          #
+#------------------------------------------------------------------------------#      
 def to_int_ptr(mtx):
     """
 
@@ -68,8 +76,10 @@ def to_int_ptr(mtx):
 
     return send,n,m
 
-# Wrapper for C++ SOQCS configuration method
-# Configuration of the maximum number of photons of the simulation
+#------------------------------------------------------------------------------#
+# Wrapper for C++ SOQCS configuration method                                   #
+# Configuration of the maximum number of photons of the simulation             #
+#------------------------------------------------------------------------------#     
 def cfg_soqcs(nph):
     """
 
@@ -81,8 +91,10 @@ def cfg_soqcs(nph):
     soqcs.all_cfg_soqcs(nph);   
 
     
-# Wrapper for C++ SOQCS class qocircit
-# Definition of a quantum optical circuit
+#------------------------------------------------------------------------------#      
+# Wrapper for C++ SOQCS class qocircit                                         #
+# Definition of a quantum optical circuit                                      #
+#------------------------------------------------------------------------------#     
 class qocircuit(object):
     """
 
@@ -91,11 +103,14 @@ class qocircuit(object):
     :nch (int): Number of channels
     :nm (optional[int]): Number of modes
     :ns (optional[int]): Number of packets
+    :np (optional[int]): Number of periods
+    :dtp (optional[double]): Length of the periods
     :clock (optional[int]):  Detector behavior configuration: |br|
-                            0: No clock. The detectors behave as counters. |br|
-                            1: Clock. The detectors are able distinguish arrival times but they are blind to frequency. |br|
+                            0: Counter. The detectors behave as counters. |br|
+                            1: Time. The detectors are able distinguish arrival times but they are blind to frequency. (This mode may change packet numeration).|br|
                             2: Full.  The detectors are able to distinguish arrival times and frequency of the outgoing photons. |br|
                             3: Manual mode.  Like 1. But the user is fully responsible of the packet definitions in order to obtain the correct calculations. |br|
+                            4: Period.  Detectors can only distinguish the period in which photons arrive. |br|
     :R (optional[int]): Number of iterations in the calculation of detector dead time and dark counts effects.
     :loss (optional[bool]): Explicit computation of losses.
     :ckind (optional[char]): Packet shape: |br|
@@ -105,8 +120,10 @@ class qocircuit(object):
     
     """
 
+    #---------------------------------------------------------------------------      
     # Create circuit
-    def __init__(self, nch, nm=1, ns=1, clock=0, R=0, loss=False, ckind='G', dummy=False):
+    #---------------------------------------------------------------------------     
+    def __init__(self, nch, nm=1, ns=1, np=1, dtp=-1.0, clock=0, R=0, loss=False, ckind='G', dummy=False):
         if(ckind=='G'): 
             ikind=0
         else:
@@ -115,13 +132,17 @@ class qocircuit(object):
         func=soqcs.qoc_new_qocircuit
         func.restype=c_long    
         if(dummy==False):
-            self.obj = func(nch,nm,ns,clock,R,loss,ikind)
-        
+            self.obj = func(nch,nm,ns,np,c_double(dtp),clock,R,loss,ikind)
+
+    #---------------------------------------------------------------------------              
     # Delete circuit        
+    #---------------------------------------------------------------------------      
     def __del__(self):       
         soqcs.qoc_destroy_qocircuit(c_long(self.obj))
-        
+
+    #---------------------------------------------------------------------------              
     # Return nunmber of levels          
+    #---------------------------------------------------------------------------      
     def num_levels(self):
         """
 
@@ -130,8 +151,10 @@ class qocircuit(object):
         :return(int): Number of levels of the circuit.
         """
         return soqcs.qoc_num_levels(c_long(self.obj))
-    
+
+    #---------------------------------------------------------------------------          
     # Adds to the circuit a random circuit
+    #---------------------------------------------------------------------------      
     def random_circuit(self):
         """
         
@@ -141,7 +164,9 @@ class qocircuit(object):
         """
         soqcs.qoc_random_circuit(c_long(self.obj))
 
+    #---------------------------------------------------------------------------      
     # Adds to the circuit a NSX subcircuit
+    #---------------------------------------------------------------------------      
     def NSX(self, ch1, ch2, ch3):
         """
             
@@ -155,7 +180,9 @@ class qocircuit(object):
         """
         soqcs.qoc_NSX(c_long(self.obj),ch1,ch2,ch3)
 
+    #---------------------------------------------------------------------------      
     # Adds to the circuit an ideal beamsplitter
+    #---------------------------------------------------------------------------      
     def beamsplitter(self, ch1, ch2, theta, phi):
         """
             
@@ -167,7 +194,9 @@ class qocircuit(object):
         """
         soqcs.qoc_beamsplitter(c_long(self.obj),ch1,ch2,c_double(theta),c_double(phi))
 
+    #---------------------------------------------------------------------------      
     # Adds to the circuit a dielectric beamsplitter
+    #---------------------------------------------------------------------------      
     def dielectric(self, ch1, ch2, t, r):
         """
             
@@ -180,7 +209,9 @@ class qocircuit(object):
         """
         soqcs.qoc_dielectric(c_long(self.obj),ch1,ch2,c_double(t.real),c_double(t.imag),c_double(r.real),c_double(r.imag))
 
+    #---------------------------------------------------------------------------      
     # Adds to the circuit a MMI 2x2 beamsplitter
+    #---------------------------------------------------------------------------      
     def MMI2(self, ch1, ch2):
         """
             
@@ -192,7 +223,9 @@ class qocircuit(object):
         """
         soqcs.qoc_MMI2(c_long(self.obj),ch1,ch2)
 
+    #---------------------------------------------------------------------------      
     # Adds to the circuit a rewire gate
+    #---------------------------------------------------------------------------      
     def rewire(self, ch1, ch2):
         """
             
@@ -203,8 +236,10 @@ class qocircuit(object):
         
         """
         soqcs.qoc_rewire(c_long(self.obj),ch1,ch2)
-    
+
+    #---------------------------------------------------------------------------          
     # Adds to the circuit a general homogeneous medium
+    #---------------------------------------------------------------------------      
     def general_medium(self, ch, t):
         """
             
@@ -216,7 +251,9 @@ class qocircuit(object):
         """
         soqcs.qoc_phase_shifter(c_long(self.obj),ch,c_double(t.real),c_double(t.imag))
         
+    #---------------------------------------------------------------------------              
     # Adds to the circuit a phase shifter
+    #---------------------------------------------------------------------------      
     def phase_shifter(self, ch, phi):
         """
             
@@ -229,8 +266,10 @@ class qocircuit(object):
         phir=math.pi*phi/180
         t=cmath.exp(1j*phir)
         self.general_medium(ch,t)
-    
+
+    #---------------------------------------------------------------------------          
     # Adds to the circuit a lossy medium
+    #---------------------------------------------------------------------------      
     def loss(self, ch, l):
         """
             
@@ -242,7 +281,9 @@ class qocircuit(object):
         """
         self.general_medium(ch, math.sqrt(1.0-l))
 
+    #---------------------------------------------------------------------------      
     # Adds to the circuit a rotator
+    #---------------------------------------------------------------------------      
     def rotator(self, ch, theta, phi):
         """
         
@@ -255,8 +296,10 @@ class qocircuit(object):
         """
         soqcs.qoc_rotator(c_long(self.obj),ch,c_double(theta),c_double(phi))
 
+    #---------------------------------------------------------------------------      
     # Adds to the circuit a polarized beamsplitter
-    def polbeamsplitter(self, ch1, ch2, P):
+    #---------------------------------------------------------------------------      
+    def pol_beamsplitter(self, ch1, ch2, P):
         """
             
         Adds a polarized beamsplitter attached to channels ch1 and ch2.
@@ -266,9 +309,26 @@ class qocircuit(object):
         :P   (int): Polarization to which the beamsplitter is sensitive.
         
         """
-        soqcs.qoc_polbeamsplitter(c_long(self.obj),ch1, ch2, P)
+        soqcs.qoc_pol_beamsplitter(c_long(self.obj),ch1, ch2, P)
 
+    #---------------------------------------------------------------------------      
+    # Adds to the circuit a polarized phase shifter
+    #---------------------------------------------------------------------------      
+    def pol_phase_shifter(self, ch, P, phi):
+        """
+            
+        Adds a polarized phase shifter attached to channel ch.
+        
+        :ch  (int): Beamsplitter input channel.
+        :P   (int): Polarization to which the phase shifter is sensitive.
+        :phi (double):  Phase in degrees.
+        
+        """
+        soqcs.qoc_pol_phase_shifter(c_long(self.obj),ch, P,c_double(phi))
+
+    #---------------------------------------------------------------------------      
     # Adds to the circuit a waveplate
+    #---------------------------------------------------------------------------      
     def waveplate(self, ch, alpha, gamma):
         """
             
@@ -281,7 +341,9 @@ class qocircuit(object):
         """
         soqcs.qoc_waveplate(c_long(self.obj),ch, c_double(alpha), c_double(gamma))
 
+    #---------------------------------------------------------------------------      
     # Adds to the circuit a half waveplate
+    #---------------------------------------------------------------------------      
     def half(self, ch, alpha):  
         """
             
@@ -293,7 +355,9 @@ class qocircuit(object):
         """
         self.waveplate(ch, alpha, 90.0)
 
+    #---------------------------------------------------------------------------      
     # Adds to the circuit a quarter waveplate
+    #---------------------------------------------------------------------------      
     def quarter(self, ch, alpha):   
         """
             
@@ -304,8 +368,10 @@ class qocircuit(object):
         
         """
         self.waveplate(ch, alpha, 45.0)
-  
-     # Adds to the circuit a detector
+
+    #---------------------------------------------------------------------------      
+    # Adds to the circuit a detector
+    #---------------------------------------------------------------------------      
     def detector(self, ch, cond=-1, eff=1.0, blnk=0.0, gamma=0.0):
         """
             
@@ -323,7 +389,9 @@ class qocircuit(object):
         """
         soqcs.qoc_detector(c_long(self.obj),ch,cond,c_double(eff),c_double(blnk),c_double(gamma))
 
-     # Ignore detections on a channel
+    #---------------------------------------------------------------------------      
+    # Ignore detections on a channel
+    #---------------------------------------------------------------------------      
     def ignore(self, ch):
         """
             
@@ -333,8 +401,10 @@ class qocircuit(object):
         
         """
         soqcs.qoc_detector(c_long(self.obj),ch,-2,c_double(1.0),c_double(0.0),c_double(0.0))
-        
+
+    #---------------------------------------------------------------------------              
     # Adds to the output a random Gaussian whote noise of stdev^2 dispersion
+    #---------------------------------------------------------------------------      
     def noise(self, stdev2):
         """
             
@@ -344,96 +414,48 @@ class qocircuit(object):
         
         """
         soqcs.qoc_noise(c_long(self.obj),c_double(stdev2))
-        
+
+    #---------------------------------------------------------------------------              
     # Adds to the circuit a packet definition
-    def def_packet(self, n,t,f,w, tp=-1.0, val1=0.0, val2=0.0, rand=0):
+    #---------------------------------------------------------------------------      
+    def def_packet(self, n,t,f,w): 
         """
             
         Adds to the circuit a new definition of a wave packet. |br|
-        Warning!  Note that when the detectors are not configured as counters the packet numeration may change on emission.
+        **Warning!**  Note that when the detectors are not configured as counters the packet numeration may change on emission.
 
         
         :n(int):   Suggested wavepacket number.
         :t(float): Wavepacket characteristic emission time.
         :f(float): Wavepacket characteristic frequency.
-        :w(float): Width or decay length depending if the packet shape model is Gaussian or Exponential.
-        :tp(optional[float]): Initial phase in time units. If tp=t then the initial phase is zero at the central time(Gaussian)/front(exponential) of the packet.
-        :val1(optional[float]): Value 1, depends on the rand configuration
-        :val2(optional[float]): Value 2, depends on the rand configuration
-        :rand(optional[int]): Phase computation. |br|
-        
-        - 0 = Physical manual. |br|
-        
-        The packet is configured with the given parameters. |br|
-        val1=irrelevant. |br|
-        val2=irrelevant. |br|
-        |br|
-        
-        - 1 = Cascade fully automatic. |br|
-        
-        An extra random (exponentially distributed) emission time is calculated to automatically compute for the probabilistic delay between an exciton X
-        and a bi-exciton XX in a XX-X-G cascade of a QD.|br|
-        val1=Characteristic time txx of the previous photon in the cascade used to calculate a random additional emission time. |br|
-        val2=irrelevant. |br|
-        The random generated value is returned in the dt1 and dt2 fields of the cfg_rnd structure.|br|
-        |br|
-        
-        - 2 = Cascade automatic. |br|
-        
-        Extra random emission and phase times are calculated separately to automatically compute for the probabilistic delay between an exciton X
-        and a bi-exciton XX in a XX-X-G cascade of a QD. In this case the phase time is calculated with an exponential distribution
-        that depends on T*. |br|
-        val1= Characteristic time txx of the previous photon in the cascade used to calculate a random additional emission time.  |br|
-        val2= T* pure dephasing characteristic time used to calculate an extra random phase. |br|
-        The extra randomly generated times for delay dt1 and phase dt2 are returned in the cfg_rnd structure. |br|
-        |br|
-        
-        - 3 = Cascade manual. |br|
-        
-        Same as 2 but in this case we take those extra random times from val1 and val2 assuming they are properly generated externally. |br|
-        val1=Extra emission time. |br|
-        val2=Extra emission phase time. |br|
-        In this case val1 and val2 are returned in the cfg_rnd structure as dt1 and dt2 fields respectively. |br|
-        |br|
-        
-        - 4 = Cascade semi-manual. |br|
-        
-        Same as 2 but only for the phase time. This is useful when we want to maintain fixed a particular overlapping between two photons. |br|
-        val1= Irrelevant. |br|
-        val2=T* pure dephasing characteristic time used to calculate an extra random phase. |br|
-        In this case val1=0 and val2 are returned in the cfg_rnd structure as dt1 and dt2 respectively. |br|
-        Note that both tx and T* are needed to calculate the phase time. |br|
-        
+        :w(float): Width or decay length depending if the packet shape model is Gaussian or Exponential.                
         
         """
-        if tp<0:
-            tp=t
         func=soqcs.qoc_def_packet
-        func.restype=POINTER(c_int)
-        array_ptr=c_int*2
-        array_ptr=func(c_long(self.obj),n,c_double(t),c_double(f),c_double(w),c_double(tp),c_double(val1),c_double(val2), rand)
-        dt1=array_ptr[0]
-        dt2=array_ptr[1]
-        free_ptr(array_ptr)
-        return dt1, dt2
+        func.restype=c_int
+        return func(c_long(self.obj),n,c_double(t),c_double(f),c_double(w))
       
 
+    #---------------------------------------------------------------------------      
     # Calculates the emitted packet visibility
+    #---------------------------------------------------------------------------      
     def emitted_vis(self, i,j):
         """
         
-        Overlapping probability between two wave packets.
+        Overlap probability between two wave packets.
         
         :i (int):  Packet i. 
         :j (int):  Packet j. 
-        :return(float): Probability of overlapping.
+        :return(float): Probability of overlap.
         
         """
         func=soqcs.qoc_emitted_vis
         func.restype=c_double
         return func(c_long(self.obj),i,j)                
 
+    #---------------------------------------------------------------------------      
     # Adds to the circuit an emitter
+    #---------------------------------------------------------------------------      
     def emitter(self):
         """
         
@@ -442,20 +464,23 @@ class qocircuit(object):
         
         """
         soqcs.qoc_emitter(c_long(self.obj))     
-    
+
+    #---------------------------------------------------------------------------          
     #  Adds to the circuit a delay
-    def delay(self, ch, dt):
+    #---------------------------------------------------------------------------      
+    def delay(self, ch):
         """
         
-        Increases the optical path of a channel by a quantity dt.
+        Increases the optical path of a channel by a quantity equal to a period.
         
         :ch (int):  Channel where the delay is introduced.
-        :dt (double):  Delay time introduced in the channel (because of a larger path length for example).
                 
         """
-        soqcs.qoc_delay(c_long(self.obj),ch,c_double(dt))     
+        soqcs.qoc_delay(c_long(self.obj),ch)     
 
+    #---------------------------------------------------------------------------      
     # Print circuit
+    #---------------------------------------------------------------------------      
     def prnt(self, fmt=0):  
         """
         
@@ -470,8 +495,10 @@ class qocircuit(object):
         sys.stdout.flush()
         
 
-# Wrapper for C++ SOQCS class state
-# Definition of a quantum photonic state
+#------------------------------------------------------------------------------#      
+# Wrapper for C++ SOQCS class state                                            #
+# Definition of a quantum photonic state                                       #
+#------------------------------------------------------------------------------#      
 class state(object):
     """
 
@@ -481,26 +508,88 @@ class state(object):
     :maxket(optional(int)): Maximum number of different terms in the summation. (Internal memory).
     :dummy(automatic(bool)): If True it creates a dummy empty class. (Option used internally by the library).
     
-    """    
+    """   
+    #---------------------------------------------------------------------------      
     # Create a state
+    #---------------------------------------------------------------------------      
     def __init__(self, level,maxket=50,dummy=False):
         func=soqcs.st_new_state
         func.restype=c_long
         if(dummy==False):
             self.obj = func(level,maxket)
-        
+
+    #---------------------------------------------------------------------------              
     # Delete a state
+    #---------------------------------------------------------------------------      
     def __del__(self):
         soqcs.st_destroy_state(c_long(self.obj))
 
-    # Add a new term (ket + amplitude) to a state
+    #---------------------------------------------------------------------------      
+    # Calculate braket coefficient between two states
+    #---------------------------------------------------------------------------      
+    def braket(self,state):   
+        """
+
+        Performs the bra-ket operation <bra|state> using the complex conjugate of this state as bra.
+        
+        :state(state): State in the right hand side of the braket operation.         
+        :return (complex): The complex number result of the projection.
+            
+        """  
+        func=soqcs.st_braket
+        func.restype=POINTER(c_double)
+        array_ptr=2*c_double
+        array_ptr=func(c_long(self.obj),c_long(state.obj))
+        value=complex(c_double(array_ptr[0]).value,c_double(array_ptr[1]).value)        
+        free_ptr(array_ptr)
+        return value
+
+    #---------------------------------------------------------------------------      
+    # Normalizes a state
+    #---------------------------------------------------------------------------      
+    def normalize(self):
+        """
+
+        Normalizes the state.         
+        
+        """  
+        soqcs.st_normalize(c_long(self.obj))
+
+    #---------------------------------------------------------------------------      
+    # Rephase
+    #---------------------------------------------------------------------------      
+    def rephase(self,mtx,qoc):
+        """
+
+        Changes the global phase of the state to make real the coefficient of the reference ket defined by mtx.
+         
+        :mtx(list[][]):  Matrix that defines the ket which coefficient is used as reference. Each column defines the configuration of one level. |br|
+                         There are four different ways to create these configurations depending on the number of rows
+                         of the term matrix: |br|
+                         |br|
+                         4-Row: Channels, polarization, wavepacket and occupation in this order. |br|
+                         3-Row: Channels, polarization and occupation in this order. Wavepackets are assumed to be the same in all cases. |br|
+                         2-Row: Channels and occupation in this order. Polarization and wavepackets are assumed to be the same in all cases. |br|
+                         1-Row: Occupation. In this case the user must provide just a list of occupations for each channel in level ordering. |br|
+                         |br|
+                         Except in the 1-Row case the order is irrelevant. Furthermore, levels not configured are assumed to be initialized by zero.
+                 
+        :qoc(qocircuit): Circuit to which the term is related.
+        
+        """  
+        param=to_int_ptr(mtx)
+        soqcs.st_rephase(c_long(self.obj), param[0],param[1],param[2],c_long(qoc.obj)) 
+
+    #---------------------------------------------------------------------------              
+    # Adds a new term (ket + amplitude) to a state using a state description
+    #---------------------------------------------------------------------------      
     def add_term(self, ampl, mtx,qoc):
         """
 
-        Adds a new term to the state.
+        Adds a new term to the state using a definition of the term.
          
         :ampl(complex):  Amplitude of the new term.
-        :mtx(list[][]):  Matrix that defines the new tern. Each column defines the configuration of one level. |br|
+        :mtx(list[][]):  Matrix that defines the new term. Each column defines the configuration of one level. |br|
                          There are four different ways to create these configurations depending on the number of rows
                          of the term matrix: |br|
                          |br|
@@ -517,7 +606,29 @@ class state(object):
         param=to_int_ptr(mtx)
         soqcs.st_add_term(c_long(self.obj),c_double(ampl.real), c_double(ampl.imag), param[0],param[1],param[2],c_long(qoc.obj)) 
 
+    #---------------------------------------------------------------------------      
+    #  Adds a new term (ket + amplitude) to a state directly from level definition
+    #---------------------------------------------------------------------------      
+    def add_ket(self, ampl, vec):   
+        """
+
+        Adds a new term to the state using a vector with the level occupation.
+         
+        :ampl(complex):  Amplitude of the new term.
+        :vel(list[int]): List with the occupation of each level in the new term.
+        :qoc(qocircuit): Circuit to which the term is related.
+        
+        """  
+        length=len(vec)
+        send=(c_int*length)()
+        for i in range(0,length):
+            send[i]=vec[i]
+            
+        soqcs.st_add_raw_term(c_long(self.obj),c_double(ampl.real), c_double(ampl.imag), send) 
+
+    #---------------------------------------------------------------------------      
     # Post-selection by a projector
+    #---------------------------------------------------------------------------      
     def post_selection(self, prj):   
         """
 
@@ -533,8 +644,89 @@ class state(object):
         newstate.obj=obj
         return newstate
 
+    #---------------------------------------------------------------------------      
+    # Encode a state into qubit encoding.
+    # Those kets that can not be encoded are ignored and the result is normalized
+    # WARNING: It is responsability of the library user to make sure that not 
+    # repetitions arise after encoding.
+    #---------------------------------------------------------------------------      
+    def encode(self, qmap,  qoc):
+        """
+        Encode a state into a qubit encoding. Those kets that can not be encoded are dismissed and the result is normalized. |br|
+        **Only for ideal circuits (nm=1 and nd=1)**. |br|        
+        **Warning!** post-selection over ignored channels may not result in a pure state. 
+        Encoding is not possible under those circunstances and  a warning will be printed.
 
+
+        :qmap(list[][]): 2xn matrix with the qubit definitions. Each column has two entries
+                         specifying the channels that define the qubit.
+        :qoc(qocircuit): Circuit which the state is related.
+        :return output(state): An encoded state.
+        
+        """  
+        param=to_int_ptr(qmap)
+        func=soqcs.st_encode
+        func.restype=c_long   
+        obj=func(c_long(self.obj),param[0],param[2],c_long(qoc.obj))  
+        aux=state(1,True)
+        aux.obj=obj
+        return aux 
+
+   #---------------------------------------------------------------------------      
+   # Decode a state from a qubit encoding into photon modes.
+   #--------------------------------------------------------------------------- 
+    def decode(self, qmap, anzilla, qoc):
+        """
+        Decode a state from a qubit encoding into photon encoding. |br|
+        **Only for ideal circuits (nm=1 and nd=1)**. |br|        
+        Note that we need to define the values of the extra anzilla channels that are not included into the qubit encoding
+        but they are needed to the circuit to work in the intended way
+
+
+        :qmap(list[][]): 2xn matrix with the qubit definitions. Each column has two entries
+                         specifying the channels that define the qubit.
+        :anzilla(list[]): List with the values of the anzilla channels (from smaller to large channel number).
+        :qoc(qocircuit): Circuit which the state is related.
+        :return output(state): A decoded state.
+        
+        """  
+        
+        nq=len(qmap[0])
+        nanz=len(anzilla)
+        nch=2*nq+nanz   
+
+      
+        # Compute anzillas
+        aux=[1]*nch
+        for i in range(0,nq):
+            aux[qmap[0][i]]=0
+            aux[qmap[1][i]]=0
+            
+        k=0
+        occ=[]
+        for i in range(0,nch):
+            if aux[i]==0:
+                occ.append(0)
+            if aux[i]==1:
+                occ.append(anzilla[k])
+                k=k+1
+                
+        anzstate= state(nch,maxket=1)
+        occxt=[occ]
+        anzstate.add_term(1.0, occxt,qoc)
+        
+        
+        param=to_int_ptr(qmap)
+        func=soqcs.st_decode
+        func.restype=c_long   
+        obj=func(c_long(self.obj),param[0],param[2],c_long(anzstate.obj),c_long(qoc.obj))  
+        aux=state(1,True)
+        aux.obj=obj
+        return aux 
+    
+    #---------------------------------------------------------------------------      
     # Print state
+    #---------------------------------------------------------------------------      
     def prnt_state(self,format=3,column=0,loss=False,qoc=None):
         """
             Prints a state in one of the specified the formats. If loss=True loss channels are printed in blue.
@@ -553,9 +745,11 @@ class state(object):
         soqcs.st_prnt_state(c_long(self.obj), format, column, loss, c_long(aux))
         sys.stdout.flush()
                                     
-            
+
+#---------------------------------------------------------------------------                  
 # Wrapper for C++ SOQCS class projector
 # Definition of a projector to perform post-selection
+#---------------------------------------------------------------------------      
 class projector(object):
     """
 
@@ -565,17 +759,23 @@ class projector(object):
     :maxket(optional(int)): Maximum number of terms to define the projector. (Internal memory)
     
     """  
-    # Create a proejctor
+    #---------------------------------------------------------------------------      
+    # Create a projector
+    #---------------------------------------------------------------------------      
     def __init__(self,nlevel,maxket):
         func=soqcs.prj_new_projector
         func.restype=c_long    
         self.obj = func(nlevel,maxket)
-    
+
+    #---------------------------------------------------------------------------          
     # Delete a projector
+    #---------------------------------------------------------------------------      
     def __del__(self):
         soqcs.prj_destroy_projector(c_long(self.obj))
-          
+
+    #---------------------------------------------------------------------------                
     # Add a new term (ket + amplitude) to a projector    
+    #---------------------------------------------------------------------------      
     def add_term(self, ampl, mtx,qoc):
         """
 
@@ -600,8 +800,10 @@ class projector(object):
         soqcs.prj_add_term(c_long(self.obj),c_double(ampl.real), c_double(ampl.imag), param[0],param[1],param[2],c_long(qoc.obj)) 
 
 
-# Wrapper for C++ SOQCS class p_bin
-# Definition of a set of probability bins
+#------------------------------------------------------------------------------#
+# Wrapper for C++ SOQCS class p_bin                                            #
+# Definition of a set of probability bins                                      #
+#------------------------------------------------------------------------------#      
 class p_bin(object):
     """
 
@@ -611,18 +813,24 @@ class p_bin(object):
     :dummy(automatic(bool)): If True it creates a dummy empty class. (Option used internally by the library).
     
     """  
+    #---------------------------------------------------------------------------      
     # Create a p_bin
+    #---------------------------------------------------------------------------      
     def __init__(self, level,maxket=50,dummy=False):
         func=soqcs.pb_new_pbin
         func.restype=c_long
         if(dummy==False):
             self.obj = func(level,maxket)
-                
+
+    #---------------------------------------------------------------------------                      
     # Delete a p_bin
+    #---------------------------------------------------------------------------      
     def __del__(self):
         soqcs.pb_destroy_pbin(c_long(self.obj))
-          
+
+    #---------------------------------------------------------------------------                
     # Add the statistics of a state to a pbin
+    #---------------------------------------------------------------------------      
     def add_state(self, state):
         """
 
@@ -632,19 +840,27 @@ class p_bin(object):
         
         """
         soqcs.pb_add_state(c_long(self.obj),c_long(state.obj)) 
-        
+
+    #---------------------------------------------------------------------------      
+    # Total probability of a set of bins. Maybe inferior to one because of the
+    # post-selection
+    #---------------------------------------------------------------------------              
     def trace(self):
         """
         
         Obtains the total probability of the set of bins. It may be inferior to one due post-selection or encoding procedures.
+        
+        :return(double): Normalization value of the set of probability bins.
     
         """
         func=soqcs.pb_trace
         func.restype=c_double
         return func(c_long(self.obj))
-        
+
+    #---------------------------------------------------------------------------              
     # Normalize the p_pin. All the probabilities sum to one. 
     # This may not be true if post-selection has been applied.
+    #---------------------------------------------------------------------------      s
     def normalize(self):
         """
         
@@ -653,7 +869,9 @@ class p_bin(object):
         """
         soqcs.pb_normalize(c_long(self.obj)) 
 
+    #---------------------------------------------------------------------------      
     # Calculate the measurement
+    #---------------------------------------------------------------------------      
     def calc_measure(self, qoc):
         """
         
@@ -670,8 +888,10 @@ class p_bin(object):
         aux=p_bin(1,True)
         aux.obj=obj
         return aux
-    
+
+    #---------------------------------------------------------------------------          
     # Return the number of bins
+    #---------------------------------------------------------------------------      
     def nbins(self):
         """
            Returns the number of bins stored.        
@@ -679,8 +899,10 @@ class p_bin(object):
             :return (int): Number of bins.
         """
         return soqcs.pb_nbins(c_long(self.obj))
-    
+
+    #---------------------------------------------------------------------------          
     # Return nunmber of levels          
+    #---------------------------------------------------------------------------      
     def num_levels(self):
         """
            Returns the number of levels that define each bin.
@@ -689,7 +911,9 @@ class p_bin(object):
         """
         return soqcs.pb_num_levels(c_long(self.obj))
 
+    #---------------------------------------------------------------------------      
     # Return tag of the bin ("bin name")
+    #---------------------------------------------------------------------------      
     def tag(self, index):
         """
         
@@ -710,7 +934,9 @@ class p_bin(object):
         free_ptr(array_ptr)
         return "".join(array)
 
+    #---------------------------------------------------------------------------      
     # Return probability of a bin
+    #---------------------------------------------------------------------------      
     def prob_idx(self, index):
         """
         
@@ -723,8 +949,10 @@ class p_bin(object):
         func=soqcs.pb_prob
         func.restype=c_double
         return func(c_long(self.obj),index)
-    
+
+    #---------------------------------------------------------------------------          
     # Return probability of a bin from its definition (using a circuit)
+    #---------------------------------------------------------------------------      
     def prob_qoc(self, mtx,qoc):
         """
         Returns the probability of the outcome stored in the bin described by the provided definition (Circuit version). |br|
@@ -745,7 +973,10 @@ class p_bin(object):
         param=to_int_ptr(mtx)
         return func(c_long(self.obj), param[0],param[1],param[2],c_long(qoc.obj))    
 
-    # Return probability of a bin from its definition (using a generalized metacircuit)
+    #---------------------------------------------------------------------------      
+    # Return probability of a bin from its definition 
+    # (using a generalized metacircuit)
+    #---------------------------------------------------------------------------      
     def prob(self, mtx,dev):
         """
         Returns the probability of the outcome stored in the bin described by the provided definition (Device version). |br|
@@ -765,8 +996,36 @@ class p_bin(object):
         func.restype=c_double
         param=to_int_ptr(mtx)
         return func(c_long(self.obj), param[0],param[1],param[2],c_long(dev.circ.obj))   
+
+    #---------------------------------------------------------------------------      
+    # Translate the labels of a probability bins into qubit encoding.
+    # Those that can not be encoded are ignored and the result is normalized.
+    #---------------------------------------------------------------------------
+    def translate(self, qmap,   dev):
+        """
+        Translates the labels of a set of probability bins into a qubit encoding. 
+        Those that can not be encoded are ignored and the result is normalized. |br|
+        **Only for ideal circuits (nm=1 and nd=1)**. |br|        
+        **Warning!** post-selection over ignored channels may not result in a pure state. 
+        Encoding is not possible under those circunstances and  a warning will be printed.
+
+        :qmap(list[][]): 2xn matrix with the qubit definitions. Each column has two entries
+                         specifying the channels that define the qubit.
+        :dev(qodev): Device to which the set of probability bins is related.
+        :return out(p_bin): A translated set of probability bins.
+        
+        """          
+        param=to_int_ptr(qmap)
+        func=soqcs.pb_translate
+        func.restype=c_long   
+        obj=func(c_long(self.obj),param[0],param[2],c_long(dev.circ.obj))  
+        aux=p_bin(1,True)
+        aux.obj=obj
+        return aux
     
+    #---------------------------------------------------------------------------          
     # Print a set of probability bins (using a circuit)
+    #---------------------------------------------------------------------------      
     def prnt_bins_qoc(self,format=0,thresh=0.0,loss=False,qoc=None):
         """
             Prints a set of probability bins (Circuit version).
@@ -785,7 +1044,9 @@ class p_bin(object):
         soqcs.pb_prnt_bins_qoc(c_long(self.obj), format, c_double(thresh), loss, c_long(aux))
         sys.stdout.flush()            
 
+    #---------------------------------------------------------------------------      
     # Print a set of probability bins (using a generalized metacircuit)
+    #---------------------------------------------------------------------------      
     def prnt_bins(self,format=0,thresh=0.0,loss=False,dev=None):
         """
             Prints a set of probability bins (Device version).
@@ -804,12 +1065,20 @@ class p_bin(object):
         soqcs.pb_prnt_bins(c_long(self.obj), format, c_double(thresh), loss, c_long(aux))            
         sys.stdout.flush()
 
+    #---------------------------------------------------------------------------      
     # Plots a set of probability bins graphically
-    def show(self):
+    #---------------------------------------------------------------------------      
+    def show(self, sizex=8, sizey=5, dpi=100, angle=70, font=14):
         """
         
-        Plots the outcomes in a bar diagram.
+            Plots the outcomes in a bar diagram.
         
+            :sizex(optional[float]): Size of the plot in the x direction in inches.
+            :sizey(optional[float]): Size of the plot in the y direction in inches.
+            :dpi(optional[float]): Density of points  by inch.
+            :angle(optional[float]): Angle of the horizontal axis labels.
+            :font(optional[fint]): Size of the font of the horizontal axis labels.
+            
         """  
         nbins=self.nbins()
         taglist=list()
@@ -824,21 +1093,28 @@ class p_bin(object):
         staglist, sproblist = [ list(tuple) for tuple in  tuples]
         
         fig, ax = plt.subplots(1, 1)
+        fig.set_size_inches(sizex,sizey)
+        fig.set_dpi(dpi)
+        plt.xticks(rotation = angle)
+        
         y_pos = np.arange(len(staglist))
         pbar=ax.bar(y_pos, sproblist, align='center', alpha=0.5)
         ax.bar_label(pbar,fmt='%.3f')
+        ax.tick_params(axis='x', which='major', labelsize=font)
         ax.set_axisbelow(True)
         plt.grid(visible=True, which='major', axis='y', color='0.8', linestyle='--', linewidth=2)
         plt.xticks(y_pos, staglist)
-        plt.ylabel('Frequency')
+        plt.ylabel('Frequency',fontsize=font)
         plt.title('Output')
        
         plt.draw()
         plt.show()
            
-    
-# Wrapper for C++ SOQCS class dmatrix
-# Definition of a density matrix
+
+#------------------------------------------------------------------------------#          
+# Wrapper for C++ SOQCS class dmatrix                                          #
+# Definition of a density matrix                                               #
+#------------------------------------------------------------------------------#     
 class dmatrix(object):
     """
 
@@ -848,18 +1124,24 @@ class dmatrix(object):
     :dummy(automatic(bool)): If True it creates a dummy empty class. (Option used internally by the library).
     
     """ 
+    #---------------------------------------------------------------------------          
     # Create a density matrix
+    #---------------------------------------------------------------------------      
     def __init__(self, mem=1000,dummy=False):
         func=soqcs.dm_new_dmat
         func.restype=c_long
         if(dummy==False):
             self.obj = func(mem) ## Problem here
-        
+
+    #---------------------------------------------------------------------------              
     # Delete a density amtriz
+    #---------------------------------------------------------------------------      
     def __del__(self):
         soqcs.dm_destroy_dmat(c_long(self.obj))
 
+    #---------------------------------------------------------------------------      
     # Return trace
+    #---------------------------------------------------------------------------      
     def trace(self):
         """
 
@@ -872,7 +1154,9 @@ class dmatrix(object):
         func.restype=c_double
         return func(c_long(self.obj))
 
+    #---------------------------------------------------------------------------      
     # Normalize the density matrix (diagonal=1)
+    #---------------------------------------------------------------------------      
     def normalize(self):
         """
 
@@ -881,7 +1165,9 @@ class dmatrix(object):
         """ 
         soqcs.dm_normalize(c_long(self.obj))
 
+    #---------------------------------------------------------------------------      
     # Calculates the fidelity of the matrix with a referene state
+    #---------------------------------------------------------------------------      
     def fidelity(self, state):
         """
 
@@ -894,8 +1180,10 @@ class dmatrix(object):
         func=soqcs.dm_fidelity
         func.restype=c_double
         return func(c_long(self.obj),c_long(state.obj))
-          
+
+    #---------------------------------------------------------------------------                
     # Add the statistics of a state to a density matrix (using a circuit)
+    #---------------------------------------------------------------------------      
     def add_state_qoc(self, state, qoc):
         """
 
@@ -908,15 +1196,17 @@ class dmatrix(object):
         """ 
         soqcs.dm_add_state_qoc(c_long(self.obj),c_long(state.obj),c_long(qoc.obj)) 
 
+    #---------------------------------------------------------------------------      
     # Calculate the measurement (using a circuit)
+    #---------------------------------------------------------------------------      
     def calc_measure_qoc(self, qoc):
         """
 
-        Calculate measure (Circuit version). It means to trace out the frequency degrees of 
-        freedom or both the frequency and time degrees of freedom depending on the circuit 
-        configuration of the detectors.
+        Calculate measure (Circuit version). It means to remove degrees of freedom depending on the 
+        circuit configuration of the detectors.
         
         :qoc(qocircuit): Circuit to which the density matrix is related.     
+        :return(dmat): Reduced matrix.
     
         """ 
         func=soqcs.dm_calc_measure_qoc
@@ -926,7 +1216,9 @@ class dmatrix(object):
         aux.obj=obj
         return aux
 
+    #---------------------------------------------------------------------------      
     # Print state (using a circuit)
+    #---------------------------------------------------------------------------      
     def prnt_mtx_qoc(self,format=0,thresh=0.0,qoc=None):
         """
 
@@ -947,7 +1239,9 @@ class dmatrix(object):
         soqcs.dm_prnt_mtx_qoc(c_long(self.obj), format, c_double(thresh), c_long(aux))
         sys.stdout.flush()
 
+    #---------------------------------------------------------------------------      
     # Add the statistics of a state to a density matrix (using a generalized metacircuit)
+    #---------------------------------------------------------------------------      
     def add_state(self, state, dev):
         """
 
@@ -960,15 +1254,17 @@ class dmatrix(object):
         """ 
         soqcs.dm_add_state(c_long(self.obj),c_long(state.obj),c_long(dev.circ.obj)) 
 
+    #---------------------------------------------------------------------------      
     # Calculate the measurement (using a generalized metacircuit)
+    #---------------------------------------------------------------------------      
     def calc_measure(self, dev):
         """
 
-        Calculate measure (Device version). It means to trace out the frequency degrees of 
-        freedom or both the frequency and time degrees of freedom depending on the circuit 
-        configuration of the detectors.
+        Calculate measure (Device version). It means to remove degrees of freedom depending on the 
+        circuit configuration of the detectors.
         
         :dev(qodev): Device to which the density matrix is related.
+        :return(dmat): Reduced matrix.
     
         """ 
         func=soqcs.dm_calc_measure
@@ -978,7 +1274,9 @@ class dmatrix(object):
         aux.obj=obj
         return aux
 
+    #---------------------------------------------------------------------------      
     # Print state (using a generalized metacircuit)
+    #---------------------------------------------------------------------------      
     def prnt_mtx(self,format=0,thresh=0.0,dev=None):
         """
 
@@ -999,9 +1297,11 @@ class dmatrix(object):
         soqcs.dm_prnt_mtx(c_long(self.obj), format, c_double(thresh), c_long(aux))
         sys.stdout.flush()
             
-                
-# Wrapper for C++ SOQCS class qodev
-# Definition of a generalized metacircuit
+
+#------------------------------------------------------------------------------#                      
+# Wrapper for C++ SOQCS class qodev                                            #
+# Definition of a generalized device                                           #
+#------------------------------------------------------------------------------#      
 class auxqodev(object):
     """
 
@@ -1010,20 +1310,27 @@ class auxqodev(object):
     Intended for the internal use of the library.
     
     """
+    #---------------------------------------------------------------------------      
     # Create a qodev
-    def __init__(self, nph, nch, nm=1, ns=1, clock=0, R=0, loss=False, ckind='G', maxket=1):
+    #---------------------------------------------------------------------------      
+    def __init__(self, nph, nch, nm=1, ns=1, np=1, dtp=-1.0, clock=0, R=0, loss=False, ckind='G', maxket=1):
         if(ckind=='G'): 
             ikind=0
         else:
             ikind=1            
         func=soqcs.dev_new_qodev
         func.restype=c_long
-        self.obj = func(nph,nch,nm,ns,clock,R,loss,ikind,maxket)
-               
+        self.obj = func(nph,nch,nm,ns,np,c_double(dtp),clock,R,loss,ikind,maxket)
+
+    #---------------------------------------------------------------------------                     
     # Delete a qodev
+    #---------------------------------------------------------------------------      
     def __del__(self):
         soqcs.dev_destroy_qodev(c_long(self.obj))
-        
+
+    #---------------------------------------------------------------------------      
+    # Concatenates to quantum devices (with some limitations)
+    #---------------------------------------------------------------------------              
     def concatenate(self,dev):
         """
 
@@ -1037,7 +1344,9 @@ class auxqodev(object):
         """
         soqcs.dev_concatenate(c_long(self.obj),c_long(dev.obj))
 
-    # Add photons to the metacircuit
+    #---------------------------------------------------------------------------      
+    # Add photons to the device
+    #---------------------------------------------------------------------------      
     def add_photons(self, N, ch, P=0, t=0.0 ,f=1.0, w=1.0):
         """
         
@@ -1049,13 +1358,15 @@ class auxqodev(object):
         :t (optional[float]): Central time of the photons wave-packet
         :f (optional[float]): Central frequency of the photons wave-packet
         :w (optional[float]): Width (Gaussians) or decay time (Exponentials) of the photon packet.
+        :return  [int]: Packet number if success, a negative value if failure.
  
         """
-        soqcs.dev_add_photons(c_long(self.obj),N,ch,P,c_double(t),c_double(f),c_double(w)) 
+        return soqcs.dev_add_photons(c_long(self.obj),c_int(N),c_int(ch),c_int(P),c_double(t),c_double(f),c_double(w)) 
 
-
-    # Add a QD emitter to the metacircuit
-    def add_QD(self, ch1, ch2, t1=0.0, tp1=-1.0, f1=1.0, w1=1.0, t2=0.0, tp2=-1.0, f2=1.0, w2=1.0, PW=0, S=0.0, k=1.0, tss=1000000.0, thv=1000000.0, T2=0.0, rand=2):
+    #---------------------------------------------------------------------------      
+    # Add a QD emitter to the device
+    #---------------------------------------------------------------------------      
+    def add_QD(self, ch1, ch2, t1=0.0, f1=1.0, w1=1.0, t2=0.0, f2=1.0, w2=1.0, S=0.0, k=1.0, tss=1000000.0, thv=1000000.0, cascade=0):
         """
         
         Adds a bi-excition XX and excition X photons cascade with states compatible 
@@ -1064,33 +1375,24 @@ class auxqodev(object):
         :ch1 (int): Channel where the bi-exciton XX photon is emitted.
         :ch2 (int): Channel where the exciton X photon is emitted.
         :t1  (optional[float]): Central time of the XX photon wave-packet
-        :tp1 (optional[float]): Time at which the phase of the XX is zero. If tp1<0 then tp1=t1.
         :f1  (optional[float]): Central frequency of the XX photon wave-packet
         :w1  (optional[float]): Decay time of the XX photon wave-packet
         :t2  (optional[float]): Central time of the X photon wave-packet
-        :tp2 (optional[float]): Time at which the phase of the X is zero. If tp1<0 then tp2=t2.
         :f2  (optional[float]): Central frequency of the X photon wave-packet
         :w2  (optional[float]): Decay time of the X photon wave-packet
-        :PW  (optional[float]): Frequency shift between H and V polarized photons due FSS. 0=No/1=Yes.
         :S   (optional[float]): Fine Structure Splitting (FSS)
         :k   (optional[float]): Signal to noise ratio.
         :tss (optional[float]): Spin scattering time.
         :thv (optional[float]): Cross dephasing time.
-        :T2 (optional[float]):  Pure dephasing characteristic time.
-        :rand (optional[int]):  Kind of emission pattern XX-X-G: |br|
-                                0= Fully automatic emission calculation. The exciton phase time is configured equal to its randomly generated emission time. |br|
-                                1= Automatic emission and phase calculation. Same than 0 but the exciton phase time is randomly generated separately from a distribution parametrized by T2. |br|
-                                2= Semi-automatic calculation. The exciton phase time is randomly calculated using T2 like in 1 but the exciton emission time is set manually. |br|
+        :cascade (optional[int]):  The second photon is considered to be exmitted randomly after t2 to simulate a casacase 0=No/1=Yes
                                                                  
         """
-        if tp1<0:
-            tp1=t1
-            
-        if tp2<0:
-            tp2=t2
 
-        soqcs.dev_add_QD(c_long(self.obj),ch1,ch2,c_double(t1),c_double(tp1),c_double(f1),c_double(w1),c_double(t2),c_double(tp2),c_double(f2),c_double(w2),PW,c_double(S),c_double(k),c_double(tss),c_double(thv),c_double(T2),rand) 
-        
+        soqcs.dev_add_QD(c_long(self.obj),c_int(ch1),c_int(ch2),c_double(t1),c_double(f1),c_double(w1),c_double(t2),c_double(f2),c_double(w2),c_double(S),c_double(k),c_double(tss),c_double(thv),cascade) 
+
+    #---------------------------------------------------------------------------      
+    # Initializes the device with a path encoded Bell state        
+    #---------------------------------------------------------------------------      
     def add_Bell(self, ch1, ch2, ckind, phi=0.0, t1=0.0, f1=1.0, w1=1.0, t2=0.0, f2=1.0, w2=1.0):
         """
         
@@ -1124,8 +1426,11 @@ class auxqodev(object):
         if(ckind=='m'): 
             kind=3
 
-        soqcs.dev_add_Bell(c_long(self.obj),ch1,ch2,kind,c_double(phi),c_double(t1),c_double(f1),c_double(w1),c_double(t2),c_double(f2),c_double(w2))
+        soqcs.dev_add_Bell(c_long(self.obj),c_int(ch1),c_int(ch2),kind,c_double(phi),c_double(t1),c_double(f1),c_double(w1),c_double(t2),c_double(f2),c_double(w2))
 
+    #---------------------------------------------------------------------------      
+    # Initialized the device with a polarization encoded Bell state
+    #---------------------------------------------------------------------------      
     def add_BellP(self, ch1, ch2, ckind, phi=0.0, t1=0.0, f1=1.0, w1=1.0, t2=0.0, f2=1.0, w2=1.0):
         """
         
@@ -1159,9 +1464,11 @@ class auxqodev(object):
         if(ckind=='m'): 
             kind=3
 
-        soqcs.dev_add_BellP(c_long(self.obj),ch1,ch2,kind,c_double(phi),c_double(t1),c_double(f1),c_double(w1),c_double(t2),c_double(f2),c_double(w2))
+        soqcs.dev_add_BellP(c_long(self.obj),c_int(ch1),c_int(ch2),kind,c_double(phi),c_double(t1),c_double(f1),c_double(w1),c_double(t2),c_double(f2),c_double(w2))
     
-    # Return the initial state
+    #---------------------------------------------------------------------------      
+    # Returns the initial state
+    #---------------------------------------------------------------------------      
     def input(self):  
         """
         
@@ -1177,7 +1484,9 @@ class auxqodev(object):
         newstate.obj=obj;
         return newstate        
 
+    #---------------------------------------------------------------------------      
     # Return the internal circuit definition
+    #---------------------------------------------------------------------------      
     def circuit(self):  
         """
         
@@ -1193,7 +1502,9 @@ class auxqodev(object):
         qoc.obj=obj
         return qoc
 
+    #---------------------------------------------------------------------------      
     # Changes Gram-Schmidt packet order
+    #---------------------------------------------------------------------------      
     def repack(self,vec):
         """
         
@@ -1205,7 +1516,9 @@ class auxqodev(object):
         param=to_int_ptr(vec)
         soqcs.st_add_term(c_long(self.obj),param[0],param[1]) 
 
+    #---------------------------------------------------------------------------      
     # Calculates the emitted packet visibility
+    #---------------------------------------------------------------------------      
     def emitted_vis(self, i, j):
         """
         
@@ -1219,7 +1532,9 @@ class auxqodev(object):
         func.restype=c_double
         return func(c_long(self.obj), i ,j)  
 
+    #---------------------------------------------------------------------------      
     # Print packet configuration
+    #---------------------------------------------------------------------------      
     def prnt_packets(self):
         """
         
@@ -1227,10 +1542,11 @@ class auxqodev(object):
         
         
         """
-        return soqcs.dev_prnt_packets(c_long(self.obj))  
+        soqcs.dev_prnt_packets(c_long(self.obj))  
 
-
+    #---------------------------------------------------------------------------      
     # Adds to the metacircuit a random circuit
+    #---------------------------------------------------------------------------      
     def random_circuit(self):
         """
         
@@ -1240,7 +1556,9 @@ class auxqodev(object):
         """
         soqcs.dev_random_circuit(c_long(self.obj))
 
+    #---------------------------------------------------------------------------      
     # Adds to the metacircuit a NSX subcircuit
+    #---------------------------------------------------------------------------      
     def NSX(self, ch1, ch2, ch3):
         """
             
@@ -1253,9 +1571,11 @@ class auxqodev(object):
         
         
         """
-        soqcs.dev_NSX(c_long(self.obj),ch1,ch2,ch3)
+        soqcs.dev_NSX(c_long(self.obj),c_int(ch1),c_int(ch2),c_int(ch3))
 
+    #---------------------------------------------------------------------------      
     # Adds to the metacircuit an ideal beamsplitter
+    #---------------------------------------------------------------------------      
     def beamsplitter(self, ch1, ch2, theta, phi):
         """
             
@@ -1265,9 +1585,11 @@ class auxqodev(object):
         :ch2 (int): Beamsplitter input channel 2.
         
         """
-        soqcs.dev_beamsplitter(c_long(self.obj),ch1,ch2,c_double(theta),c_double(phi))
+        soqcs.dev_beamsplitter(c_long(self.obj),c_int(ch1),c_int(ch2),c_double(theta),c_double(phi))
 
+    #---------------------------------------------------------------------------      
     # Adds to the metacircuit a dielectric beamsplitter
+    #---------------------------------------------------------------------------      
     def dielectric(self, ch1, ch2, t, r):
         """
             
@@ -1278,9 +1600,11 @@ class auxqodev(object):
         :ch2 (int): Dielectric input channel 2.
         
         """
-        soqcs.dev_dielectric(c_long(self.obj),ch1,ch2,c_double(t.real),c_double(t.imag),c_double(r.real),c_double(r.imag))
+        soqcs.dev_dielectric(c_long(self.obj),c_int(ch1),c_int(ch2),c_double(t.real),c_double(t.imag),c_double(r.real),c_double(r.imag))
 
+    #---------------------------------------------------------------------------      
     # Adds to the metacircuit a MMI 2x2 beamsplitter
+    #---------------------------------------------------------------------------      
     def MMI2(self, ch1, ch2):
         """
             
@@ -1290,9 +1614,11 @@ class auxqodev(object):
         :ch2 (int): MMI2 input channel 2.
         
         """
-        soqcs.dev_MMI2(c_long(self.obj),ch1,ch2)
+        soqcs.dev_MMI2(c_long(self.obj),c_int(ch1),c_int(ch2))
 
+    #---------------------------------------------------------------------------      
     # Adds to the metacircuit a rewire gate
+    #---------------------------------------------------------------------------      
     def rewire(self, ch1, ch2):
         """
             
@@ -1302,9 +1628,11 @@ class auxqodev(object):
         :ch2 (int): Channel 2.
         
         """
-        soqcs.dev_rewire(c_long(self.obj),ch1,ch2)
-    
+        soqcs.dev_rewire(c_long(self.obj),c_int(ch1),c_int(ch2))
+
+    #---------------------------------------------------------------------------          
     # Adds to the metacircuit a phase shifter
+    #---------------------------------------------------------------------------      
     def phase_shifter(self, ch, phi):
         """
             
@@ -1314,9 +1642,11 @@ class auxqodev(object):
         :phi (float): Angle phi in degrees.
         
         """
-        soqcs.dev_phase_shifter(c_long(self.obj),ch,c_double(phi))
+        soqcs.dev_phase_shifter(c_long(self.obj),c_int(ch),c_double(phi))
 
+    #---------------------------------------------------------------------------      
     # Adds to the metacircuit a hmogeneous lossy medium
+    #---------------------------------------------------------------------------      
     def loss(self, ch, l):
         """
             
@@ -1326,21 +1656,24 @@ class auxqodev(object):
         :l  (float): Loss probability.
         
         """
-        soqcs.dev_loss(c_long(self.obj),ch,c_double(l))
+        soqcs.dev_loss(c_long(self.obj),c_int(ch),c_double(l))
 
+    #---------------------------------------------------------------------------      
     # Adds to the metacircuit a delay
-    def delay(self, ch, dt):
+    #---------------------------------------------------------------------------      
+    def delay(self, ch):
         """
         
-        Adds a delay to a channel
+        Adds a delay of one period to a channel
         
         :ch (int):  Channel where the delay is introduced.
-        :dt (double):  Delay time introduced in the channel (because of a larger path length for example).
                 
         """
-        soqcs.dev_delay(c_long(self.obj),ch,c_double(dt))
+        soqcs.dev_delay(c_long(self.obj),c_int(ch))
 
+    #---------------------------------------------------------------------------      
     # Adds to the metacircuit a rotator
+    #---------------------------------------------------------------------------      
     def rotator(self, ch, theta, phi):
         """
         
@@ -1351,10 +1684,12 @@ class auxqodev(object):
         :phi   (double):  Angle phi in degrees.
                 
         """
-        soqcs.dev_rotator(c_long(self.obj),ch,c_double(theta),c_double(phi))
+        soqcs.dev_rotator(c_long(self.obj),c_int(ch),c_double(theta),c_double(phi))
 
+    #---------------------------------------------------------------------------      
     # Adds to the metacircuit a polarized beamsplitter
-    def polbeamsplitter(self, ch1, ch2, P):
+    #---------------------------------------------------------------------------      
+    def pol_beamsplitter(self, ch1, ch2, P):
         """
             
         Adds a polarized beamsplitter attached to channels ch1 and ch2.
@@ -1364,9 +1699,26 @@ class auxqodev(object):
         :P   (int): Polarization to which the beamsplitter is sensitive.
         
         """
-        soqcs.dev_polbeamsplitter(c_long(self.obj),ch1, ch2, P)
+        soqcs.dev_pol_beamsplitter(c_long(self.obj),c_int(ch1), c_int(ch2), c_int(P))
 
+    #---------------------------------------------------------------------------      
+    # Adds to the metacircuit a polarized phase shifter
+    #---------------------------------------------------------------------------      
+    def pol_phase_shifter(self, ch, P, phi):
+        """
+            
+        Adds a polarized phase shifter attached to channels ch.
+        
+        :ch  (int): Phase shifter input channel.
+        :P   (int): Polarization to which the phase shifter is sensitive.
+        :phi (double): Phase in degrees
+        
+        """
+        soqcs.dev_pol_phase_shifter(c_long(self.obj),c_int(ch), c_int(P), c_double(phi))
+
+    #---------------------------------------------------------------------------      
     # Adds to the metacircuit a half waveplate
+    #---------------------------------------------------------------------------      
     def half(self, ch, alpha):
         """
             
@@ -1376,9 +1728,11 @@ class auxqodev(object):
         :alpha (double):  Rotation angle in degrees.
         
         """
-        soqcs.dev_half(c_long(self.obj),ch, c_double(alpha))
+        soqcs.dev_half(c_long(self.obj), c_int(ch), c_double(alpha))
 
+    #---------------------------------------------------------------------------      
     # Adds to the metacircuit a quarter waveplate
+    #---------------------------------------------------------------------------
     def quarter(self, ch, alpha):
         """
             
@@ -1388,9 +1742,11 @@ class auxqodev(object):
         :alpha (double):  Rotation angle in degrees.
         
         """
-        soqcs.dev_quarter(c_long(self.obj),ch, c_double(alpha))
-        
-     # Adds to the metacircuit a detector
+        soqcs.dev_quarter(c_long(self.obj), c_int(ch), c_double(alpha))
+
+    #---------------------------------------------------------------------------              
+    # Adds to the metacircuit a detector
+    #---------------------------------------------------------------------------      
     def detector(self, ch, cond=-1, eff=1.0, blnk=0.0, gamma=0.0):
         """
             
@@ -1405,9 +1761,11 @@ class auxqodev(object):
         :gamma (float):  Average rate of dark counts in this channel.
         
         """
-        soqcs.dev_detector(c_long(self.obj),ch,cond,c_double(eff),c_double(blnk),c_double(gamma))
+        soqcs.dev_detector(c_long(self.obj),c_int(ch),c_int(cond),c_double(eff),c_double(blnk),c_double(gamma))
 
-     # Ignores a channel
+    #---------------------------------------------------------------------------      
+    # Ignores a channel
+    #---------------------------------------------------------------------------      
     def ignore(self, ch):
         """
             
@@ -1416,9 +1774,11 @@ class auxqodev(object):
         :ch (int): Ignored channel.
         
         """
-        soqcs.dev_detector(c_long(self.obj),ch,-2,c_double(1.0),c_double(0.0),c_double(0.0))
-        
+        soqcs.dev_detector(c_long(self.obj),c_int(ch),-2,c_double(1.0),c_double(0.0),c_double(0.0))
+
+    #---------------------------------------------------------------------------              
     # Adds to the output a random Gaussian whote noise of stdev^2 dispersion
+    #---------------------------------------------------------------------------      
     def noise(self, stdev2):
         """
             
@@ -1429,11 +1789,15 @@ class auxqodev(object):
         """
         soqcs.dev_noise(c_long(self.obj),c_double(stdev2))
     
+    #---------------------------------------------------------------------------      
+    #  Apply a *single ket* post-selection condition defined by the detectors 
+    # ( only valid for ideal circuits).
+    #---------------------------------------------------------------------------      
     def apply_condition(self, inputst, ignore):
         """
             
         Apply the post-selection condition defined by the detectors (to ideal circuits). |br|
-        Warning!. This can be only applied to ideal circuits nm=1 and nd=1 where detector naturally 
+        **Warning!**. This can be only applied to ideal circuits nm=1 and nd=1 where detector naturally 
         define a single ket projector. Otherwise the conditions lead to a density matrix output and
         there are other tools available in SOQCS for that purpose. Note that ignored channels are 
         not transcribed therefore post-selection may lead to collision between otherwise different kets.
@@ -1448,9 +1812,11 @@ class auxqodev(object):
         newstate.obj=obj;
         return newstate
 
-        
-# Wrapper for C++ SOQCS class simulator
-# Definition of the quantum optical circuit simulator
+
+#------------------------------------------------------------------------------#
+# Wrapper for C++ SOQCS class simulator                                        #
+# Definition of the quantum optical circuit simulator                          #
+#------------------------------------------------------------------------------#     
 class simulator(object):
     """
 
@@ -1466,18 +1832,23 @@ class simulator(object):
     :mem(optional([int]): Reserved memory for the output expressed as a maximum number of terms. (Internal memory)
     
     """
-    
+    #---------------------------------------------------------------------------          
     # Create a simulator
+    #---------------------------------------------------------------------------      
     def __init__(self, backend=0,mem=1000):
         func=soqcs.sim_new_simulator
         func.restype=c_long    
         self.obj = func(backend,mem)
 
+    #---------------------------------------------------------------------------      
     # Delete a simulator
+    #---------------------------------------------------------------------------      
     def __del__(self):
         soqcs.sim_destroy_simulator(c_long(self.obj))
-         
+
+    #---------------------------------------------------------------------------               
     # Run a simulator for a metacircuit
+    #---------------------------------------------------------------------------      
     def run(self, dev):
         """
 
@@ -1485,6 +1856,7 @@ class simulator(object):
 
 
         :dev(qodev): Input quantum device.
+        :return(p_bin): Device outcome.
     
         """
         func=soqcs.sim_run
@@ -1494,14 +1866,17 @@ class simulator(object):
         newoutcome.obj=obj
         return newoutcome
 
+    #---------------------------------------------------------------------------      
     # Run a simulator for an input state and a circuit
+    #---------------------------------------------------------------------------      
     def run_st(self, istate,qoc):
         """
 
         Calculates an output state as a function of an input initial state using the selected backend/core according to the rules established by a quantum circuit.
 
-        :istate(state): Initial state
+        :istate(state): Initial state.
         :qoc(qocircuit): Input quantum circuit.
+        :return(state): Output state.
     
         """
         func=soqcs.sim_run_state
@@ -1511,15 +1886,18 @@ class simulator(object):
         newstate.obj=obj
         return newstate
 
+    #---------------------------------------------------------------------------      
     # Run a Clifford A sampling for a metacircuit
+    #---------------------------------------------------------------------------      
     def sample(self, dev, N):
         """
 
         Sampling of a device using Clifford A algorithm. |br|
-        Warning! Clifford A is defined to be used with a single input term. Therefor neither Bell or QD initializations are recommended.
+        **Warning!** Clifford A is defined to be used with a single input term. Therefor neither Bell or QD initializations are recommended.
 
         :dev(qodev): Input quantum device.
-        :N(int): Number of samples
+        :N(int): Number of samples.
+        :return(p_bin): Device outcome.
 
         """
         func=soqcs.sim_sample
@@ -1529,28 +1907,33 @@ class simulator(object):
         newoutcome.obj=obj
         return newoutcome
 
+    #---------------------------------------------------------------------------      
     # Run a Clifford sampling for an input state and a circuit
+    #---------------------------------------------------------------------------      
     def sample_st(self, istate,qoc,N):
         """
 
         Sampling of a circuit using Clifford A algorithm. |br|
-        Warning! Clifford A is defined to be used with a single input term. Input states with multiple terms are not recommended.
+        **Warning!** Clifford A is defined to be used with a single input term. Input states with multiple terms are not recommended.
 
         :istate(state): Initial state
         :qoc(qocircuit): Input quantum circuit.
         :N(int): Number of samples
+        :return(p_bin): Circuit outcome.
 
         """
         func=soqcs.sim_sample_state
         func.restype=c_long
         obj=func(c_long(self.obj),c_long(istate.obj),c_long(qoc.obj),N) 
-        newstate=state(1,True)
-        newstate.obj=obj
-        return newstate
-    
+        newoutcome=p_bin(1,True)
+        newoutcome.obj=obj
+        return newoutcome
 
-# Class gcircuit: Graphical circuit
-# Graphical representation of a quantum optical circuit
+    
+#------------------------------------------------------------------------------#      
+# Class gcircuit: Graphical circuit                                            #
+# Graphical representation of a quantum optical circuit                        #
+#------------------------------------------------------------------------------#      
 class gcircuit(object):
     """
 
@@ -1560,12 +1943,17 @@ class gcircuit(object):
 
     
     """
+    #---------------------------------------------------------------------------      
     # Creates a gcircuit object
+    #---------------------------------------------------------------------------      
     def __init__(self):              
-        self.list=[]
-        self.nl=0
+        self.list=[]    # List
+        self.nl=0       # Numbe of elements in the list
+        self.newrow=0   # Number of calls to newline. Affects the plot dimensions.
 
+    #---------------------------------------------------------------------------      
     # Concatenates two devices
+    #---------------------------------------------------------------------------      
     def concatenate(self, dev):
         """
 
@@ -1579,8 +1967,9 @@ class gcircuit(object):
         self.list=auxlist
         self.nl=auxnl
         
-      
+    #---------------------------------------------------------------------------      
     # Defines a wire to a channel with length depth.
+    #---------------------------------------------------------------------------      
     def add_wire(self,ch,depth): 
         """
 
@@ -1593,7 +1982,9 @@ class gcircuit(object):
         self.list.append(['add_wire',ch,depth])
         self.nl=self.nl+1
 
+    #---------------------------------------------------------------------------      
     # Initial number of photons
+    #---------------------------------------------------------------------------      
     def init_ph(self,ch,n):    
         """
 
@@ -1606,7 +1997,9 @@ class gcircuit(object):
         self.list.append(['init_ph',ch,n])
         self.nl=self.nl+1
 
-    # Initial Bell state.
+    #---------------------------------------------------------------------------      
+    # Initial Bell state
+    #---------------------------------------------------------------------------      
     def bell(self,ch1,ch2,kind):    
         """
 
@@ -1626,8 +2019,9 @@ class gcircuit(object):
         if(ch2!=ch1+1):
             self.rewire(ch1+1,ch2)
 
-            
+    #---------------------------------------------------------------------------                  
     # Bell state element. (Two consecutive channels, no rewires)
+    #---------------------------------------------------------------------------      
     def bell_element(self,ch,auxch,kind): 
         """
 
@@ -1641,8 +2035,9 @@ class gcircuit(object):
         self.list.append(['bell_element',ch,auxch,kind])
         self.nl=self.nl+1
 
-            
-    # Defines a final detector.
+    #---------------------------------------------------------------------------                  
+    # Defines a final detector
+    #---------------------------------------------------------------------------      s
     def final_dec(self,ch,post):
         """
 
@@ -1655,8 +2050,10 @@ class gcircuit(object):
         self.list.append(['final_dec',ch,post])
         self.nl=self.nl+1
 
-    # Defines a circuit element.
-    def element(self,ch,nch,text): 
+    #---------------------------------------------------------------------------      
+    # Defines a circuit element
+    #---------------------------------------------------------------------------      
+    def element(self,ch,nch,text, colored=False): 
         """
 
         Defines a graphical representation of circuit element. 
@@ -1664,12 +2061,15 @@ class gcircuit(object):
         :ch (int): First channel of the element.
         :nch(int): Number of channels used by the element.
         :text (string): Text describing the element.
+        :colored (bool): Prints the element in a different color than the default one.
     
         """  
-        self.list.append(['element',ch,nch,text])
+        self.list.append(['element',ch,nch,text, colored])
         self.nl=self.nl+1
 
-    # Defines a rewire between two channels.
+    #---------------------------------------------------------------------------      
+    # Defines a rewire between two channels
+    #---------------------------------------------------------------------------      
     def rewire(self,ch1,ch2): 
         """
 
@@ -1683,20 +2083,25 @@ class gcircuit(object):
         self.list.append(['rewire',ch1,ch2])
         self.nl=self.nl+1
 
+    #---------------------------------------------------------------------------      
     # Defines a single channel circuit element
-    def one_gate(self,ch,text): 
+    #---------------------------------------------------------------------------      
+    def one_gate(self,ch,text, colored=False): 
         """
 
         Defines a graphical representation of an optical element of one input channel.
         
         :ch (int): Channel.
         :text (string): Text to be plotted describing the element.
+        :colored (bool): Prints the gate in a different color than the default one.
         """
-        self.element(ch,1,text)        
-        
+        self.element(ch,1,text, colored)        
+
+    #---------------------------------------------------------------------------              
     # Defines a two channel circuit elements
     # Rewires for non consecutive channels are calculated automatically
-    def two_gate(self,ch1,ch2,text): 
+    #---------------------------------------------------------------------------      
+    def two_gate(self,ch1,ch2,text, colored=False): 
         """
 
         Defines a graphical representation of an optical element of two input channels.
@@ -1707,18 +2112,22 @@ class gcircuit(object):
         :ch1 (int): Channel1.
         :ch2 (int): Channel2.
         :text (string): Text to be plotted describing the element.
+        :colored (bool): Prints the gate in a different color than the default one.
+        
         """
         if(ch2!=ch1+1):
             self.rewire(ch2,ch1+1)
         
-        self.element(ch1,2,text)
+        self.element(ch1,2,text, colored)
     
         if(ch2!=ch1+1):
             self.rewire(ch1+1,ch2)
 
+    #---------------------------------------------------------------------------      
     # Defines a three channel circuit element
     # Rewires for non consecutive channels are calculated automatically
-    def three_gate(self,ch1,ch2,ch3,text): 
+    #---------------------------------------------------------------------------      
+    def three_gate(self,ch1,ch2,ch3,text, colored=False): 
         """
 
         Defines  graphical representation of an optical element of three input channels.
@@ -1730,37 +2139,41 @@ class gcircuit(object):
         :ch2 (int): Channel2.
         :ch3 (int): Channel3.
         :text (string): Text to be plotted describing the element.
+        :colored (bool): Prints the gate in a different color than the default one.
+        
         """
         if(ch2!=ch1+1):
             self.rewire(ch2,ch1+1)
 
         if(ch3!=ch1+2):
-            self.rewire(ch2,ch1+2)
+            self.rewire(ch3,ch1+2)
         
-        self.element(ch1,3,text)
+        self.element(ch1,3,text, colored)
     
         if(ch2!=ch1+1):
             self.rewire(ch1+1,ch2)
 
         if(ch3!=ch1+2):
-            self.rewire(ch1+2,ch2)
+            self.rewire(ch1+2,ch3)
 
-
-    #Defines a delay circuit element. (It has an specific special symbol)
-    def delay(self,ch,time):
+    #---------------------------------------------------------------------------      
+    # Defines a delay circuit element. (It has an specific special symbol)
+    #---------------------------------------------------------------------------      
+    def delay(self,ch):
         """
 
         Defines a graphical representation of a delay. It is similat to plot a
         one gate but with a different symbol.
         
         :ch (int): Channel.
-        :time (double): Delay time.
         
         """
-        self.list.append(['delay',ch,time])
+        self.list.append(['delay',ch])
         self.nl=self.nl+1
 
+    #---------------------------------------------------------------------------      
     # Defines a separator
+    #---------------------------------------------------------------------------      
     def separator(self): 
         """
 
@@ -1769,8 +2182,24 @@ class gcircuit(object):
         """
         self.list.append(['separator'])
         self.nl=self.nl+1
+
+
+    #---------------------------------------------------------------------------      
+    # Defines a newline
+    #---------------------------------------------------------------------------      
+    def newline(self): 
+        """
+
+        Defines a change in the printing row where the elements are being drawn.
         
+        """
+        self.list.append(['newline'])
+        self.nl=self.nl+1
+        self.newrow=self.newrow+1
+        
+    #---------------------------------------------------------------------------              
     # Draws an empty wire in a channel for a given depth
+    #---------------------------------------------------------------------------      
     def g_add_wire(self,ch,depth):
         """
 
@@ -1784,7 +2213,7 @@ class gcircuit(object):
         end=depth
         
         if(depth>init):
-            height=0.5+(1+self.pad)*ch            
+            height=0.5+(1+self.pad)*ch+self.line*self.width_line            
             if init>0:                               
                 plt.plot([2*init, 2*end],[height, height], color='black', linewidth=4)
             else:
@@ -1794,7 +2223,9 @@ class gcircuit(object):
                 
             self.display[ch]=depth
 
+    #---------------------------------------------------------------------------      
     # Draws a representation of the initial photon configuration of a channel
+    #---------------------------------------------------------------------------      
     def g_init_ph(self,ch,n):
         """
 
@@ -1825,7 +2256,10 @@ class gcircuit(object):
         if(self.display[ch]<=0):
             self.display[ch]=1
 
+
+    #---------------------------------------------------------------------------      
     # Draws a Bell state element. 
+    #---------------------------------------------------------------------------      
     def g_bell_element(self,ch,auxch,kind): 
         """
 
@@ -1915,8 +2349,9 @@ class gcircuit(object):
             plt.plot([(2*end-0.2),2*end],[heightch, heightch], color='black', linewidth=4)
                       
         
-        
+    #---------------------------------------------------------------------------              
     # Draws a representation of the detector configuration in a channel
+    #---------------------------------------------------------------------------      
     def g_final_dec(self,ch,post):
         """
 
@@ -1928,8 +2363,13 @@ class gcircuit(object):
         """ 
         init=self.display[ch];
         end=init+1;
-        self.display[ch]=end;
-        height=0.5+(1+self.pad)*ch                
+        if end>(self.depth-2):
+            self.g_newline()
+            init=self.display[ch];
+            end=init+1;
+
+        self.display[ch]=end
+        height=0.5+(1+self.pad)*ch+self.line*self.width_line                        
         
         if(post>=-1): 
             color="steelblue"
@@ -1958,8 +2398,10 @@ class gcircuit(object):
         if(post>=0):
             plt.text(2*init+0.4,height,str(post),backgroundcolor=color,**text_kwargs)   
 
+    #---------------------------------------------------------------------------      
     # Draws a representation of a general circuit element
-    def g_element(self,ch,nch,text): 
+    #---------------------------------------------------------------------------      
+    def g_element(self,ch,nch,text, colored=False): 
         """
 
         Draws a graphical representation of circuit element. 
@@ -1969,6 +2411,7 @@ class gcircuit(object):
         :ch (int): First channel of the element.
         :nch(int): Number of channels used by the element.
         :text (string): Text describing the element.
+        :colored (bool): Prints the graphical element in a different color than the default one.
     
         """  
         maxdepth=0
@@ -1976,24 +2419,31 @@ class gcircuit(object):
             maxdepth=max(maxdepth,self.display[i])
             
         init=maxdepth
-        end=init+1;        
+        end=init+1;    
+        if end>(self.depth-2):
+            self.g_newline()
+            init=self.display[ch];
+            end=init+1;
         
         for i in range(ch,ch+nch):
             self.g_add_wire(i,init)
             self.display[i]=end                                
             
-        height=0.5+(1+self.pad)*ch            
+        height=0.5+(1+self.pad)*ch+self.line*self.width_line                        
         add=(nch-1)      
-                
+
+        color='mediumpurple'
+        if colored==True:
+            color='mediumorchid'            
         rect = patches.Rectangle(((2*init+0.2), (height-0.5+0.2)),
                                   (2*end-0.2-(2*init+0.2)), 
                                   ((height+add+0.5-0.2)-(height-0.5+0.2)),
-                                 linewidth=4, edgecolor='black', facecolor='mediumpurple')
+                                 linewidth=4, edgecolor='black', facecolor=color)
         self.ax.add_patch(rect)
 
         
         for i in range(0,nch):
-            heightch=0.5+(1+self.pad)*(ch+i)
+            heightch=0.5+(1+self.pad)*(ch+i)+self.line*self.width_line            
             
             plt.plot([2*init,(2*init+0.2)],[heightch, heightch], color='black', linewidth=4)
             plt.plot([(2*end-0.2),2*end],[heightch, heightch], color='black', linewidth=4)
@@ -2002,7 +2452,9 @@ class gcircuit(object):
         text_kwargs = dict(ha='center', va='center',multialignment='left', fontsize=self.size_font-2, color='black')
         plt.text((2*init+1),(height+(nch-1)/2),str(text),**text_kwargs)
 
+    #---------------------------------------------------------------------------      
     # Draws a rewire between two channels
+    #---------------------------------------------------------------------------      
     def g_rewire(self,ch1,ch2): 
         """
 
@@ -2012,42 +2464,52 @@ class gcircuit(object):
         :ch2 (int): Channel 2.
         """  
         maxdepth=0
-        maxdepth=max(self.display[ch1],self.display[ch2])
+        chi=min(ch1,ch2)
+        cho=max(ch1,ch2)
+        for chaux in range(chi,cho+1):
+            maxdepth=max(maxdepth,self.display[chaux])
         init=maxdepth
         end=init+1;
-        
-        self.g_add_wire(ch1,init)
-        self.display[ch1]=end
-        self.g_add_wire(ch2,init)
-        self.display[ch2]=end
+        if end>(self.depth-2):
+            self.g_newline()
+            init=self.display[ch1];
+            end=init+1;
+
+        self.g_add_wire(chi,init)   
+        self.display[chi]=end        
+        self.g_add_wire(cho,init)   
+        self.display[cho]=end        
+        for chaux in range(chi+1,cho):
+            self.g_add_wire(chaux,end)   
+            self.display[chaux]=end
                                 
-        height1=0.5+(1+self.pad)*ch1            
-        height2=0.5+(1+self.pad)*ch2            
+        height1=0.5+(1+self.pad)*ch1+self.line*self.width_line                       
+        height2=0.5+(1+self.pad)*ch2+self.line*self.width_line                       
                     
         plt.plot([2*init,2*end],[height1, height2], color='black', linewidth=4)
         plt.plot([2*init,2*end],[height2, height1], color='black', linewidth=4)   
 
-
-            
+    #---------------------------------------------------------------------------                  
     # Draws a delay circuit element. (It has an specific special symbol)
-    def g_delay(self,ch,time):
+    #---------------------------------------------------------------------------      
+    def g_delay(self,ch):
         """
 
         Draws a graphical representation of a delay. It is similat to plot a
         one gate but with a different symbol.
         
         :ch (int): Channel.
-        :time (double): Delay time.
         
         """
         init=self.display[ch];
         end=init+1;
+        if end>(self.depth-2):
+            self.g_newline()
+            init=self.display[ch];
+            end=init+1;
+            
         self.display[ch]=end;
-        height=0.5+(1+self.pad)*ch 
-        str1='t= '
-        str2=str(round(time,2))
-        strt=str1+str2
-                
+        height=0.5+(1+self.pad)*ch+self.line*self.width_line                            
         
         plt.plot([2*init    , 2*init+0.5],[height+0.3, height+0.3], color='black', linewidth=4)
         plt.plot([2*init+0.5, 2*init+1  ],[height    , height    ], color='black', linewidth=4)
@@ -2060,10 +2522,9 @@ class gcircuit(object):
         plt.plot([2*init+1.5, 2*init+1.5],[height+0.3, height    ], color='black', linewidth=4)
     
     
-        text_kwargs = dict(ha='center', va='center', fontsize=self.size_font, color='black')
-        plt.text(2*init+0.5,height-0.25,str(strt),**text_kwargs)
-        
+    #---------------------------------------------------------------------------              
     # Draws a separator to clarify the plot
+    #---------------------------------------------------------------------------      
     def g_separator(self): 
         """
 
@@ -2076,15 +2537,64 @@ class gcircuit(object):
 
         init=maxdepth
         end=init+1;
-        
+        if end>(self.depth-2):
+            self.g_newline()
+            init=self.display[0];
+            end=init+1;
+               
         for i in range(0,self.nch):
             self.g_add_wire(i,end)
             self.display[i]=end
             
-        plt.plot([2*init+1, 2*init+1],[0, self.nch], color='gray',linestyle='dashed', linewidth=6)
-    
+        plt.plot([2*init+1, 2*init+1],
+                 [0+self.line*self.width_line , self.nch+self.line*self.width_line], 
+                 color='gray',linestyle='dashed', linewidth=6)
+
+    #---------------------------------------------------------------------------              
+    # Draws a "hard" separator to identify changes of line
+    #---------------------------------------------------------------------------      
+    def g_hard_separator(self, width): 
+        """
+
+        Draws a different graphical separator to indicate a change of printing row.
+        
+        """
+        maxdepth=0
+        for i in range(0,self.nch):
+            maxdepth=max(maxdepth,self.display[i])
+
+        init=maxdepth
+        end=init+1;
+               
+        for i in range(0,self.nch):
+            self.g_add_wire(i,end)
+            self.display[i]=end
+            
+        plt.plot([2*init+1, 2*init+1],
+                 [0+self.line*self.width_line , self.nch+self.line*self.width_line], 
+                 color='black',linestyle='dashdot', linewidth=width)
+
+    #---------------------------------------------------------------------------              
+    # Advances the printing row.
+    #---------------------------------------------------------------------------           
+    def g_newline(self): 
+        """
+
+        Changes the row where the elements are being drawn to a new line and plots
+        two "hard" separators to indicate this change.
+        
+        """
+        self.g_hard_separator(3)
+        self.display=np.zeros(self.nch)
+        self.line=self.line+1
+        self.g_hard_separator(3)
+        for i in range(0,self.nch):
+            self.g_add_wire(i,1)
+                    
+    #---------------------------------------------------------------------------          
     # Plots and launches the widget with the canvas of the whole circuit
-    def show(self, nch, depth, sizexy, font):
+    #---------------------------------------------------------------------------      
+    def show(self, nch, depth, sizexy, font, rows=1):
         """
         Shows the quantum device circuit. |br|
         It reads the list of definition and draws the graphical elements. Each channels 
@@ -2096,6 +2606,11 @@ class gcircuit(object):
         :depth (int): Depth (in cells) of the circuit to be drawn.
         :sizexy (int): Number of pixels by cell.
         :font(int): Font size of the labels.
+        :rows(int): Numbers of printing lines to be used by the plotter. |br| 
+                   If rows=1, the plot is printed in one line unless hard separators are used to manually 
+                   point out the change of printing line. |br| 
+                   If rows>1, the plot is drawn in a fixed quantity of lines. In this case the change of line is done automatically. |br|
+                   
         """
   
         dpi=sizexy;
@@ -2105,13 +2620,18 @@ class gcircuit(object):
         self.display=np.zeros(nch)
         self.nph=np.zeros(nch)
         self.pad=0.1
+        self.line=0
+        self.width_line=((sizexy+sizexy/10)*(nch-1)+sizexy)/dpi+0.5*sizexy/dpi
+        self.depth=depth
+        if rows>1:
+            self.newrow=rows-1
         
         self.fig, self.ax= plt.subplots()        
         self.fig.set_dpi(dpi)
-        self.fig.set_size_inches( ((depth-1)*2*sizexy+sizexy)/dpi, ((sizexy+sizexy/10)*nch+sizexy)/dpi, forward=True)
+        self.fig.set_size_inches( ((depth-1)*2*sizexy+sizexy)/dpi, (self.newrow+1)*((sizexy+sizexy/10)*nch+sizexy)/dpi, forward=True)
         self.ax.set_facecolor("white")
-        plt.xlim([0, ((depth-1)*2*sizexy+sizexy)/dpi])
-        plt.ylim([-0.5*sizexy/dpi, ((sizexy+sizexy/10)*(nch-1)+sizexy)/dpi+0.5*sizexy/dpi])
+        plt.xlim([0, ((depth-1)*2*sizexy-0.8*sizexy)/dpi])
+        plt.ylim([-0.5*sizexy/dpi, (self.newrow+1)*self.width_line])
         plt.gca().invert_yaxis()
         plt.axis('off')
         
@@ -2131,24 +2651,30 @@ class gcircuit(object):
                 self.g_final_dec(gate[1],gate[2])
 
             if(gate[0]=='element'): 
-                self.g_element(gate[1],gate[2],gate[3])
+                self.g_element(gate[1],gate[2],gate[3], gate[4])
 
             if(gate[0]=='rewire'): 
                 self.g_rewire(gate[1],gate[2])
 
             if(gate[0]=='delay'): 
-                self.g_delay(gate[1],gate[2])
+                self.g_delay(gate[1])
 
             if(gate[0]=='separator'): 
                 self.g_separator()
+                
+            if(gate[0]=='newline'): 
+                self.g_newline()
 
         plt.draw()
         plt.show()
+
         
-           
-# Class qodev: Full metacircuit
-# It merges the classes auxqodev and qcircuit to create a full metacircuit representation
-# in python able to create both the logical and the graphical representations of a metacircuit
+#------------------------------------------------------------------------------#                 
+# Class qodev: Full metacircuit                                                #
+# It merges the classes auxqodev and qcircuit to create a full device          #
+# representation# in python able to create both the logical and the graphical  #
+# representations of the device                                                #
+#------------------------------------------------------------------------------#      
 class qodev(object):
     """
 
@@ -2158,28 +2684,36 @@ class qodev(object):
     :nch (int): Number of channels
     :nm (optional[int]): Number of modes
     :ns (optional[int]): Number of packets
+    :np (optional[int]): Number of periods
+    :dtp (optional[double]): Length of the periods
     :clock (optional[int]):  Detector behavior configuration: |br|
-                            0: No clock. The detectors behave as counters. |br|
-                            1: Clock. The detectors are able distinguish arrival times but they are blind to frequency. |br|
+                            0: Counter. The detectors behave as counters. |br|
+                            1: Time. The detectors are able distinguish arrival times but they are blind to frequency. (This mode may change packet numeration).|br|
                             2: Full.  The detectors are able to distinguish arrival times and frequency of the outgoing photons. |br|
                             3: Manual mode.  Like 1. But the user is fully responsible of the packet definitions in order to obtain the correct calculations. |br|
+                            4: Period.  Detectors can only distinguish the period in which photons arrive. |br|
     :R (optional[int]): Number of iterations in the calculation of detector dead time and dark counts effects.
     :loss (optional[bool]): Explicit computation of losses.
     :ckind (optional[char]): Packet shape: |br|
                              'G': Gaussian |br|
-                             'E': Exonetial |br|
+                             'E': Exponential |br|
     :mem(optional(int)): Number of reserved entries to define the initial state. (Internal memory)
     
     """
-    
+    #---------------------------------------------------------------------------          
     # Create a metacircuit
-    def __init__(self, nph, nch, nm=1, ns=1, clock=0, R=0,   loss=False, ckind='G', mem=4):
-        self.circ=auxqodev(nph,nch,nm,ns,clock,R,loss,ckind,mem)
+    #---------------------------------------------------------------------------      
+    def __init__(self, nph, nch, nm=1, ns=1, np=1, dtp=-1.0, clock=0, R=0,   loss=False, ckind='G', mem=4):
+        self.circ=auxqodev(nph,nch,nm,ns,np,dtp,clock,R,loss,ckind,mem)
         self.disp=gcircuit()
         self.first=1
+        self.nph=nph
         self.nch=nch
+        
 
-    # Concatenates two metacircuits
+    #---------------------------------------------------------------------------      
+    # Concatenates two devices ( with some limitations)
+    #---------------------------------------------------------------------------      
     def concatenate(self,dev):
         """
 
@@ -2192,8 +2726,16 @@ class qodev(object):
         """
         self.disp.concatenate(dev.disp)
         self.circ.concatenate(dev.circ)
-        
-     # Add photons to the metacircuit
+    #---------------------------------------------------------------------------      
+    # Alias to concatenate
+    #---------------------------------------------------------------------------       
+    def __lshift__(self, dev):
+        self.concatenate(dev)
+    
+
+    #---------------------------------------------------------------------------              
+    # Adds photons to the device
+    #---------------------------------------------------------------------------      
     def add_photons(self,  N, ch, P=0, t=0.0 ,f=1.0, w=1.0):
         """
         
@@ -2205,13 +2747,43 @@ class qodev(object):
         :t (optional[float]): Central time of the photons wave-packet
         :f (optional[float]): Central frequency of the photons wave-packet
         :w (optional[float]): Width (Gaussians) or decay time (Exponentials) of the photon packet.
+        :return  [int]: Packet number if success, a negative value if failure.
  
         """
-        self.circ.add_photons(N, ch, P ,t, f, w)
+        aux=self.circ.add_photons(N, ch, P ,t, f, w)
         self.disp.init_ph(ch,N)
-         
-     # Add Quantum Dot emitter to the metacircuit
-    def add_QD(self, ch1, ch2, t1=0.0, tp1=-1.0, f1=1.0, w1=1.0, t2=0.0, tp2=-1.0, f2=1.0, w2=1.0, PW=0, S=0.0, k=1.0, tss=1000000.0, thv=1000000.0, T2=0.0, rand=2):
+        return aux
+
+    #---------------------------------------------------------------------------              
+    # Initialize qubits
+    #---------------------------------------------------------------------------            
+    def qubits(self, qlist, qmap):
+        """
+        
+        Initialize the device with photons that represent a list of path encoded qubits.
+   
+        :qlist list[int]: Qubit values
+        :qmap(list[][]): 2xn matrix with the qubit definitions. Each column has two entries
+                         specifying the channels that define the qubit.
+                          
+        """
+        for i in range(0,len(qlist)):
+            if qlist[i]==0:
+                self.circ.add_photons(0, qmap[0][i])
+                self.circ.add_photons(1, qmap[1][i])                
+                self.disp.init_ph(qmap[0][i],0)
+                self.disp.init_ph(qmap[1][i],1)
+            else:
+                self.circ.add_photons(1, qmap[0][i])
+                self.circ.add_photons(0, qmap[1][i])                
+                self.disp.init_ph(qmap[0][i],1)
+                self.disp.init_ph(qmap[1][i],0)
+                           
+
+    #---------------------------------------------------------------------------               
+    # Adds Quantum Dot emitter to the device
+    #---------------------------------------------------------------------------      
+    def add_QD(self, ch1, ch2, t1=0.0, f1=1.0, w1=1.0, t2=0.0, f2=1.0, w2=1.0, S=0.0, k=1.0, tss=1000000.0, thv=1000000.0, cascade=0):
         """
         
         Adds a pair of photons to the input of a circuit as if they where emitted by a quantum dot in a XX-X cascade.
@@ -2219,28 +2791,24 @@ class qodev(object):
         :ch1 (int): Channel where the bi-exciton XX photon is emitted.
         :ch2 (int): Channel where the exciton X photon is emitted.
         :t1  (optional[float]): Central time of the XX photon wave-packet
-        :tp1 (optional[float]): Time at which the phase of the XX is zero. If tp1<0 then tp1=t1.
         :f1  (optional[float]): Central frequency of the XX photon wave-packet
         :w1  (optional[float]): Decay time of the XX photon wave-packet
         :t2  (optional[float]): Central time of the X photon wave-packet
-        :tp2 (optional[float]): Time at which the phase of the X is zero. If tp1<0 then tp2=t2.
         :f2  (optional[float]): Central frequency of the X photon wave-packet
         :w2  (optional[float]): Decay time of the X photon wave-packet
-        :PW  (optional[float]): Frequency shift between H and V polarized photons due FSS. 0=No/1=Yes.
         :S   (optional[float]): Fine Structure Splitting (FSS)
         :k   (optional[float]): Signal to noise ratio.
         :tss (optional[float]): Spin scattering time.
         :thv (optional[float]): Cross dephasing time.
-        :T2 (optional[float]):  Pure dephasing characteristic time.
-        :rand (optional[int]):  Kind of emission pattern XX-X-G: |br|
-                                0= Fully automatic emission calculation. The exciton phase time is configured equal to its randomly generated emission time. |br|
-                                1= Automatic emission and phase calculation. Same than 0 but the exciton phase time is randomly generated separately from a distribution parametrized by T2. |br|
-                                2= Semi-automatic calculation. The exciton phase time is randomly calculated using T2 like in 1 but the exciton emission time is set manually. |br|
-                                                                 
-        """
-        self.circ.add_QD(ch1, ch2 ,t1, tp1, f1, w1, t2, tp2, f2, w2, PW, S, k, tss, thv, T2, rand)
-        self.disp.bell(ch1,ch2,'P')
+        :cascade (optional[int]):  The second photon is considered to be exmitted randomly after t2 to simulate a casacase 0=No/1=Yes                                                                 
         
+        """
+        self.circ.add_QD(ch1, ch2 ,t1, f1, w1, t2, f2, w2, S, k, tss, thv, cascade)
+        self.disp.bell(ch1,ch2,'P')
+
+    #---------------------------------------------------------------------------      
+    # Initializes the device with a path encoded Bell state
+    #---------------------------------------------------------------------------              
     def add_Bell(self, ch1, ch2, ckind, phi=0.0, t1=0.0, f1=1.0, w1=1.0, t2=0.0, f2=1.0, w2=1.0):
         """
         
@@ -2267,6 +2835,9 @@ class qodev(object):
         self.circ.add_Bell(ch1, ch2, ckind, phi ,t1,f1, w1, t2, f2, w2)
         self.disp.bell(ch1,ch2,'O')
 
+    #---------------------------------------------------------------------------      
+    # Initializes the device with a polarization encoded Bell state
+    #---------------------------------------------------------------------------              
     def add_BellP(self, ch1, ch2, ckind, phi=0.0, t1=0.0, f1=1.0, w1=1.0, t2=0.0, f2=1.0, w2=1.0):
         """
         
@@ -2292,8 +2863,10 @@ class qodev(object):
         """
         self.circ.add_BellP(ch1, ch2, ckind, phi ,t1,f1, w1, t2, f2, w2)
         self.disp.bell(ch1,ch2,'P')
-        
-     # Returns the input state of the metacircuit
+
+    #---------------------------------------------------------------------------              
+    # Returns the input state of the metacircuit
+    #---------------------------------------------------------------------------      
     def input(self):  
         """
         
@@ -2304,18 +2877,22 @@ class qodev(object):
         """
         return self.circ.input()
 
+    #---------------------------------------------------------------------------      
     # Returns the internal logical circuit representation
+    #---------------------------------------------------------------------------      
     def circuit(self):  
         """
         
         Returns a quantum optical circuit equivalent to the quantum device except for the initial conditions that are not defined in a circuit.
         
-        :return (state): A copy of the defined circuit.
+        :return (qocircuit): A copy of the defined circuit.
                                                                  
         """
         return self.circ.circuit()
 
+    #---------------------------------------------------------------------------      
     # Adds a separator to the circuit to see a more clear plot
+    #---------------------------------------------------------------------------      
     def separator(self): 
         """
         
@@ -2323,9 +2900,22 @@ class qodev(object):
                                                                  
         """
         self.disp.separator()    
+        
+    #---------------------------------------------------------------------------      
+    # Adds a change of line to see a more clear plot
+    #---------------------------------------------------------------------------      
+    def newline(self): 
+        """
+        
+        Adds a change in the printing row where the elements are being drawn to
+        see a more clear plot.
+                                                                 
+        """
+        self.disp.newline()    
 
-
+    #---------------------------------------------------------------------------      
     # Changes Gram-Schmidt packet order
+    #---------------------------------------------------------------------------      
     def repack(self,vec):
         """
         
@@ -2336,19 +2926,24 @@ class qodev(object):
         """
         return self.circ.repack(vec)
 
+    #---------------------------------------------------------------------------      
     # Calculates the emitted packet visibility
+    #---------------------------------------------------------------------------      
     def emitted_vis(self, i, j):
         """
         
-        Overlapping probability of two wave packets.
+        Overlap probability of two wavepackets.
         
         :i (int):  Packet i. 
         :j (int):  Packet j. 
+        :return (double): Overlap probability
         
         """
         return self.circ.emitted_vis(i, j)
 
+    #---------------------------------------------------------------------------      
     # Print packet configuration
+    #---------------------------------------------------------------------------      
     def prnt_packets(self):
         """
         
@@ -2356,9 +2951,11 @@ class qodev(object):
         
         
         """
-        return self.circ.prnt_packets()
+        self.circ.prnt_packets()
 
+    #---------------------------------------------------------------------------      
     # Adds to the metacircuit a random circuit
+    #---------------------------------------------------------------------------      
     def random_circuit(self, ):
         """
         
@@ -2369,8 +2966,10 @@ class qodev(object):
         strf="     RND"
         self.circ.random_circuit()
         self.disp.element(0, self.nch, strf)
-                
+
+    #---------------------------------------------------------------------------                      
     # Adds to the metacircuit a NSX subcircuit    
+    #---------------------------------------------------------------------------      
     def NSX(self, ch1, ch2, ch3):
         """
             
@@ -2386,14 +2985,19 @@ class qodev(object):
         self.circ.NSX(ch1,ch2,ch3)
         self.disp.three_gate(ch1, ch2, ch3,strf)
 
+    #---------------------------------------------------------------------------      
     # Adds to the metacircuit an ideal beamsplitter
-    def beamsplitter(self, ch1, ch2, theta, phi):
+    #---------------------------------------------------------------------------      
+    def beamsplitter(self, ch1, ch2, theta, phi, colored= False ):
         """
             
         Adds a beamsplitter to the quantum device attached to channels ch1 and ch2.
         
         :ch1 (int): Beamsplitter input channel 1.
         :ch2 (int): Beamsplitter input channel 2.
+        :theta (double):  Angle theta in degrees.
+        :phi   (double):  Angle phi in degrees.
+        :colored (bool): Prints the beamsplitter in a different color than the default one.
         
         """
         str1="     BS\n \u03B8="
@@ -2403,10 +3007,11 @@ class qodev(object):
         str5="º"
         strf=str1+str2+str3+str4+str5
         self.circ.beamsplitter(ch1,ch2,theta,phi)
-        self.disp.two_gate(ch1, ch2,strf)
+        self.disp.two_gate(ch1, ch2,strf, colored)
 
-
+    #---------------------------------------------------------------------------      
     # Adds to the metacircuit a dielectric beamsplitter
+    #---------------------------------------------------------------------------      
     def dielectric(self, ch1, ch2, t, r):
         """
             
@@ -2425,8 +3030,9 @@ class qodev(object):
         self.circ.dielectric(ch1,ch2,t,r)
         self.disp.two_gate(ch1, ch2,strf)
 
-
+    #---------------------------------------------------------------------------      
     # Adds to the metacircuit a MMI 2x2 beamsplitter
+    #---------------------------------------------------------------------------      
     def MMI2(self, ch1, ch2):
         """
             
@@ -2440,7 +3046,9 @@ class qodev(object):
         self.circ.MMI2(ch1,ch2)
         self.disp.two_gate(ch1, ch2,strf)
 
+    #---------------------------------------------------------------------------      
     # Adds to the metacircuit a rewire gate
+    #---------------------------------------------------------------------------      
     def rewire(self, ch1, ch2):
         """
             
@@ -2452,25 +3060,30 @@ class qodev(object):
         """
         self.circ.rewire(ch1,ch2)
         self.disp.rewire(ch1, ch2)       
-           
+
+    #---------------------------------------------------------------------------                 
     # Adds to the metacircuit a phase shifter
-    def phase_shifter(self, ch, phi):
+    #---------------------------------------------------------------------------      
+    def phase_shifter(self, ch, phi, colored=False):
         """
             
         Adds a phase shifter to the device in channel ch.
         
         :ch (int): Phase shifter input channel.
         :phi (float): Angle phi in degrees.
+        :colored (bool): Prints the phase shifter in a different color than the default one.
         
         """
         str1="PS \u03C6="
-        str2=str(round(phi,2))
+        str2=str(round(float(phi),2))
         str3="º"
         strf=str1+str2+str3
         self.circ.phase_shifter(ch,phi)
-        self.disp.one_gate(ch,strf)
-    
+        self.disp.one_gate(ch,strf,colored)
+
+    #---------------------------------------------------------------------------          
     # Adds to the metacircuit an homogeneous lossy medium
+    #---------------------------------------------------------------------------      
     def loss(self, ch, l):
         """
             
@@ -2486,20 +3099,23 @@ class qodev(object):
         self.circ.loss(ch,l)
         self.disp.one_gate(ch,strf)
 
+    #---------------------------------------------------------------------------      
     #  Adds to the metacircuit a delay
-    def delay(self, ch, dt):
+    #---------------------------------------------------------------------------      
+    def delay(self, ch):
         """
         
-        Increases the optical path of a channel by a quantity dt.
+        Increases the optical path of a channel by a quantity equal to a period
         
         :ch (int):  Channel where the delay is introduced.
-        :dt (double):  Delay time introduced in the channel (because of a larger path length for example).
                 
         """
-        self.circ.delay(ch,dt)
-        self.disp.delay(ch,dt)
+        self.circ.delay(ch)
+        self.disp.delay(ch)
 
+    #---------------------------------------------------------------------------      
     # Adds to the metacircuit a rotator
+    #---------------------------------------------------------------------------      
     def rotator(self, ch, theta, phi):
         """
         
@@ -2519,8 +3135,10 @@ class qodev(object):
         self.circ.rotator(ch,theta,phi)
         self.disp.one_gate(ch,strf)
 
+    #---------------------------------------------------------------------------      
     # Adds to the metacircuit a polarized beamsplitter
-    def polbeamsplitter(self, ch1, ch2, P):
+    #---------------------------------------------------------------------------      
+    def pol_beamsplitter(self, ch1, ch2, P):
         """
             
         Adds a polarized beamsplitter attached to channels ch1 and ch2.
@@ -2537,10 +3155,39 @@ class qodev(object):
             str2='V'
         
         strf=str1+str2
-        self.circ.polbeamsplitter(ch1,ch2,P)
+        self.circ.pol_beamsplitter(ch1,ch2,P)
         self.disp.two_gate(ch1, ch2,strf)
 
+    #---------------------------------------------------------------------------                 
+    # Adds to the metacircuit a polarized phase shifter
+    #---------------------------------------------------------------------------      
+    def pol_phase_shifter(self, ch, P, phi, colored=False):
+        """
+            
+        Adds a polarized phase shifter to the device in channel ch.
+        
+        :ch (int): Phase shifter input channel.
+        :P   (int): Polarization to which the phase shifter is sensitive.
+        :phi (float): Angle phi in degrees.
+        :colored (bool): Prints the phase shifter in a different color than the default one.
+        
+        """
+                  
+        str1="PS"
+        if P==0:
+            str2='(H)'
+        else:
+            str2='(V)'
+        str3=" \u03C6="
+        str4=str(round(float(phi),2))
+        str5="º"
+        strf=str1+str2+str3+str4+str5
+        self.circ.pol_phase_shifter(ch,P,phi)
+        self.disp.one_gate(ch,strf,colored)
+
+    #---------------------------------------------------------------------------      
     # Adds to the metacircuit a half waveplate
+    #---------------------------------------------------------------------------      
     def half(self, ch, alpha):
         """
             
@@ -2557,7 +3204,9 @@ class qodev(object):
         self.circ.half(ch,alpha)
         self.disp.one_gate(ch,strf)
 
+    #---------------------------------------------------------------------------      
     # Adds to the metacircuit a quarter waveplate
+    #---------------------------------------------------------------------------      
     def quarter(self, ch, alpha):
         """
             
@@ -2573,8 +3222,10 @@ class qodev(object):
         strf=str1+str2+str3
         self.circ.quarter(ch,alpha)
         self.disp.one_gate(ch,strf)        
-        
+
+    #---------------------------------------------------------------------------              
     # Adds to the metacircuit a detector
+    #---------------------------------------------------------------------------      
     def detector(self, ch, cond=-1, eff=1.0, blnk=0.0, gamma=0.0):
         """
             
@@ -2593,7 +3244,9 @@ class qodev(object):
         self.circ.detector(ch,cond,eff,blnk,gamma)
         self.disp.final_dec(ch,cond)
 
+    #---------------------------------------------------------------------------      
     # Ignore a channel
+    #---------------------------------------------------------------------------      
     def ignore(self, ch):
         """
             
@@ -2604,8 +3257,10 @@ class qodev(object):
         """
         self.circ.detector(ch,-2,1.0,0.0,0.0)
         self.disp.final_dec(ch,-2)
-        
+
+    #---------------------------------------------------------------------------              
     # Adds to the output a random Gaussian whote noise of stdev^2 dispersion
+    #---------------------------------------------------------------------------      
     def noise(self, stdev2):
         """
             
@@ -2615,12 +3270,16 @@ class qodev(object):
         
         """
         self.circ.noise(stdev2)
-        
+
+    #---------------------------------------------------------------------------      
+    #  Apply a *single ket* post-selection condition defined by the detectors 
+    # ( only valid for ideal circuits).
+    #---------------------------------------------------------------------------         
     def apply_condition(self, inputst, ignore=True):
         """
         
         Apply the post-selection condition defined by the detectors in an ideal circuit to a state. |br|
-        Warning! This can be only applied to ideal devices nm=1 and nd=1 where detector naturally define 
+        **Warning!** This can be only applied to ideal devices nm=1 and nd=1 where detector naturally define 
         a single ket projector. Otherwise the conditions lead to a density matrix output and there are 
         other tools available in SOQCS for that purpose. Note that ignored channels are not transcribed 
         but that may lead to collisions between otherwise different terms.           
@@ -2631,9 +3290,11 @@ class qodev(object):
     
         """
         return self.circ.apply_condition(inputst, ignore)
-        
-    # Plots the metacircuit.
-    def show(self,depth=10,sizexy=100,font=18):
+
+    #---------------------------------------------------------------------------              
+    # Plots the device
+    #---------------------------------------------------------------------------      
+    def show(self,depth=10,sizexy=100,font=18, rows=1):
         """
         
         Plots the quantum device.
@@ -2641,15 +3302,21 @@ class qodev(object):
         :depth (optional[int]): Number of plot layers. The longer the circuit the more needed.
         :sizexy(optional[int]): How many pixels by layer. Controls the size of the plot.
         :font (optional[int]):  Font size of the labels.
+        :rows(int): Numbers of printing lines to be used by the plotter. |br| 
+                   If rows=1, the plot is printed in one line unless hard separators are used to manually 
+                   point out the change of printing line. |br| 
+                   If rows>1, the plot is drawn in a fixed quantity of lines. In this case the change of line is done automatically. |br|
+
         
         """
     
     
-        self.disp.show(self.nch,depth,sizexy,font)
+        self.disp.show(self.nch,depth,sizexy,font, rows)
         
-               
-# Plot Prbability vs dt        
-def plot(pfunc,cnvx,cnvy,textx,x0,x1,nxt,texty,y0,y1,nyt,N,argsv=[{0:0}],colorv=['b']):
+#------------------------------------------------------------------------------#                    
+# Plots Prbability vs dt                                                       #
+#------------------------------------------------------------------------------#      
+def plot(pfunc,cnvx,cnvy,textx,x0,x1,nxt,texty,y0,y1,nyt,N,argsv=[{0:0}],colorv=['b'],padb=0.0,padt=0.0):
     """
         
     Plots a multivalued function.
@@ -2668,6 +3335,8 @@ def plot(pfunc,cnvx,cnvy,textx,x0,x1,nxt,texty,y0,y1,nyt,N,argsv=[{0:0}],colorv=
     :N (int): Number of points.
     :argsv(dicc): Dictionary with the parameters for each sweep to pfunc.
     :colorv(list): Colors assigned to each sweep of pfunc.
+    :padb (float): Pad bottom. Some extra space at the bottom to better visualization.
+    :padt (float): Pad top. Some extra space at the top to better visualization.
         
     """
     Nv=len(argsv)
@@ -2687,7 +3356,7 @@ def plot(pfunc,cnvx,cnvy,textx,x0,x1,nxt,texty,y0,y1,nyt,N,argsv=[{0:0}],colorv=
     ax1.yaxis.set_ticks_position('left')
 
     plt.xlim(x0,x1)
-    plt.ylim(y0,y1)
+    plt.ylim(y0-padb,y1+padt)
     tx=np.linspace(x0, x1, nxt)   
     ty=np.linspace(y0, y1, nyt)   
     plt.xticks(tx, size = 18)
@@ -2701,4 +3370,53 @@ def plot(pfunc,cnvx,cnvy,textx,x0,x1,nxt,texty,y0,y1,nyt,N,argsv=[{0:0}],colorv=
     plt.tick_params(which='minor', length=-4, pad=15)
     for i in range(0,Nv):
         plt.plot(dt, probs[i],color=colorv[i], linewidth=3.0)
+    plt.show()
+    
+
+#------------------------------------------------------------------------------#                    
+# Scatter plot of (X,Y) pairts                                                 #
+#------------------------------------------------------------------------------#      
+def plot_data(Y,X,cnvx,cnvy,textx,x0,x1,nxt,texty,y0,y1,nyt,N,color='b',padb=0.0,padt=0.0):
+    """
+        
+    Scatter plot of (X,Y) pairts  
+    
+    :Y (list[double]): Y-Data to be plotted of a (X,Y) pair
+    :X (list[double]): X-Data to be plotted of a (X,Y) pair
+    :cnvx (int): Size in x of the figure.
+    :cnvy (int): Size in y of the figure.
+    :textx (string): Label x axis.
+    :x0 (float): Start x value.
+    :x1 (float): End x value.
+    :nxt (int): Number of x ticks.
+    :texty (string): Label y axis.
+    :y0 (float): Start y value.
+    :y1 (float): End y value.
+    :nyt (int): Number of y ticks.
+    :N (int): Number of points.
+    :color: Color of the plot.
+    :padb (float): Pad bottom. Some extra space at the bottom to better visualization.
+    :padt (float): Pad top. Some extra space at the top to better visualization.
+        
+    """
+      
+    f=plt.figure(figsize=(cnvx,cnvy))
+    ax1=f.add_subplot(111)
+    ax1.xaxis.set_ticks_position('bottom')
+    ax1.yaxis.set_ticks_position('left')
+
+    plt.xlim(x0,x1)
+    plt.ylim(y0-padb,y1+padt)
+    tx=np.linspace(x0, x1, nxt)   
+    ty=np.linspace(y0, y1, nyt)   
+    plt.xticks(tx, size = 18)
+    plt.yticks(ty, size = 18)
+    plt.xlabel(textx, fontsize=18, labelpad=0)
+    plt.ylabel(texty,  fontsize=18, labelpad=0)
+    plt.subplots_adjust(left = 0.14)
+    plt.subplots_adjust(bottom = 0.15)
+    plt.tick_params(which='both', width=1)
+    plt.tick_params(which='major', length=-7, pad=15)
+    plt.tick_params(which='minor', length=-4, pad=15)
+    plt.plot(X, Y,color=color, linewidth=3.0)
     plt.show()
