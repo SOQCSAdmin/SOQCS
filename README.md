@@ -17,7 +17,7 @@
 # Related Publications #
 Please cite the most appropriate of these works if you make use of this library:
 
-*  Javier Osca and Jiri Vala.  <span style="color:blue"> <i>Implementation of photon partial distinguishability in a quantum optical circuit simulation</span>. **arXiv:2208.03250 (2022)**
+*  Javier Osca and Jiri Vala.  <span style="color:blue"> <i>Implementation of photon partial distinguishability in a quantum optical circuit simulation</i></span>. **arXiv:2208.03250 (2022)**
 *  Javier Osca and Jiri Vala.  <span style="color:blue"> <i>Implementation of a Stochastic Optical Quantum Circuit Simulator ( SOQCS ) </i></span>. **In preparation.**
 
 
