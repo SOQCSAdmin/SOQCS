@@ -3,7 +3,7 @@
 * @author Javier Osca
 * @author Jiri Vala
 *
-* @copyright Copyright © 2022 National University of Ireland Maynooth, Maynooth University. All rights reserved.
+* @copyright Copyright © 2023 National University of Ireland Maynooth, Maynooth University. All rights reserved.
 *            The contents of this file are subject to the licence terms detailed in LICENCE.TXT available in the
 *            root directory of this source tree. Use of the source code in this file is only permitted under the
 *            terms of the licence in LICENCE.TXT.
@@ -57,11 +57,12 @@ public:
     void clear();                                                        //  Clears a state
 
     // State manipulation methods.
-    void add_term(cmplx i_ampl, int *occ);                               // Adds a new term to a state
-    void add_term(cmplx i_ampl, hterm term, qocircuit *qoc);             // Adds a new term to a state ( human readable form)
-    void dproduct(state *rhs);                                           // Direct product of states defined in non coincident channels).
+    int add_term(cmplx i_ampl, int *occ);                                // Adds a new term to a state
+    int add_term(cmplx i_ampl, hterm term, qocircuit *qoc);              // Adds a new term to a state ( human readable form)
+    int dproduct(state *rhs);                                            // Direct product of states defined in non coincident channels).
     cmplx braket(state *bra);                                            // Calculates the braket <bra|state>
     void normalize();                                                    // Normalizes the state
+    int rephase(hterm def,qocircuit *qoc);                               // Changes the global phase of the state.
     state *post_selection(state *prj);                                   // Post select a state using a "projector"
     state *remove_empty_channels(veci ch, int t,qocircuit *qoc);         // Remove all the levels corresponding to the specified channels provided that they are zero.
     state *convert(veci cnv, qocircuit *qoc);                            // Re-arranges the packet numeration
@@ -73,14 +74,19 @@ public:
     void  prnt_state(int format, int column, bool loss, qocircuit *qoc); // Prints a state ( in human readable form )
 
     // Emitters/Initial states
-    void QD(mati ch, double k, double S, double tss, double thv, qocircuit *qoc);                                       // QD state generator model
-    void Bell (mati ch,char kind, double phi, qocircuit *qoc);                                                          // Non-ideal bell emitter with a phase e^(-i phi) in the second term. (Path encoding)
-    void BellP(mati ch,char kind, double phi, qocircuit *qoc);                                                          // Non-ideal bell emitter with a phase e^(-i phi) in the second term. (Polarization encoding)
-    void QDPair(int i_ch0,int i_ch1, veci i_t, double dt, double k, double S, double tss, double thv, qocircuit *qoc);  // Single pair photon emission in a QD.
-    void Bell_Path(int i_ch0,int i_ch1, veci i_t, char kind, double phi, qocircuit *qoc);                               // Auxiliary method for non-ideal bell emission. (Path encoding)
-    void Bell_Pol(int i_ch0,int i_ch1, veci i_t, char kind, double phi,qocircuit *qoc);                                 // Auxiliary method for non-ideal bell emission. (Polarization encoding)
-    void Corr_Pol(int i_ch0,int i_ch1, veci i_t, qocircuit *qoc);                                                       // Auxiliary method for QD emission. Correlated emitter
-    void Rand_Pol(int i_ch0,int i_ch1, veci i_t, qocircuit *qoc);                                                       // Auxiliary method for QD emission. Random emitter
+    int QD(mati ch, double k, double S, double tss, double thv, qocircuit *qoc);                                       // QD state generator model
+    int Bell (mati ch,char kind, double phi, qocircuit *qoc);                                                          // Non-ideal bell emitter with a phase e^(-i phi) in the second term. (Path encoding)
+    int BellP(mati ch,char kind, double phi, qocircuit *qoc);                                                          // Non-ideal bell emitter with a phase e^(-i phi) in the second term. (Polarization encoding)
+    int QDPair(int i_ch0,int i_ch1, veci i_t, double dt, double k, double S, double tss, double thv, qocircuit *qoc);  // Single pair photon emission in a QD.
+    int Bell_Path(int i_ch0,int i_ch1, veci i_t, char kind, double phi, qocircuit *qoc);                               // Auxiliary method for non-ideal bell emission. (Path encoding)
+    int  Bell_Pol(int i_ch0,int i_ch1, veci i_t, char kind, double phi,qocircuit *qoc);                                // Auxiliary method for non-ideal bell emission. (Polarization encoding)
+    int Corr_Pol(int i_ch0,int i_ch1, veci i_t, qocircuit *qoc);                                                       // Auxiliary method for QD emission. Correlated emitter
+    int Rand_Pol(int i_ch0,int i_ch1, veci i_t, qocircuit *qoc);                                                       // Auxiliary method for QD emission. Random emitter
+
+    // Qubit codification methods (path encoding)
+    state *encode(mati qbits,qocircuit *qoc);                             // Encode from photonic to QuBit representation
+    state *decode(mati qdef,state *anzilla,qocircuit *qoc);               // Decode from QuBit to photonic representation ( state version )
+    state *decode(mati qdef,veci anzilla,qocircuit *qoc);                 // Decode from QuBit to photonic representation ( vector version)
 
 protected:
     // Auxiliary methods
@@ -110,6 +116,7 @@ typedef MatrixXi hterm;               ///< Type "Human Term" (hterm). Matrix def
 
 // Constant defaults
 const int    DEFFORMAT   = 3;         ///< Default print format.
+const int    NFORMATS    = 2;
 const int    DEFSTATEDIM = 50;        ///< Default maximum number of kets.
 const double DEFTHOLDPRNT= 0.0001;    ///< Default amplitude magnitude threshold for printing.
 
@@ -125,7 +132,7 @@ const double DEFTHOLDPRNT= 0.0001;    ///< Default amplitude magnitude threshold
 *   \author Javier Osca
 *   \author Jiri Vala
 *
-*   \copyright Copyright &copy; 2022 National University of Ireland Maynooth, Maynooth University. All rights reserved. <br>
+*   \copyright Copyright &copy; 2023 National University of Ireland Maynooth, Maynooth University. All rights reserved. <br>
 *              The contents and use of this document and the related code are subject to the licence terms detailed in <a  href="../assets/LICENCE.TXT"> LICENCE.txt </a>.
 *
 *   @ingroup Ket_List
@@ -208,6 +215,7 @@ public:
     *   Adds a new ket to the list.
     *
     *  @param int   *occ    Array with the occupation of each level in the new ket.
+    *  @return the ket index if success -1 otherwise.
     *  @ingroup Ket_operations
     */
     int add_ket(int *occ);
@@ -226,6 +234,7 @@ public:
     *   Except in the 1-Row case the order is irrelevant. Furthermore, levels not configured are assumed to be initialized by zero.
     *
     *  @param qocircuit *qoc     Circuit to which the ket is related.
+    *  @return the ket index if success -1 otherwise.
     *  @ingroup Ket_operations
     */
     int add_ket(hterm term, qocircuit *qoc);
@@ -233,7 +242,7 @@ public:
     *  Finds the position of a ket in the list.
     *
     *  @param int   *occ    List with the occupation of each level of the ket we are searching.
-    *  @return Position of the ket in the list.
+    *  @return Position of the ket in the list. -1 if that ket is not present.
     *  @ingroup Ket_operations
     */
     int find_ket(int *occ);
@@ -252,7 +261,7 @@ public:
     *   Except in the 1-Row case the order is irrelevant. Furthermore, levels not configured are assumed to be zero.
     *
     *  @param qocircuit *qoc     Circuit to which the ket is related.
-    *  @return Position of the ket in the list.
+    *  @return Position of the ket in the list. -1 if that ket is not present.
     *  @ingroup Ket_operations
     */
     int find_ket(hterm def,qocircuit *qoc);
@@ -281,27 +290,15 @@ public:
     *
     *  @param int iket           Index of ket to be printed.
     *  @param int format         Format of the output.<br>
-                        <b>0</b> The ket is printed in numerical format: | (channel, polarization, wavefunction): occupation >. <br>
-    *                     Detailed format:
+                       <b>0</b>  Straightforward form: <br>
+    *                     The occupation values are printed in ascending order. The method reverts to this format
+    *                     independently of the configuration if the pointer to the circuit "qocircuit* qoc" is Null<br>
+    *                     Example:<br>
     *                     @code
-                            |(ch1{, m1}{, t1}): o1,  ...,(chn{, mn}{, tn}): on >
-    *                     @endcode
-    *                     Example:
-    *                     @code
-                            | (0, 0, 0): 0, (0, 0, 1): 0, (0, 1, 0): 2, (0, 1, 1): 0 >
-    *                    @endcode
-    *                    <br>
-    *                   <b>1</b> The polarization is referred by a letter H/V: | (channel, H/V, wavefunction): occupation >. <br>
-    *                     Detailed format:
-    *                     @code
-                            | (ch1{, H/V}{, t1}): o1, ...,(chn{, H/V}{, tn}): on >
-    *                     @endcode
-    *                     Example:
-    *                     @code
-                            | (0, H, 0): 0, (0, H, 1): 0, (0, V, 0): 2, (0, V, 1): 0 >
+                            | 0, 0, 2, 0 >
     *                     @endcode
     *                     <br>
-    *                  <b>2</b>  Human readable format: | [occupation]H/V(wavefunction)channel >  <br>
+    *                  <b>1</b>  Human readable format: | [occupation]H/V(wavefunction)channel >  <br>
     *                     Detailed format:
     *                     @code
                             {{ | {{[o1]}o1>1}{H/V}{(t1)}ch1 > } o1>0},...,{{ | {{[on]}o1>1}{{H/V}{(tn)}chn > } on>0}
@@ -309,14 +306,6 @@ public:
     *                     Example:
     *                     @code
                             | [2]V(0)0 >
-    *                     @endcode
-    *                     <br>
-                       <b>3</b>  Straightforward form: <br>
-    *                     The occupation values are printed in ascending order. The method reverts to this format
-    *                     independently of the configuration if the pointer to the circuit "qocircuit* qoc" is Null<br>
-    *                     Example:<br>
-    *                     @code
-                            | 0, 0, 2, 0 >
     *                     @endcode
     *  <br>
     *  <b>Legend</b>:<br>
@@ -332,27 +321,15 @@ public:
     *
     *  @param int iket           Number of ket to be printed.
     *  @param int format         Format of the output.<br>
-                        <b>0</b> The ket is printed in numerical format: | (channel, polarization, wavefunction): occupation >. <br>
-    *                     Detailed format:
+                       <b>0</b>  Straightforward form: <br>
+    *                     The occupation values are printed in ascending order. The method reverts to this format
+    *                     independently of the configuration if the pointer to the circuit "qocircuit* qoc" is Null<br>
+    *                     Example:<br>
     *                     @code
-                            |(ch1{, m1}{, t1}): o1,  ...,(chn{, mn}{, tn}): on >
-    *                     @endcode
-    *                     Example:
-    *                     @code
-                            | (0, 0, 0): 0, (0, 0, 1): 0, (0, 1, 0): 2, (0, 1, 1): 0 >
-    *                    @endcode
-    *                    <br>
-    *                   <b>1</b> The polarization is referred by a letter H/V: | (channel, H/V, wavefunction): occupation >. <br>
-    *                     Detailed format:
-    *                     @code
-                            | (ch1{, H/V}{, t1}): o1, ...,(chn{, H/V}{, tn}): on >
-    *                     @endcode
-    *                     Example:
-    *                     @code
-                            | (0, H, 0): 0, (0, H, 1): 0, (0, V, 0): 2, (0, V, 1): 0 >
+                            | 0, 0, 2, 0 >
     *                     @endcode
     *                     <br>
-    *                  <b>2</b>  Human readable format: | [occupation]H/V(wavefunction)channel >  <br>
+    *                  <b>1</b>  Human readable format: | [occupation]H/V(wavefunction)channel >  <br>
     *                     Detailed format:
     *                     @code
                             {{ | {{[o1]}o1>1}{H/V}{(t1)}ch1 > } o1>0},...,{{ | {{[on]}o1>1}{{H/V}{(tn)}chn > } on>0}
@@ -360,14 +337,6 @@ public:
     *                     Example:
     *                     @code
                             | [2]V(0)0 >
-    *                     @endcode
-    *                     <br>
-                       <b>3</b>  Straightforward format: <br>
-    *                     The occupation values are printed in ascending order. The method reverts to this format
-    *                     independently of the configuration if the pointer to the circuit "qocircuit* qoc" is Null<br>
-    *                     Example:<br>
-    *                     @code
-                            | 0, 0, 2, 0 >
     *                     @endcode
     *  <br>
     *  <b>Legend</b>:<br>
@@ -404,7 +373,7 @@ protected:
 *   \author Javier Osca
 *   \author Jiri Vala
 *
-*   \copyright Copyright &copy; 2022 National University of Ireland Maynooth, Maynooth University. All rights reserved. <br>
+*   \copyright Copyright &copy; 2023 National University of Ireland Maynooth, Maynooth University. All rights reserved. <br>
 *              The contents and use of this document and the related code are subject to the licence terms detailed in <a  href="../assets/LICENCE.TXT"> LICENCE.txt </a>.
 *
 *   @ingroup State
@@ -484,6 +453,7 @@ public:
     *
     *  @param cmplx i_ampl  Amplitude of the new term.
     *  @param int   *occ    List with the occupation of each level in the new term.
+    *  @return index of the new term in the list defining the state.
     *  @ingroup State_operations
     */
     int add_term(cmplx i_ampl, int *occ);
@@ -511,13 +481,14 @@ public:
     *  The kets of the resulting state are the result of the sum of the occupations of both the present and input state.
     *
     *  @param state *rhs  State in the right hand side of the direct product like operation.
-    *  @return index of the new ket in the ket list defining the state.
+    *  @return 0 if the operation is successful -1 otherwise.
     *  @ingroup State_operations
     */
-    void dproduct(state *rhs);
+    int dproduct(state *rhs);
     /**
-    *  Performs the bra-ket operation <bra|state>.
+    *  Performs the bra-ket operation <bra|state> using the complex conjugate of this state as bra.
     *
+    *  @param state *rhs  State in the right hand side of the braket operation.
     *  @return The complex number result of the projection.
     *  @ingroup State_operations
     */
@@ -528,6 +499,24 @@ public:
     *  @ingroup State_operations
     */
     void normalize();
+    /**
+    *  Changes the global phase of the state to make real the coefficient of the reference ket defined by def.
+    *  @param hterm      def     Matrix that defines the ket which coefficient is used as reference. Each column defines the configuration of one level.<br>
+    *                            There are four different ways to create these configurations depending on the number of rows
+    *                            of the term matrix: <br>
+    *                            <br>
+    *                            4-Row: Channels, polarization, wavepacket and occupation in this order.<br>
+    *                            3-Row: Channels, polarization and occupation in this order. Wavepackets are assumed to be the same in all cases.<br>
+    *                            2-Row: Channels and occupation in this order. Polarization and wavepackets are assumed to be the same in all cases.<br>
+    *                            1-Row: Occupation. In this case the user must provide just a list of occupations for each channel in level ordering.<br>
+    *                            <br>
+    *   Except in the 1-Row case the order is irrelevant. Furthermore, levels not configured are assumed to be initialized by zero.
+    *
+    *  @param qocircuit *qoc     Circuit to which the definition is related.
+    *  @return index of the reference ket in the ket list defining the state.
+    *  @ingroup State_operations
+    */
+    int rephase(hterm def,qocircuit *qoc);
     /**
     *  Post-selection over states by the condition defined in the the "projector".
     *
@@ -657,9 +646,10 @@ public:
     *  @param double tss Characteristic time of spin-scattering tss.
     *  @param double thv Characteristic time of cross-dephasing thv.
     *  @param qocircuit *qoc Circuit to which the state to be created is related.
+    *  @return >=0 if success <0 otherwise.
     *  @ingroup Emitter_state
     */
-    void QD(mati ch, double k, double S, double tx, double tss, double thv, qocircuit *qoc);
+    int QD(mati ch, double k, double S, double tx, double tss, double thv, qocircuit *qoc);
     /**
     *  Method to create a photonic Bell state in path encoding.
     *
@@ -681,9 +671,10 @@ public:
         | A, B > + exp(-i phi)| C, D >
     *  @endcode
     *  @param qocircuit *qoc Circuit to which the state to be created is related.
+    *  @return >=0 if success <0 otherwise.
     *  @ingroup Emitter_state
     */
-    void Bell (mati ch, char kind, double phi, qocircuit *qoc);
+    int Bell (mati ch, char kind, double phi, qocircuit *qoc);
     /**
     *  Method to create a photonic Bell state in polarization encoding.
     *
@@ -702,9 +693,10 @@ public:
         | A, B > + exp(-i phi)| C, D >
     *  @endcode
     *  @param qocircuit *qoc Circuit to which the state to be created is related.
+    *  @return >=0 if success <0 otherwise.
     *  @ingroup Emitter_state
     */
-    void BellP(mati ch, char kind, double phi, qocircuit *qoc);
+    int BellP(mati ch, char kind, double phi, qocircuit *qoc);
     /**
     *  Quantum dot photon pair generator. It creates a photon pair as it would be generated by a quantum dot excited by a single laser pulse.
     *
@@ -718,9 +710,10 @@ public:
     *  @param double tss Characteristic time of spin-scattering tss.
     *  @param double thv Characteristic time of cross-dephasing thv.
     *  @param qocircuit *qoc Circuit to which the state to be created is related.
+    *  @return >=0 if success <0 otherwise.
     *  @ingroup Emitter_state
     */
-    void QDPair(int i_ch0,int i_ch1, veci i_t, double dt, double k, double S, double tss, double thv, qocircuit *qoc);
+    int QDPair(int i_ch0,int i_ch1, veci i_t, double dt, double k, double S, double tss, double thv, qocircuit *qoc);
     /**
     *  Auxiliary method to create a photonic Bell state in path encoding.
     *
@@ -740,9 +733,10 @@ public:
         | A, B > + exp(-i phi)| C, D >
     *  @endcode
     *  @param qocircuit *qoc Circuit to which the state to be created is related.
+    *  @return >=0 if success <0 otherwise.
     *  @ingroup Emitter_state
     */
-    void Bell_Path(int i_ch0,int i_ch1, veci i_t, char kind, double phi, qocircuit *qoc);
+    int Bell_Path(int i_ch0,int i_ch1, veci i_t, char kind, double phi, qocircuit *qoc);
     /**
     *  Auxiliary method to create a photonic Bell state in polarization encoding.
     *
@@ -762,9 +756,10 @@ public:
         | A, B > + exp(-i phi)| C, D >
     *  @endcode
     *  @param qocircuit *qoc Circuit to which the state to be created is related.
+    *  @return >=0 if success <0 otherwise.
     *  @ingroup Emitter_state
     */
-    void Bell_Pol(int i_ch0,int i_ch1, veci i_t, char kind, double phi, qocircuit *qoc);
+    int Bell_Pol(int i_ch0,int i_ch1, veci i_t, char kind, double phi, qocircuit *qoc);
     /**
     *  It creates a photon pair correlated in polarization.
     *
@@ -773,9 +768,10 @@ public:
     *  @param veci i_t  Vector with the wavepacket numbers to be assigned to the photon depending on their polarization.
     *  First, the first channel horizontal and vertical wavepackets and then the second channel in the same order 1H1V2H2V.
     *  @param qocircuit *qoc Circuit to which the state to be created is related.
+    *  @return >=0 if success <0 otherwise.
     *  @ingroup Emitter_state
     */
-    void Corr_Pol(int i_ch0,int i_ch1, veci i_t, qocircuit *qoc);
+    int Corr_Pol(int i_ch0,int i_ch1, veci i_t, qocircuit *qoc);
     /**
     *  It creates a photon pair with random polarization.
     *
@@ -784,9 +780,49 @@ public:
     *  @param veci i_t  Vector with the wavepacket numbers to be assigned to the photon depending on their polarization.
     *  First, the first channel horizontal and vertical wavepackets and then the second channel in the same order 1H1V2H2V.
     *  @param qocircuit *qoc Circuit to which the state to be created is related.
+    *  @return >=0 if success <0 otherwise.
     *  @ingroup Emitter_state
     */
-    void Rand_Pol(int i_ch0,int i_ch1, veci i_t, qocircuit *qoc);
+    int Rand_Pol(int i_ch0,int i_ch1, veci i_t, qocircuit *qoc);
+
+
+    // Qubit codification methods.
+    /** @defgroup State_qubit Qubit codification support
+    *   @ingroup State
+    *   Support to encode and decode qubit states into photonic states (and back) using path encoding.
+    */
+    /**
+    *  It encodes a photonic state into a qubit state (path encoding). <br>
+    *  <b> Only for ideal circuits. nm=1 and ns=1 </b>
+    *
+    *  @param mati qbits Qubit definition. Matrix with a column entry for each qubit where they are defined the two photonic channels needed to encode the qubit. A 01 occupation means Q=0 and a 10 occupation Q=1.
+    *  @param qocircuit *qoc Circuit to which the state is related.
+    *  @return Encoded state.
+    *  @ingroup State_qubit
+    */
+    state *encode(mati qbits,qocircuit *qoc);
+    /**
+    *  It decodes qubit state into a photonic state using path encoding. (State definition version) <br>
+    *  <b> Only for ideal circuits. nm=1 and ns=1 </b>
+    *
+    *  @param mati qbits Qubit definition. Matrix with a column entry for each qubit where they are defined the two photonic channels needed to encode the qubit. A 01 occupation means Q=0 and a 10 occupation Q=1.
+    *  @param anzilla. State defining the occupations of the auxiliary channels that are not-part of a qubit but need to be initialized with some specific values to the circuit to work.
+    *  @param qocircuit *qoc Circuit to which the state is related.
+    *  @return Decoded state.
+    *  @ingroup State_qubit
+    */
+    state *decode(mati qdef,state *anzilla,qocircuit *qoc);
+    /**
+    *  It decodes qubit state into a photonic state using path encoding. (Vector definition version) <br>
+    *  <b> Only for ideal circuits. nm=1 and ns=1 </b>
+    *
+    *  @param mati qbits Qubit definition. Matrix with a column entry for each qubit where they are defined the two photonic channels needed to encode the qubit. A 01 occupation means Q=0 and a 10 occupation Q=1.
+    *  @param anzilla. Vector defining the values of the anzilla channels in order ( from smaller to larger channel number ).
+    *  @param qocircuit *qoc Circuit to which the state is related.
+    *  @return Decoded state.
+    *  @ingroup State_qubit
+    */
+    state *decode(mati qdef,veci anzilla,qocircuit *qoc);
 
 protected:
     // Auxiliary methods
@@ -830,7 +866,7 @@ protected:
 *   \author Javier Osca
 *   \author Jiri Vala
 *
-*   \copyright Copyright &copy; 2022 National University of Ireland Maynooth, Maynooth University. All rights reserved. <br>
+*   \copyright Copyright &copy; 2023 National University of Ireland Maynooth, Maynooth University. All rights reserved. <br>
 *              The contents and use of this document and the related code are subject to the licence terms detailed in <a  href="../assets/LICENCE.TXT"> LICENCE.txt </a>.
 *
 *   @ingroup State

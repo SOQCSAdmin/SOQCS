@@ -3,7 +3,7 @@
 //
 // PROBABILITY BINS DEFINITION LIBRARY.
 //
-// Copyright © 2022 National University of Ireland Maynooth, Maynooth University. All rights reserved.
+// Copyright © 2023 National University of Ireland Maynooth, Maynooth University. All rights reserved.
 // The contents of this file are subject to the licence terms detailed in LICENCE.TXT available in the
 // root directory of this source tree. Use of the source code in this file is only permitted under the
 // terms of the licence in LICENCE.TXT.
@@ -128,7 +128,7 @@ int p_bin::add_count(int *occ){
 
 
     index=add_ket(occ);
-    p[index]=p[index]+1.0;
+    if(index>=0) p[index]=p[index]+1.0;
     N=N+1;
 
     return index;
@@ -141,7 +141,7 @@ int p_bin::add_count(int *occ){
 //  compatible bin set.
 //
 //----------------------------------------
-void p_bin::add_bin(p_bin *input){
+int p_bin::add_bin(p_bin *input){
 //  p_bin *input;     // Input probability bin set
 //  Variables
     int    index;     // Index of each entry in this set
@@ -151,10 +151,12 @@ void p_bin::add_bin(p_bin *input){
 
     for(i=0;i<input->nket;i++){
         index=add_ket(input->ket[i]);
+        if(index<0) return -1;
         p[index]=p[index]+input->p[i];
     }
 
     N=N+input->N;
+    return 0;
 }
 
 
@@ -165,7 +167,7 @@ void p_bin::add_bin(p_bin *input){
 // from it
 //
 //----------------------------------------
-void p_bin::add_state(state *input){
+int p_bin::add_state(state *input){
 //  state *input;     // Input state
 //  Variables
     int    index;     // Index of each entry in this set
@@ -175,10 +177,12 @@ void p_bin::add_state(state *input){
 
     for(i=0;i<input->nket;i++){
         index=add_ket(input->ket[i]);
+        if(index<0) return -1;
         p[index]=p[index]+(double) abs(conj(input->ampl[i])*input->ampl[i]);
     }
 
     N=N+1;
+    return 0;
 }
 
 
@@ -417,7 +421,7 @@ void p_bin::aux_prnt_bins( int format, double thresh, bool loss, qocircuit *qoc)
             cout <<right << setw(2) << i << " : ";
             prnt_ket(i,format,loss,qoc);
             cout << ": ";
-            cout << left << prob;
+            cout << left << setprecision(4) << prob;
 
 
         }
@@ -522,6 +526,7 @@ p_bin *p_bin::calc_measure(qocircuit *qoc){
 //  Variables
     int    S;               // Blinking and dark counts calculation number of iterations
     double stdev;           // Gaussian white noise standard deviation
+    p_bin *inperiod;        // Output after removing photons that are not in the measurement period.
     p_bin *dark;            // Output after adding dark counts
     p_bin *blinked;         // Output after blinking effect considerations
     p_bin *lossed;          // Output after considering the detector efficiency
@@ -536,9 +541,12 @@ p_bin *p_bin::calc_measure(qocircuit *qoc){
     S=qoc->R;
     stdev=sqrt(qoc->dev);
 
+    if(qoc->np>1) inperiod=this->meas_window(qoc);
+    else inperiod=this->clone();
+
     // Compute Dark counts
-    if(qoc->timed==0) dark=this->dark_counts(S,qoc);
-    else dark=this->clone();
+    if(qoc->timed==0) dark=inperiod->dark_counts(S,qoc);
+    else dark=inperiod->clone();
 
     // Compute Blinking
     blinked=dark->blink(S,qoc);
@@ -566,11 +574,14 @@ p_bin *p_bin::calc_measure(qocircuit *qoc){
             case 1:  // Clock: Partial trace
                 counted=measured->remove_freq(qoc);
                 break;
+            case 2:  // Clock+Spectrum: Full
+                counted=measured->clone();
+                break;
             case 3:  // Clock: Manual mode
                 counted=measured->remove_freq(qoc);
                 break;
-            case 2:  // Clock+Spectrum: Full
-                counted=measured->clone();
+            case 4:  // Classify periods
+                counted=measured->classify_period(qoc);
                 break;
             default: // Default: Error
                 cout << "calc_measure error: Time has a non-valid value" << endl;
@@ -587,6 +598,7 @@ p_bin *p_bin::calc_measure(qocircuit *qoc){
     else noisy=counted->clone();
 
     // Free memory
+    delete inperiod;
     delete dark;
     delete blinked;
     delete lossed;
@@ -596,6 +608,66 @@ p_bin *p_bin::calc_measure(qocircuit *qoc){
 
     // Return final detection
     return noisy;
+}
+
+//--------------------------------------------
+//
+// Filters the photons out of the measurement window
+// established by the detectors.
+//
+//--------------------------------------------
+p_bin *p_bin::meas_window(qocircuit* qoc){
+//  qocircuit *qoc;     // Circuit where the detectors are defined
+//  Variables
+    int    ch;          // Channel number
+    int    m;           // Mode number
+    int    s;           // Wavepacket number
+    int    nwi;         // First period that can be measured
+    int    nwf;         // Last period that can be measured
+    int    index;       // Index of a ket in this set of bins
+    int   *occ;         // Level occupation
+    p_bin *newpbin;     // New output probability bin
+//  Auxiliary index
+    int    i;           // Aux index
+    int    k;           // Aux index
+    int    l;           // Aux index
+
+    // Set up measurement period.
+    nwi=qoc->mpi;
+    nwf=qoc->mpf+1;
+
+    if((qoc->mpi<0)&&(qoc->mpf<0)) return this->clone();
+    if(qoc->mpi<0) nwi=0;
+    if(qoc->mpf<0) nwf=qoc->np+1;
+
+    // Calculate blinking
+    newpbin=new p_bin(nlevel,maxket,vis);
+
+        for(i=0;i<nket;i++){
+            occ=new int[nlevel]();
+            for(ch=0;ch<qoc->nch;ch++){
+            for(m=0;m<qoc->nm;m++){
+            for(s=0;s<qoc->ns;s++){
+                // Store the level occupation depending if the channel is blinking at that moment
+                l=qoc->i_idx[ch][m][s];
+
+                // Store
+                k=0;
+                while(vis[k]!=l) k=k+1;
+                if((s>=nwi*qoc->nsp)&&(s<nwf*qoc->nsp)) occ[k]=occ[k]+ket[i][k];
+
+            }}}
+
+            // Store level occupation
+            index=newpbin->add_ket(occ);
+            newpbin->p[index]=newpbin->p[index]+p[i];
+            delete occ;
+        }
+
+    newpbin->N=N;
+
+    // Return new bin
+    return newpbin;
 }
 
 
@@ -1103,7 +1175,74 @@ p_bin *p_bin::remove_freq(qocircuit* qoc){
 //  Variables
     int    ch;          // Channel number
     int    m;           // Mode number
-    int    s;           // Packet number
+    int    is;          // Packet number
+    int    it;          // Packet number
+    int    ip;          // Period number
+    int    nt;          // Number of times
+    int    index;       // Index of a ket in this set of bins
+    int   *occ;         // Level occupation
+    p_bin *newpbin;     // New output probability bin
+//  Auxiliary index
+    int    i;           // Aux index
+    int    j;           // Aux index
+    int    k;           // Aux index
+    int    l;           // Aux index
+
+
+    // If for some reason there are not packets defined
+    // then the input is returned
+    if(qoc->emitted->pack_def.cols()==0){
+        newpbin=this->clone();
+        return newpbin;
+    }
+
+    // Set up number of times.
+    nt=qoc->emitted->times.size();
+
+    // Calculate counts in a channel-polarization
+    // VISIBILITY information is to remember the post-selected channels.
+    newpbin=new p_bin(nlevel,nket,vis);
+    for(i=0;i<nket;i++){
+        occ=new int[qoc->nlevel]();
+        for(j=0;j<nlevel;j++){
+            ch=qoc->idx[vis[j]].ch;
+            m=qoc->idx[vis[j]].m;
+            is=qoc->idx[vis[j]].s%qoc->nsp;
+            ip=qoc->idx[vis[j]].s/qoc->nsp;
+
+            if(ket[i][j]>0){ // We prevent to check levels that we don't have packet defined when we reserve more packets than we use
+                // Redefine the index as time instead of packets
+                it=qoc->emitted->pack_def(0,is)+ip*nt;
+                l=qoc->i_idx[ch][m][it];
+
+                // Store
+                k=0;
+                while(vis[k]!=l) k=k+1;
+                occ[k]=occ[k]+ket[i][j];
+            }
+        }
+        index=newpbin->add_ket(occ);
+        newpbin->p[index]=newpbin->p[index]+p[i];
+        delete occ;
+    }
+    newpbin->N=N;
+
+    // Return new bin.
+    return newpbin;
+}
+
+
+//----------------------------------------
+//
+// Classify period
+//
+//----------------------------------------
+p_bin *p_bin::classify_period(qocircuit* qoc){
+//  qocircuit *qoc;     // Circuit where the detectors are defined
+//  Variables
+    int    ch;          // Channel number
+    int    m;           // Mode number
+    int    ip;          // Packet period
     int    index;       // Index of a ket in this set of bins
     int   *occ;         // Level occupation
     p_bin *newpbin;     // New output probability bin
@@ -1122,19 +1261,18 @@ p_bin *p_bin::remove_freq(qocircuit* qoc){
     }
 
     // Calculate counts in a channel-polarization
+    // VISIBILITY information is to remember the post-selected channels.
     newpbin=new p_bin(nlevel,nket,vis);
     for(i=0;i<nket;i++){
-        occ=new int[nlevel]();
+        occ=new int[qoc->nlevel]();
         for(j=0;j<nlevel;j++){
-            // We put all the counts in
-            // the same time/wavepacket
             ch=qoc->idx[vis[j]].ch;
             m=qoc->idx[vis[j]].m;
-            s=qoc->idx[vis[j]].s;
+            ip=qoc->idx[vis[j]].s/qoc->nsp;
 
             if(ket[i][j]>0){ // We prevent to check levels that we don't have packet defined when we reserve more packets than we use
-                // Redefine the index as time instead of packets
-                l=qoc->i_idx[ch][m][qoc->emitted->pack_def(0,s)];
+                // Redefine the index as period instead of packets
+                l=qoc->i_idx[ch][m][ip];
 
                 // Store
                 k=0;
@@ -1199,6 +1337,7 @@ p_bin *p_bin::perform_count(qocircuit* qoc){
     // Return new bin.
     return newpbin;
 }
+
 
 
 //----------------------------------------
@@ -1275,4 +1414,101 @@ double p_bin::prob(mati def,qodev *dev){
 }
 
 
+//---------------------------------------------------------------------------
+//
+//  Encode a p_bin into a qubit representation using path encoding
+//  Circuit version.
+//
+//----------------------------------------------------------------------------
+p_bin *p_bin::translate(mati qdef,qocircuit *qoc){
+// mati       qdef; // Integer matrix with the q-bit to channel definitions
+// qocircuit *qoc;  // Quatum optical circuit to which this p_bin is referred
+// Variables
+    bool   valid;   // Is the ket valid for codification true=Yes/false=No
+    bool   print;   // A warning has been printed. True=Yes/False=No
+    int    val0;    // value of channel 0
+    int    val1;    // value of channel 1
+    int    qval;    // Q-bit equivalent value of channels 0 and 1.
+    int    pos;     // Position of the new stored value
+    int    nvalid;  // Number of encoded bins
+    int   *values;  // Vector of the values of each q-bit
+    p_bin *qbin;    // Q-bit encoded probability bin
+//  Auxiliary index
+    int    i;       // Aux index
+    int    j;       // Aux index
+    int    k;       // Aux index
+    int    l;       // Aux index
+    int    m;       // Aux index
+    int    n;       // Aux index
 
+
+    // Reserve and initialize memory
+    qbin=new p_bin(qdef.cols(),maxket);
+
+    // Check translation conditions
+    if((qoc->nm>1)||(qoc->ns>1)){
+        cout << "Translate error: The circuit number of modes nm and packets ns can only be one for encoding." << endl;
+        return qbin;
+    }
+
+    // Encode each bin
+    nvalid=0;
+    print=false;
+    for(i=0;i<nket;i++){
+        values=new int[qdef.cols()]();
+        valid=true;
+        for(j=0;j<qdef.cols();j++){
+            // Find the channels
+            m=qoc->i_idx[qdef(0,j)][0][0];
+            n=qoc->i_idx[qdef(1,j)][0][0];
+
+            // Read the values
+            // qdef is given over circuit definition.
+            // Levels number may change after post-selection
+            k=0;
+            l=0;
+            while((vis[k]!=m)&&(k<nlevel)) k=k+1; // Not efficient but small search
+            while((vis[l]!=n)&&(l<nlevel)) l=l+1; // Not efficient but small search
+            val0=ket[i][k];
+            val1=ket[i][l];
+
+            // Encode the values
+            qval=-1;
+            if((val0==0)&&(val1==1)) qval=0;
+            if((val0==1)&&(val1==0)) qval=1;
+            if(qval<0) valid=false;
+            values[j]=qval;
+        }
+        if(valid==true){
+            pos=qbin->add_count(values);
+            qbin->p[pos]=p[i];
+            if((pos!=nvalid)&&(print==false)){
+                cout << "Translate: Warning! encoding leads to collision. Invalid result" << endl;
+                print=true;
+            }
+            nvalid=nvalid+1;
+        }
+        delete values;
+    }
+
+    // Normalize bins
+    qbin->N=N;
+
+    // Return encoded bins
+    return qbin;
+}
+
+
+//---------------------------------------------------------------------------
+//
+//  Encode a p_bin into a qubit representation using path encoding.
+//  Device version.
+//
+//----------------------------------------------------------------------------
+p_bin *p_bin::translate(mati qdef,qodev *dev){
+//  mati       qdef; // Integer matrix with the q-bit to channel definitions
+//  qodev     *dev;  // Quatum optical device to which this p_bin is referred
+
+
+    return translate(qdef,dev->circ);
+}

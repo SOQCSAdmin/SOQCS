@@ -3,7 +3,7 @@
 //
 // MULTI THREAD SERVER LIBRARY
 //
-// Copyright © 2022 National University of Ireland Maynooth, Maynooth University. All rights reserved.
+// Copyright © 2023 National University of Ireland Maynooth, Maynooth University. All rights reserved.
 // The contents of this file are subject to the licence terms detailed in LICENCE.TXT available in the
 // root directory of this source tree. Use of the source code in this file is only permitted under the
 // terms of the licence in LICENCE.TXT.

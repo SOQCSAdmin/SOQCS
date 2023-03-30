@@ -3,7 +3,7 @@
 //
 // METACIRCUIT LIBRARY
 //
-// Copyright © 2022 National University of Ireland Maynooth, Maynooth University. All rights reserved.
+// Copyright © 2023 National University of Ireland Maynooth, Maynooth University. All rights reserved.
 // The contents of this file are subject to the licence terms detailed in LICENCE.TXT available in the
 // root directory of this source tree. Use of the source code in this file is only permitted under the
 // terms of the licence in LICENCE.TXT.
@@ -22,7 +22,7 @@ qodev::qodev(int i_nph, int i_nch){
 
 
     cfg_soqcs(i_nph);
-    circ=new qocircuit(i_nch,1,1, 0, 0, false,'G');
+    circ=new qocircuit(i_nch,1,1, 1, -1.0,0,0, false,'G');
     create_qodev(circ->num_levels(),DEFSTATEDIM,1);
 }
 
@@ -39,7 +39,7 @@ qodev::qodev(int i_nph, int i_nch, int i_nm){
 
 
     cfg_soqcs(i_nph);
-    circ=new qocircuit(i_nch,i_nm,1, 0, 0, false,'G');
+    circ=new qocircuit(i_nch,i_nm, 1, 1, -1.0, 0, 0, false,'G');
     create_qodev(circ->num_levels(),DEFSTATEDIM,1);
 }
 
@@ -59,10 +59,9 @@ qodev::qodev(int i_nph,int i_nch, int i_nm, int i_ns, int clock, char ckind){
 
 
     cfg_soqcs(i_nph);
-    circ=new qocircuit(i_nch,i_nm,i_ns, clock, 0, false,ckind);
+    circ=new qocircuit(i_nch,i_nm,i_ns, 1, -1.0, clock, 0, false, ckind);
     create_qodev(circ->num_levels(),DEFSTATEDIM,i_ns);
 }
-
 
 
 //-----------------------------------------------------
@@ -70,21 +69,46 @@ qodev::qodev(int i_nph,int i_nch, int i_nm, int i_ns, int clock, char ckind){
 //  Creates a physical device with physical detectors
 //
 //-----------------------------------------------------
-qodev::qodev(int i_nph, int i_nch, int i_nm, int i_ns, int clock, int i_R, bool loss, char ckind, int i_maxket){
-//  int  i_nph;     // Maximum number of photons to be simulated
-//  int  i_nch;     // Number of channels
-//  int  i_nch;     // Number of channels
-//  int  i_nm;      // Number of modes
-//  int  i_ns;      // Number of packets
-//  int  clock;     // Kind of detectors
-//  int  i_R;       // Number of iterations to calculate blinking and dark counts
-//  bool loss;      // Are losses going to be calculated explicitly? True=Yes/False=No
-//  char ckind;     // Kind of packets  'G': Gaussian/'E': Exponential
-//  int  i_maxket;  // Maximum number of bunches in the list
+qodev::qodev(int i_nph, int i_nch, int i_nm, int i_ns, int i_np, double i_dtp, int clock, int i_R, bool loss, char ckind){
+//  int    i_nph;   // Maximum number of photons to be simulated
+//  int    i_nch;   // Number of channels
+//  int    i_nm;    // Number of modes
+//  int    i_ns;    // Number of packets
+//  int    i_np;    // Number of periods.
+//  double dtp;     // Period length
+//  int    clock;   // Kind of detectors
+//  int    i_R;     // Number of iterations to calculate blinking and dark counts
+//  bool   loss;    // Are losses going to be calculated explicitly? True=Yes/False=No
+//  char   ckind;   // Kind of packets  'G': Gaussian/'E': Exponential
 
 
     cfg_soqcs(i_nph);
-    circ=new qocircuit(i_nch,i_nm,i_ns, clock, i_R, loss,ckind);
+    circ=new qocircuit(i_nch,i_nm,i_ns, i_np, i_dtp, clock, i_R, loss,ckind);
+    create_qodev(circ->num_levels(),DEFSTATEDIM,i_ns);
+}
+
+
+//-----------------------------------------------------
+//
+//  Creates a physical device with physical detectors
+//
+//-----------------------------------------------------
+qodev::qodev(int i_nph, int i_nch, int i_nm, int i_ns, int i_np, double i_dtp, int clock, int i_R, bool loss, char ckind, int i_maxket){
+//  int    i_nph;    // Maximum number of photons to be simulated
+//  int    i_nch;    // Number of channels
+//  int    i_nm;     // Number of modes
+//  int    i_ns;     // Number of packets
+//  int    i_np;     // Number of periods.
+//  double dtp;      // Period length
+//  int    clock;    // Kind of detectors
+//  int    i_R;      // Number of iterations to calculate blinking and dark counts
+//  bool   loss;     // Are losses going to be calculated explicitly? True=Yes/False=No
+//  char   ckind;    // Kind of packets  'G': Gaussian/'E': Exponential
+//  int    i_maxket; // Maximum number of bunches in the list
+
+
+    cfg_soqcs(i_nph);
+    circ=new qocircuit(i_nch,i_nm,i_ns, i_np, i_dtp, clock, i_R, loss,ckind);
     create_qodev(circ->num_levels(),i_maxket,i_ns);
 }
 
@@ -94,7 +118,7 @@ qodev::qodev(int i_nph, int i_nch, int i_nm, int i_ns, int clock, int i_R, bool 
 //  Auxiliary private method to create a device
 //
 //----------------------------------------
-void qodev::create_qodev(int i_level, int i_maxket, int i_np){
+void qodev::create_qodev(int i_level, int i_maxket, int i_ns){
 //  int  i_level;     // Number of levels to describe the state
 //  int  i_maxket;    // Maximum number of bunches in the list
 //  int  i_np;        // Number of packets
@@ -103,7 +127,7 @@ void qodev::create_qodev(int i_level, int i_maxket, int i_np){
 
 
     npack=0;
-    pack_list.resize(5,i_np);
+    pack_list.resize(4,i_ns);
     inpt=new state(i_level,i_maxket);
     occ=new int[i_level]();
     inpt->add_term(1.0,occ);
@@ -190,8 +214,11 @@ int qodev::add_photons(int N, int ch, int P, double t, double f, double w){
 //  double f;        // Photon emission frequency
 //  double w;        // Photon emission  width or decay time depending on the packet shape model
 //  Variables
+    int    ip;       // Period index
     int    T;        // Packet number
     int    add;      // Add new packer 0=No/1=Yes. This way we check repetitions.
+    int    error;    // An error happened when adding the term? >=0 No/-1=Yes
+    double rt;       // Reduced time of the packet to its equivalent in the first period.
     int   *occ;      // Level occupation
     state *aux;      // Auxiliary state
     hterm  in_term;  // Human readable input term
@@ -204,36 +231,46 @@ int qodev::add_photons(int N, int ch, int P, double t, double f, double w){
     // Check correctness
     if(circ->emiss==1){
         cout << "add_photons error #1: Photons already emitted. More photons can not be added at this stage" << endl;
-        cout << "No new photons can be defined after a delay or dispersion elements " << endl;
         return -1;
+    }
+
+    // Calculate period of the packet and the reduced
+    // time in the leading period.
+    if(circ->np>1){
+        ip=floor((t+0.5*circ->dtp)/circ->dtp);
+        rt=t-ip*circ->dtp;
+    }else{
+        ip=0;
+        rt=t;
     }
 
     // Check if the packet described for this entry already exists
     add=1;
     i=0;
     while((i<npack)&&(add==1)){
-        if((pack_list(1,i)==t)&&(pack_list(2,i)==f)&&(pack_list(3,i)==w)) add=0;
+        if( (abs(pack_list(1,i)-rt)<xcut)&&(abs(pack_list(2,i)-f)<xcut)&&(abs(pack_list(3,i)-w)<xcut)) add=0;
         i++;
     }
 
     // Update the wave-packet information
     if(add==1){
-        if(npack>=circ->ns) {
-            cout << "add_photons error #2: Not enough ns degrees of freedom! Needed: "<< npack+1 << endl;
+        if(npack>=circ->nsp){
+            cout << "add_photons error #3: Not enough ns degrees of freedom! Needed at least: "<< npack+1 << endl;
             return -1;
         }
         // If not exists add it
         T=npack;
         pack_list(0,npack)=(double) npack;
-        pack_list(1,npack)= t;
+        pack_list(1,npack)= rt;
         pack_list(2,npack)= f;
         pack_list(3,npack)= w;
-        pack_list(4,npack)= t;
         npack=npack+1;
     }else{
         // If exist just take the index
         T=i-1;
     }
+
+    T=T+ip*circ->nsp;
 
 
     // Update the input state information
@@ -244,7 +281,11 @@ int qodev::add_photons(int N, int ch, int P, double t, double f, double w){
                T,
                N;
     aux=new state(inpt->nlevel,1);
-    aux->add_term(1.0,in_term,circ);
+    error=aux->add_term(1.0,in_term,circ);
+    if(error<0){
+        cout << "add_photons: Warning! photons are being created at levels not defined in the circuit." << endl;
+        return -1;
+    }
 
     newinpt=new state(inpt->nlevel,inpt->maxket);
     for(j=0;j<inpt->nket;j++){
@@ -260,7 +301,7 @@ int qodev::add_photons(int N, int ch, int P, double t, double f, double w){
     delete inpt;
     inpt=newinpt;
 
-    return 0;
+    return T;
 }
 
 
@@ -269,7 +310,7 @@ int qodev::add_photons(int N, int ch, int P, double t, double f, double w){
 //  Add photons to a device as generated by a QD
 //
 //----------------------------------------
-int qodev::add_QD(int ch1, int ch2,double i_t1, double i_f1, double i_w1, double i_t2, double i_f2, double i_w2, int PW, double S, double k, double tss, double thv){
+int qodev::add_QD(int ch1, int ch2,double i_t1, double i_f1, double i_w1, double i_t2, double i_f2, double i_w2, double S, double k, double tss, double thv, int cascade){
 //  int    ch1;      // Chanel where the photons are added
 //  int    ch2;      // Chanel where the photons are added
 //  double t1;       // Photon 1 emission time
@@ -278,70 +319,19 @@ int qodev::add_QD(int ch1, int ch2,double i_t1, double i_f1, double i_w1, double
 //  double t2;       // Photon 2 emission time
 //  double f2;       // Photon 2 emission frequency
 //  double w2;       // Photon 2 emission width or decay time depending on the packet shape model
-//  int    PW;       // Do we consider frequency shift in emission because FSS?. 0='No'/1='Yes'
 //  double S;        // FSS
 //  double k;        // Signal to noise ration
 //  double tss;      // Spin scattering characteristic time
 //  double thv;      // Cross dephasing characteristic time
-
-
-    return this->add_QD( ch1, ch2, i_t1, i_t1, i_f1, i_w1, i_t2, i_t2, i_f2, i_w2, PW, S, k, tss, thv, 0.0, 2);
-}
-
-
-//----------------------------------------
-//
-//  Add photons to a device as generated by a QD in a cascade
-//
-//----------------------------------------
-int qodev::add_QD(int ch1, int ch2,double i_t1, double i_f1, double i_w1, double i_t2, double i_f2, double i_w2, int PW, double S, double k, double tss, double thv, double T2){
-//  int    ch1;      // Chanel where the photons are added
-//  int    ch2;      // Chanel where the photons are added
-//  double t1;       // Photon 1 emission time
-//  double f1;       // Photon 1 emission frequency
-//  double w1;       // Photon 1 emission width or decay time depending on the packet shape model
-//  double t2;       // Photon 2 emission time
-//  double f2;       // Photon 2 emission frequency
-//  double w2;       // Photon 2 emission width or decay time depending on the packet shape model
-//  int    PW;       // Do we consider frequency shift in emission because FSS?. 0='No'/1='Yes'
-//  double S;        // FSS
-//  double k;        // Signal to noise ration
-//  double tss;      // Spin scattering characteristic time
-//  double thv;      // Cross dephasing characteristic time
-//  double T2;       // Pure  dephasing characteristic time
-
-
-    return this->add_QD( ch1, ch2, i_t1, i_t1, i_f1, i_w1, i_t2, i_t2, i_f2, i_w2, PW, S, k, tss, thv, T2, 1);
-}
-
-
-//----------------------------------------
-//
-//  Add photons to a device as generated by a QD
-//
-//----------------------------------------
-int qodev::add_QD(int ch1, int ch2,double i_t1, double i_tp1, double i_f1, double i_w1, double i_t2, double i_tp2, double i_f2, double i_w2, int PW, double S, double k, double tss, double thv, double T2, int rand){
-//  int    ch1;      // Chanel where the photons are added
-//  int    ch2;      // Chanel where the photons are added
-//  double t1;       // Photon 1 emission time
-//  double tp1;      // Photon 1 emission phase time
-//  double f1;       // Photon 1 emission frequency
-//  double w1;       // Photon 1 emission width or decay time depending on the packet shape model
-//  double t2;       // Photon 2 emission time
-//  double tp2;      // Photon 2 emission phase time
-//  double f2;       // Photon 2 emission frequency
-//  double w2;       // Photon 2 emission width or decay time depending on the packet shape model
-//  int    PW;       // Do we consider frequency shift in emission because FSS?. 0='No'/1='Yes'
-//  double S;        // FSS
-//  double k;        // Signal to noise ration
-//  double tss;      // Spin scattering characteristic time
-//  double thv;      // Cross dephasing characteristic time
-//  double T2;       // Pure  dephasing characteristic time
-//  int    rand      // Phase computation mode
+//  int cascade;     // Is the second photon part of a cascade (extra random emission time).
 //  Variables
+    int    ip1;      // Period index packet #1
+    int    ip2;      // Period index packet #2
     int    add;      // Add new packer 0=No/1=Yes. This way we check repetitions.
-    double dt1;      // Extra emission time
-    double dt2;      // Extra phase time
+    int    error;    // if >=0 operation dproduct is successful otherwise there is an error.
+    double rt1;      // Reduced time of the packet #1 to its equivalent in the first period.
+    double rt2;      // Reduced time of the packet #2 to its equivalent in the first period.
+    double dt;       // Extra emission time
     veci   T;        // Packet number
     mati   ch;       // QD configuration matrix
     hterm  in_term;  // Human readable input term
@@ -357,185 +347,102 @@ int qodev::add_QD(int ch1, int ch2,double i_t1, double i_tp1, double i_f1, doubl
         return -1;
     }
 
+    // Calculate periods of the packets and their reduced
+    // times in the leading period.
+    if(circ->np>1){
+        ip1=floor((i_t1+0.5*circ->dtp)/circ->dtp);
+        rt1=i_t1-ip1*circ->dtp;
+
+        ip2=floor((i_t2+0.5*circ->dtp)/circ->dtp);
+        rt2=i_t2-ip2*circ->dtp;
+    }else{
+        ip1=0;
+        rt1=i_t1;
+
+        ip2=0;
+        rt2=i_t2;
+    }
+
+    // Calculation of extra random time for cascades.
+    if(circ->ckind=='G'){ // Gussian
+        dt=erfi(2*urand()-1)/i_w1;
+    }else{                // Exponential
+        dt=i_w1*expi(urand());
+    }
+
     // Reserve memory
-    T.resize(4);
+    T.resize(2);
 
     // FIRST PAIR
-    // FIRST PACKET
     add=1;
     i=0;
     // Check if the packet described for this entry already exists
     while((i<npack)&&(add==1)){
-    if((pack_list(1,i)==i_t1)&&(pack_list(2,i)==i_f1)&&(pack_list(3,i)==i_w1)) add=0;
+        if( (abs(pack_list(1,i)-rt1)<xcut)&&(abs(pack_list(2,i)-i_f1)<xcut)&&(abs(pack_list(3,i)-i_w1)<xcut)) add=0;
         i++;
     }
 
     // Update the wave-packet information
     if(add==1){
-        if(npack>=circ->ns) {
-            cout << "add_QD error #1: Not enough ns degrees of freedom! Needed: "<< npack+1 << endl;
+        if(npack>=circ->nsp){
+            cout << "add_QD error #1: Not enough ns degrees of freedom! Needed at least: "<< npack+1 << endl;
             return -1;
         }
         T(0)=npack;
         pack_list(0,npack)=(double) npack;
-        pack_list(1,npack)= i_t1;
+        pack_list(1,npack)= rt1;
         pack_list(2,npack)= i_f1;
         pack_list(3,npack)= i_w1;
-        pack_list(4,npack)= i_tp1;
         npack=npack+1;
     }else{
         // If exist just take the index
         T(0)=i-1;
     }
-
-    // SECOND PACKET
-    if(PW==1){
-        add=1;
-        i=0;
-        // Check if the packet described for this entry already exists
-        while((i<npack)&&(add==1)){
-        if((pack_list(1,i)==i_t1)&&(pack_list(2,i)==i_f1+S)&&(pack_list(3,i)==i_w1)) add=0;
-            i++;
-        }
-
-        // Update the wave-packet information
-        if(add==1){
-            if(npack>=circ->ns) {
-                cout << "add_QD error #1B: Not enough ns degrees of freedom! Needed: "<< npack+1 << endl;
-                return -1;
-            }
-            T(1)=npack;
-            pack_list(0,npack)=(double) npack;
-            pack_list(1,npack)= i_t1;
-            pack_list(2,npack)= i_f1+S;
-            pack_list(3,npack)= i_w1;
-            pack_list(4,npack)= i_tp1;
-            npack=npack+1;
-        }else{
-            // If exist just take the index
-            T(1)=i-1;
-        }
-    }else{
-        T(1)=T(0);
-    }
-
+    T(0)=T(0)+ip1*circ->nsp;
 
     // SECOND PAIR
-    // FIRST PACKET
     // Check if the packet described for this entry already exists
     add=1;
     i=0;
     // Check if the packet described for this entry already exists
     while((i<npack)&&(add==1)){
-    if((pack_list(1,i)==i_t2)&&(pack_list(2,i)==i_f2)&&(pack_list(3,i)==i_w2)) add=0;
+        if( (abs(pack_list(1,i)-rt2)<xcut)&&(abs(pack_list(2,i)-i_f2)<xcut)&&(abs(pack_list(3,i)-i_w2)<xcut)) add=0;
         i++;
     }
 
 
-    if(circ->ckind=='G'){ // Gussian
-        dt1=erfi(2*urand()-1)/i_w1;
-        dt2=(2*i_w2)*erfi(2*urand()-1)/(T2*i_w1);
-    }else{               // Exponential
-        dt1=i_w1*expi(urand());
-        dt2=(T2*i_w1)*expi(urand())/(2.0*i_w2);
-    }
-
     // Update the wave-packet information
     if(add==1){
-        if(npack>=circ->ns) {
-            cout << "add_QD error #2: Not enough ns degrees of freedom! Needed: "<< npack+1 << endl;
+        if(npack>=circ->nsp){
+            cout << "add_QD error #2: Not enough ns degrees of freedom! Needed at least: "<< npack+1 << endl;
             return -1;
         }
-        T(2)=npack;
+        T(1)=npack;
         pack_list(0,npack)=(double) npack;
+        if(cascade==0) pack_list(1,npack)= rt2;
+        else pack_list(1,npack)= rt2+dt;
         pack_list(2,npack)=         i_f2;
         pack_list(3,npack)=         i_w2;
-        switch(rand) {
-            case 0: // Fully Automatic #1
-                pack_list(1,npack)= i_t2+dt1;
-                pack_list(4,npack)= i_tp2+dt1;
-                break;
-            case 1: // Automatic #2
-                pack_list(1,npack)= i_t2+dt1;
-                pack_list(4,npack)= i_tp2+dt2;
-                break;
-            case 2: // Semi manual #4
-                pack_list(1,npack)= i_t2;
-                pack_list(4,npack)= i_tp2+dt2;
-                break;
-            default:
-                cout << "add_QD error #3: rand goes form 0 to 3. Invalid configuration." << endl;
-                return -1;
-                break;
-        }
         npack=npack+1;
-
     }else{
         // If exist just take the index
-        T(2)=i-1;
+        T(1)=i-1;
     }
-
-    // SECOND PACKET
-    if(PW==1){
-        add=1;
-        i=0;
-        // Check if the packet described for this entry already exists
-        while((i<npack)&&(add==1)){
-        if((pack_list(1,i)==i_t2)&&(pack_list(2,i)==i_f2-S)&&(pack_list(3,i)==i_w2)) add=0;
-            i++;
-        }
-
-        // Update the wave-packet information
-        if(add==1){
-            if(npack>=circ->ns) {
-                cout << "add_QD error #2B: Not enough ns degrees of freedom! Needed: "<< npack+1 << endl;
-                return -1;
-            }
-            T(3)=npack;
-            pack_list(0,npack)=(double) npack;
-            pack_list(2,npack)=         i_f2-S;
-            pack_list(3,npack)=         i_w2;
-            switch(rand) {
-                case 0: // Fully automatic #1
-                    pack_list(1,npack)= i_t2+dt1;
-                    pack_list(4,npack)= i_tp2+dt1;
-                    break;
-                case 1: // Automatic #2
-                    pack_list(1,npack)= i_t2+dt1;
-                    pack_list(4,npack)= i_tp2+dt2;
-                    break;
-                case 2: // Semi manual #4
-                    pack_list(1,npack)= i_t2;
-                    pack_list(4,npack)= i_tp2+dt2;
-                    break;
-                default:
-                    cout << "add_QD error #4: rand goes form 0 to 3. Invalid configuration." << endl;
-                    return -1;
-                    break;
-            }
-            npack=npack+1;
-        }else{
-            // If exist just take the index
-            T(3)=i-1;
-        }
-    }else{
-        T(3)=T(2);
-    }
-
+    T(1)=T(1)+ip2*circ->nsp;
 
     // Configure table according to chosen order
     ch.resize(3,2);
     ch  << ch1,  ch2,
-          T(0), T(2),
-          T(1), T(3);
+          T(0), T(1),
+          T(0), T(1);
 
     // Update state
     qdstate=new state(inpt->nlevel,inpt->maxket);
     qdstate->QD(ch,k,S,i_w2,tss,thv,circ);
-    inpt->dproduct(qdstate);
+    error=inpt->dproduct(qdstate);
     delete qdstate;
 
-    return 0;
+    return error;
 }
 
 
@@ -557,7 +464,12 @@ int qodev::add_Bell(int ch1, int ch2, char kind, double phi, double t1, double f
 //  double f2;       // Photon 2 emission frequency
 //  double w2;       // Photon 2 emission width or decay time depending on the packet shape model
 //  Variables
+    int    ip1;      // Period index packet #1
+    int    ip2;      // Period index packet #2
     int    add;      // Add new packer 0=No/1=Yes. This way we check repetitions.
+    int    error;    // if >=0 operation dproduct is successful otherwise there is an error.
+    double rt1;      // Reduced time of the packet #1 to its equivalent in the first period.
+    double rt2;      // Reduced time of the packet #2 to its equivalent in the first period.
     veci   T;        // Packet number
     mati   ch;       // QD configuration matrix
     hterm  in_term;  // Human readable input term
@@ -569,39 +481,54 @@ int qodev::add_Bell(int ch1, int ch2, char kind, double phi, double t1, double f
     // Check correctness
     if(circ->emiss==1){
         cout << "add_Bell error #0: Photons already emitted. More photons can not be added at this stage" << endl;
-        cout << "No new photons can be defined after a delay or dispersion elements " << endl;
         return -1;
     }
 
+    // Calculate periods of the packets and their reduced
+    // times in the leading period.
+    if(circ->np>1){
+        ip1=floor((t1+0.5*circ->dtp)/circ->dtp);
+        rt1=t1-ip1*circ->dtp;
+
+        ip2=floor((t2+0.5*circ->dtp)/circ->dtp);
+        rt2=t2-ip2*circ->dtp;
+    }else{
+        ip1=0;
+        rt1=t1;
+
+        ip2=0;
+        rt2=t2;
+    }
+
     // Reserve memory
-    T.resize(4);
+    T.resize(2);
 
     // FIRST PACKET
     add=1;
     i=0;
     // Check if the packet described for this entry already exists
     while((i<npack)&&(add==1)){
-    if((pack_list(1,i)==t1)&&(pack_list(2,i)==f1)&&(pack_list(3,i)==w1)) add=0;
+        if( (abs(pack_list(1,i)-rt1)<xcut)&&(abs(pack_list(2,i)-f1)<xcut)&&(abs(pack_list(3,i)-w1)<xcut)) add=0;
         i++;
     }
 
     // Update the wave-packet information
     if(add==1){
-        if(npack>=circ->ns) {
-            cout << "add_Bell error #1: Not enough ns degrees of freedom! Needed: "<< npack+1 << endl;
+        if(npack>=circ->nsp){
+            cout << "add_Bell error #1: Not enough ns degrees of freedom! Needed at least: "<< npack+1 << endl;
             return -1;
         }
         T(0)=npack;
         pack_list(0,npack)=(double) npack;
-        pack_list(1,npack)= t1;
+        pack_list(1,npack)= rt1;
         pack_list(2,npack)= f1;
         pack_list(3,npack)= w1;
-        pack_list(4,npack)= t1;
         npack=npack+1;
     }else{
         // If exist just take the index
         T(0)=i-1;
     }
+    T(0)=T(0)+ip1*circ->nsp;
 
     // SECOND PACKET
     // Check if the packet described for this entry already exists
@@ -609,27 +536,27 @@ int qodev::add_Bell(int ch1, int ch2, char kind, double phi, double t1, double f
     i=0;
     // Check if the packet described for this entry already exists
     while((i<npack)&&(add==1)){
-    if((pack_list(1,i)==t2)&&(pack_list(2,i)==f2)&&(pack_list(3,i)==w2)) add=0;
+        if( (abs(pack_list(1,i)-rt2)<xcut)&&(abs(pack_list(2,i)-f2)<xcut)&&(abs(pack_list(3,i)-w2)<xcut)) add=0;
         i++;
     }
 
     // Update the wave-packet information
     if(add==1){
-        if(npack>=circ->ns) {
-            cout << "add_Bell error #2: Not enough ns degrees of freedom! Needed: "<< npack+1 << endl;
+        if(npack>=circ->nsp){
+            cout << "add_Bell error #2: Not enough ns degrees of freedom! Needed at least: "<< npack+1 << endl;
             return -1;
         }
         T(1)=npack;
         pack_list(0,npack)=(double) npack;
-        pack_list(1,npack)= t2;
+        pack_list(1,npack)= rt2;
         pack_list(2,npack)= f2;
         pack_list(3,npack)= w2;
-        pack_list(4,npack)= t2;
         npack=npack+1;
     }else{
         // If exist just take the index
         T(1)=i-1;
     }
+    T(1)=T(1)+ip2*circ->nsp;
 
     // Configure table according to chosen order
     ch.resize(2,2);
@@ -639,10 +566,10 @@ int qodev::add_Bell(int ch1, int ch2, char kind, double phi, double t1, double f
     // Update state
     qdstate=new state(inpt->nlevel,inpt->maxket);
     qdstate->Bell(ch,kind,phi,circ);
-    inpt->dproduct(qdstate);
+    error=inpt->dproduct(qdstate);
     delete qdstate;
 
-    return 0;
+    return error;
 }
 
 
@@ -664,7 +591,12 @@ int qodev::add_BellP(int ch1, int ch2, char kind, double phi, double t1, double 
 //  double f2;       // Photon 2 emission frequency
 //  double w2;       // Photon 2 emission width or decay time depending on the packet shape model
 //  Variables
+    int    ip1;      // Period index packet #1
+    int    ip2;      // Period index packet #2
     int    add;      // Add new packer 0=No/1=Yes. This way we check repetitions.
+    int    error;    // if >=0 operation dproduct is successful otherwise there is an error.
+    double rt1;      // Reduced time of the packet #1 to its equivalent in the first period.
+    double rt2;      // Reduced time of the packet #2 to its equivalent in the first period.
     veci   T;        // Packet number
     mati   ch;       // QD configuration matrix
     hterm  in_term;  // Human readable input term
@@ -680,35 +612,51 @@ int qodev::add_BellP(int ch1, int ch2, char kind, double phi, double t1, double 
         return -1;
     }
 
+    // Calculate periods of the packets and their reduced
+    // times in the leading period.
+    if(circ->np>1){
+        ip1=floor((t1+0.5*circ->dtp)/circ->dtp);
+        rt1=t1-ip1*circ->dtp;
+
+        ip2=floor((t2+0.5*circ->dtp)/circ->dtp);
+        rt2=t2-ip2*circ->dtp;
+    }else{
+        ip1=0;
+        rt1=t1;
+
+        ip2=0;
+        rt2=t2;
+    }
+
     // Reserve memory
-    T.resize(4);
+    T.resize(2);
 
     // FIRST PAIR PACKET
     add=1;
     i=0;
     // Check if the packet described for this entry already exists
     while((i<npack)&&(add==1)){
-    if((pack_list(1,i)==t1)&&(pack_list(2,i)==f1)&&(pack_list(3,i)==w1)) add=0;
+        if( (abs(pack_list(1,i)-rt1)<xcut)&&(abs(pack_list(2,i)-f1)<xcut)&&(abs(pack_list(3,i)-w1)<xcut)) add=0;
         i++;
     }
 
     // Update the wave-packet information
     if(add==1){
-        if(npack>=circ->ns) {
-            cout << "add_BellP error #1: Not enough ns degrees of freedom! Needed: "<< npack+1 << endl;
+        if(npack>=circ->nsp){
+            cout << "add_BellP error #1: Not enough ns degrees of freedom! Needed at least: "<< npack+1 << endl;
             return -1;
         }
         T(0)=npack;
         pack_list(0,npack)=(double) npack;
-        pack_list(1,npack)= t1;
+        pack_list(1,npack)= rt1;
         pack_list(2,npack)= f1;
         pack_list(3,npack)= w1;
-        pack_list(4,npack)= t1;
         npack=npack+1;
     }else{
         // If exist just take the index
         T(0)=i-1;
     }
+    T(0)=T(0)+ip1*circ->nsp;
 
     // SECOND PAIR PACKET
     // Check if the packet described for this entry already exists
@@ -716,41 +664,40 @@ int qodev::add_BellP(int ch1, int ch2, char kind, double phi, double t1, double 
     i=0;
     // Check if the packet described for this entry already exists
     while((i<npack)&&(add==1)){
-    if((pack_list(1,i)==t2)&&(pack_list(2,i)==f2)&&(pack_list(3,i)==w2)) add=0;
+        if( (abs(pack_list(1,i)-rt2)<xcut)&&(abs(pack_list(2,i)-f2)<xcut)&&(abs(pack_list(3,i)-w2)<xcut)) add=0;
         i++;
     }
 
     // Update the wave-packet information
     if(add==1){
-        if(npack>=circ->ns) {
-            cout << "add_BellP error #2: Not enough ns degrees of freedom! Needed: "<< npack+1 << endl;
+        if(npack>=circ->nsp){
+            cout << "add_BellP error #2: Not enough ns degrees of freedom! Needed at least: "<< npack+1 << endl;
             return -1;
         }
         T(1)=npack;
         pack_list(0,npack)=(double) npack;
-        pack_list(1,npack)= t2;
+        pack_list(1,npack)= rt2;
         pack_list(2,npack)= f2;
         pack_list(3,npack)= w2;
-        pack_list(4,npack)= t2;
         npack=npack+1;
     }else{
         // If exist just take the index
         T(1)=i-1;
     }
+    T(1)=T(1)+ip2*circ->nsp;
 
     // Configure table according to chosen order
-    ch.resize(3,2);
+    ch.resize(2,2);
     ch  << ch1,  ch2,
-          T(0), T(1),
           T(0), T(1);
 
     // Update state
     qdstate=new state(inpt->nlevel,inpt->maxket);
     qdstate->BellP(ch,kind,phi,circ);
-    inpt->dproduct(qdstate);
+    error=inpt->dproduct(qdstate);
     delete qdstate;
 
-    return 0;
+    return error;
 }
 
 //----------------------------------------
@@ -826,8 +773,8 @@ int qodev::repack(veci ipack){
     int i;              // Aux index
 
 
-    if(ipack.size()<npack){
-        cout << "Repack error: more indexes needed" << endl;
+    if(ipack.size()>circ->nsp){
+        cout << "Repack error: too many indexes" << endl;
         return -1;
     }
     for(i=0; i<npack;i++){
@@ -901,13 +848,13 @@ void qodev::random_circuit(){
 //  Adds a built-in NSX circuit
 //
 //----------------------------------------
-void qodev::NSX(int i_ch1, int i_ch2, int i_ch3){
+int  qodev::NSX(int i_ch1, int i_ch2, int i_ch3){
 //  int   i_ch1              // NSX input channel 1
 //  int   i_ch2              // NSX input channel 2
 //  int   i_ch3              // NSX input channel 3
 
 
-    circ->NSX(i_ch1,i_ch2,i_ch3);
+    return circ->NSX(i_ch1,i_ch2,i_ch3);
 }
 
 
@@ -916,14 +863,14 @@ void qodev::NSX(int i_ch1, int i_ch2, int i_ch3){
 //  Adds a ideal beamsplitter to the device
 //
 //----------------------------------------
-void qodev::beamsplitter(int i_ch1, int i_ch2, double theta, double phi){
+int qodev::beamsplitter(int i_ch1, int i_ch2, double theta, double phi){
 //  int    i_ch1;             // Beamsplitter input channel 1
 //  int    i_ch2;             // Beamsplitter input channel 2
 //  double d_theta;           // Angle theta in degrees
 //  double d_phi;             // Angle phi in degrees
 
 
-    circ->beamsplitter(i_ch1, i_ch2, theta, phi);
+    return circ->beamsplitter(i_ch1, i_ch2, theta, phi);
 }
 
 
@@ -932,14 +879,14 @@ void qodev::beamsplitter(int i_ch1, int i_ch2, double theta, double phi){
 //  Adds a physical dieletric beamsplitter
 //
 //----------------------------------------
-void qodev::dielectric(int i_ch1, int i_ch2, cmplx t, cmplx r){
+int qodev::dielectric(int i_ch1, int i_ch2, cmplx t, cmplx r){
 //  int   i_ch1;              // Dielectric input channel 1
 //  int   i_ch2;              // Dielectric input channel 2
 //  cmplx t;                  // Transmission amplitude
 //  cmplx r;                  // Reflection amplitude
 
 
-    circ->dielectric(i_ch1, i_ch2, t, r);
+    return circ->dielectric(i_ch1, i_ch2, t, r);
 }
 
 
@@ -948,12 +895,12 @@ void qodev::dielectric(int i_ch1, int i_ch2, cmplx t, cmplx r){
 //  Adds a 2x2 ideal MMI
 //
 //----------------------------------------
-void qodev::MMI2(int i_ch1, int i_ch2){
+int qodev::MMI2(int i_ch1, int i_ch2){
 //  int   i_ch1               // MMI2 input channel 1
 //  int   i_ch2               // MMI2 input channel 2
 
 
-    circ->MMI2(i_ch1, i_ch2);
+    return circ->MMI2(i_ch1, i_ch2);
 }
 
 
@@ -962,12 +909,12 @@ void qodev::MMI2(int i_ch1, int i_ch2){
 //  Adds a swap gate between two channels
 //
 //----------------------------------------
-void qodev::rewire(int i_ch1,int i_ch2){
+int qodev::rewire(int i_ch1,int i_ch2){
 //  int    i_ch1;             // Channel 1
 //  int    i_ch2;             // Channel 2
 
 
-    circ->rewire( i_ch1, i_ch2);
+    return circ->rewire( i_ch1, i_ch2);
 }
 
 
@@ -976,12 +923,12 @@ void qodev::rewire(int i_ch1,int i_ch2){
 //  Adds a phase_shifter to the device
 //
 //----------------------------------------
-void qodev::phase_shifter(int i_ch, double phi){
+int qodev::phase_shifter(int i_ch, double phi){
 //  int    i_ch               // Phase shifter input channel
 //  double d_phi;             // Angle phi in degrees
 
 
-    circ->phase_shifter( i_ch, phi);
+    return circ->phase_shifter( i_ch, phi);
 }
 
 
@@ -990,12 +937,12 @@ void qodev::phase_shifter(int i_ch, double phi){
 //  Adds a lossy medium
 //
 //----------------------------------------
-void qodev::loss(int i_ch, double l){
+int qodev::loss(int i_ch, double l){
 //  int    i_ch           // Phase shifter input channel
 //  double l;             // Loss probability
 
 
-    circ->loss(i_ch, l);
+    return circ->loss(i_ch, l);
 }
 
 
@@ -1004,13 +951,13 @@ void qodev::loss(int i_ch, double l){
 //  Adds a rotator to the device.
 //
 //----------------------------------------
-void qodev::rotator(int i_ch, double d_theta, double d_phi){
+int qodev::rotator(int i_ch, double d_theta, double d_phi){
 //  int    i_ch               // Rotator input channel 1
 //  double d_theta;           // Angle theta in degrees
 //  double d_phi;             // Angle phi in degrees
 
 
-    circ->rotator(i_ch, d_theta, d_phi);
+    return circ->rotator(i_ch, d_theta, d_phi);
 }
 
 
@@ -1019,27 +966,42 @@ void qodev::rotator(int i_ch, double d_theta, double d_phi){
 //  Adds a polarizing beamsplitter
 //
 //----------------------------------------
-void qodev::polbeamsplitter(int i_ch1, int i_ch2, int P){
+int qodev::pol_beamsplitter(int i_ch1, int i_ch2, int P){
 //  int   i_ch1               // Polarized beamsplitter input channel 1
 //  int   i_ch2               // Polarized beamsplitter input channel 2
-//  int   pol;                // Polarization to be switched
+//  int   P;                  // Polarization to be switched
 
 
-    circ->polbeamsplitter( i_ch1, i_ch2, P);
+    return circ->pol_beamsplitter( i_ch1, i_ch2, P);
 }
 
+
+//----------------------------------------
+//
+//  Adds a polarizing phase shifter
+//
+//----------------------------------------
+int qodev::pol_phase_shifter(int i_ch, int P, double phi){
+//  int     i_ch             // Polarized phase shifter input channel
+//  int     P;               // Polarization
+//  double  phi;             // Phase
+
+
+
+    return circ->pol_phase_shifter(i_ch, P, phi);
+}
 
 //----------------------------------------
 //
 //  Adds a half-waveplate
 //
 //----------------------------------------
-void qodev::half(int i_ch, double alpha){
+int qodev::half(int i_ch, double alpha){
 //  int    i_ch               // Waveplate input channel
 //  double d_alpha;           // Angle of the polarization rotation
 
 
-    circ->half( i_ch, alpha);
+    return circ->half( i_ch, alpha);
 }
 
 
@@ -1048,12 +1010,12 @@ void qodev::half(int i_ch, double alpha){
 //  Adds a quarter-waveplate
 //
 //----------------------------------------
-void qodev::quarter(int i_ch, double alpha){
+int qodev::quarter(int i_ch, double alpha){
 //  int    i_ch               // Waveplate input channel
 //  double d_alpha;           // Angle of the polarization rotation
 
 
-    circ->quarter(i_ch, alpha);
+    return circ->quarter(i_ch, alpha);
 }
 
 
@@ -1062,11 +1024,11 @@ void qodev::quarter(int i_ch, double alpha){
 // Flags a channel to be ignored
 //
 //----------------------------------------
-void qodev::ignore(int i_ch){
+int qodev::ignore(int i_ch){
 //  int    i_ch;        // Chanel where detection is performed
 
 
-    detector(i_ch,-2,1.0,0.0,0.0);
+    return detector(i_ch,-2,1.0,0.0,0.0);
 }
 
 
@@ -1075,11 +1037,11 @@ void qodev::ignore(int i_ch){
 //  Adds a detector
 //
 //----------------------------------------
-void qodev::detector(int i_ch){
+int qodev::detector(int i_ch){
 //  int    i_ch;        // Chanel where detection is performed
 
 
-    detector(i_ch,-1,1.0,0.0,0.0);
+    return detector(i_ch,-1,1.0,0.0,0.0);
 }
 
 
@@ -1088,12 +1050,12 @@ void qodev::detector(int i_ch){
 //  Adds a conditional detection
 //
 //----------------------------------------
-void qodev::detector(int i_ch, int cond){
+int qodev::detector(int i_ch, int cond){
 //  int    i_ch;        // Chanel where detection is performed
 //  int    cond;        // Post selection condition. If cond<0 there is none.
 
 
-    detector(i_ch,cond,1.0,0.0,0.0);
+    return detector(i_ch,cond,1.0,0.0,0.0);
 }
 
 
@@ -1102,17 +1064,16 @@ void qodev::detector(int i_ch, int cond){
 //  Adds a general physical detector
 //
 //----------------------------------------
-void qodev::detector(int i_ch, int cond, double eff, double blnk, double gamma){
+int qodev::detector(int i_ch, int cond, double eff, double blnk, double gamma){
 //  int    i_ch;        // Chanel where detection is performed
 //  int    cond;        // Post selection condition. If cond<0 there is none.
 //  double eff;         // Efficiency of the detector
 //  double blnk;        // Fraction of time blinking
 //  double gamma;       // Dark counts rate
 
-
     if((circ->emiss==0)&&(circ->remdec()==1)) send2circuit();  // Send to circuit the photons.
     if((npack==0)&&(circ->losses==1)) circ->losses=2;          // The circuit has losses but it does not compute the full matrix yet
-    circ->detector(i_ch, cond, eff, blnk, gamma);
+    return circ->detector(i_ch, cond, eff, blnk, gamma);
 }
 
 
@@ -1134,12 +1095,14 @@ void qodev::noise(double stdev2){
 //  Adds a delay using the packet definition given by def_packet
 //
 //----------------------------------------
-void qodev::delay(int ch, double dt){
+int qodev::delay(int ch){
 //  int    ch;   // Channel to be delayed
 //  double dt;   // Amount of time to be delayed
 
+
     if (circ->emiss==0) send2circuit();
-    circ->delay(ch, dt);
+    return circ->delay(ch);;
+
 }
 
 
@@ -1150,13 +1113,13 @@ void qodev::delay(int ch, double dt){
 //  frequency of the photon packets
 //
 //----------------------------------------
-void qodev::dispersion(int ch, double dt){
+int qodev::dispersion(int ch, double dt){
 //  int ch;           // Channel
 //  double dt;        // Time
 
 
     if (circ->emiss==0) send2circuit();
-    circ->dispersion(ch, dt);
+    return circ->dispersion(ch, dt);
 }
 
 
@@ -1168,14 +1131,14 @@ void qodev::dispersion(int ch, double dt){
 //  photons with a selected polarization
 //
 //----------------------------------------
-void qodev::dispersion(int ch, int P, double dt){
+int qodev::dispersion(int ch, int P, double dt){
 //  int ch;           // Channel
 //  in P;             // Photon polarization required to apply a phase shift
 //  double dt;        // Time
 
 
     if (circ->emiss==0) send2circuit();
-    circ->dispersion(ch, P, dt);
+    return circ->dispersion(ch, P, dt);
 }
 
 
@@ -1189,9 +1152,12 @@ state* qodev:: apply_condition(state *input, bool ignore){
 //  state *input;       // Input state to apply the conditions
 //  bool   ignore;      // Do we also ignore the ignored channels. False=No/True=Yes. Use with caution! ket collisions may happen if True.
 //  Variables
-    int   newnlevels;   // New number of levels
-    int  *occ;          // Occupation
-    mati  cond;         // Condition (of the detectors) matrix
+    bool   print;       // A warning has been printed. True=Yes/False=No
+    int    newnlevels;  // New number of levels
+    int    nadded;      // Number of kets after removing ignored channels.
+    int    idx;         // Index of the stored state.
+    int   *occ;         // Occupation
+    mati   cond;        // Condition (of the detectors) matrix
     state *pselected;   // State after post-selection.
     state *ignored;     // State after removing ignored channels.
     projector *prj;     // Projector
@@ -1245,6 +1211,8 @@ state* qodev:: apply_condition(state *input, bool ignore){
         }
 
         // Copy/store the visible levels
+        nadded=0;
+        print=false;
         for(i=0; i<pselected->nket;i++){
             occ=new int[newnlevels]();
             k=0;
@@ -1254,7 +1222,12 @@ state* qodev:: apply_condition(state *input, bool ignore){
                     k=k+1;
                 }
             }
-            ignored->add_term(pselected->ampl[i],occ);
+            idx=ignored->add_term(pselected->ampl[i],occ);
+            if((idx!=nadded)&&(print==false)){
+                cout << "Apply_condition: Warning ignored lead to collision!" << endl;
+                print=true;
+            }
+            nadded=nadded+1;
             delete occ;
         }
     }else{
@@ -1266,6 +1239,44 @@ state* qodev:: apply_condition(state *input, bool ignore){
     delete pselected;
 
     return ignored;
+}
+
+
+//----------------------------------------
+//
+// Apply the post-selection condition defined
+// by the detectors (to ideal devices nm=1 and nd=1).
+//
+//----------------------------------------
+state* qodev:: apply_condition(state *input){
+//  state *input;       // Input state to apply the conditions
+
+
+    return apply_condition(input, true);
+}
+
+
+//----------------------------------------
+//
+// Initalize the device with qubit values
+//
+//----------------------------------------
+void qodev::qubits(veci qinit, mati qmap){
+//  veci qinit;    // Qubit values
+//  mati qmap;     // Correspondence between qubits and channels (Path encoding)
+//  Variables
+    int i;
+
+
+    for (i=0; i<qinit.size(); i++){
+        if(qinit(i)==0){
+            add_photons(0, qmap(0,i));
+            add_photons(1, qmap(1,i));
+        }else{
+            add_photons(1, qmap(0,i));
+            add_photons(0, qmap(1,i));
+        }
+    }
 }
 
 

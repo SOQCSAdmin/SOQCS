@@ -3,7 +3,7 @@
 //
 // CONSTANTS and UTILITIES LIBRARY
 //
-// Copyright © 2022 National University of Ireland Maynooth, Maynooth University. All rights reserved.
+// Copyright © 2023 National University of Ireland Maynooth, Maynooth University. All rights reserved.
 // The contents of this file are subject to the licence terms detailed in LICENCE.TXT available in the
 // root directory of this source tree. Use of the source code in this file is only permitted under the
 // terms of the licence in LICENCE.TXT.
@@ -181,23 +181,18 @@ long long int decval(int *chainv,int n,int base){
 // Calculates the coupling of two Gaussian wave packets.
 //
 //--------------------------------------------------
-cmplx gauss_coup(double ti,double wi,double dwi, double tj,double wj,double dwj, double tri,double trj){
+cmplx gauss_coup(double ti,double wi,double dwi, double tj,double wj,double dwj){
 //  double ti;      // Packet i central time
 //  double tj;      // Packet j central time
 //  double wi;      // Packet i central frequency
 //  double wj;      // Packet j central frequency
 //  double dwi;     // Packet i width
 //  double dwj;     // Packet j width
-//  double tri;     // Packet i phase time
-//  double trj;     // Packet j phase time
 //  Variables
     cmplx dt;       // Difference of time between packets
     cmplx dt2;      // Difference of time squared dt^2
     cmplx dwi2;     // Width of the packet i squared wi^2
     cmplx dwj2;     // Width of the packet i squared wj^2
-    cmplx ctri;     // Same than tri but if tri < 0 that means no phase configuration.
-    cmplx ctrj;     // Same than trj but if trj < 0 that means no phase configuration.
-    cmplx dtr;      // Difference of phase time between packets
     cmplx coef;     // Coefficient/factor
     cmplx ce;       // Exponent
     cmplx result;   // Final result: ce*exp(coef)
@@ -208,17 +203,11 @@ cmplx gauss_coup(double ti,double wi,double dwi, double tj,double wj,double dwj,
     dt2 = conj(dt)*dt;
     dwi2= conj(dwi)*dwi;
     dwj2= conj(dwj)*dwj;
-    ctri=tri;
-    ctrj=trj;
-    if(tri<xcut) ctri=0.0;
-    if(trj<xcut) ctrj=0.0;
-    dtr=ctri-ctrj;
 
     // Expression calculation
     coef=(sqrt(2.0*dwi*dwj))/sqrt(dwi2 + dwj2);
-    ce=-(dt2*dwi2*dwj2  + pow((wi - wj),2) + 2.0*jm*dtr*(dwj2*wi + dwi2*wj))/(2.0*(dwi2 + dwj2));
+    ce=-(dt2*dwi2*dwj2  + pow((wi - wj),2) + 2.0*jm*dt*(dwj2*wi + dwi2*wj))/(2.0*(dwi2 + dwj2));
     result=coef*exp(ce);
-    if(abs(result)<xcut) result=0.0;
 
     // Return result
     return result;
@@ -230,56 +219,42 @@ cmplx gauss_coup(double ti,double wi,double dwi, double tj,double wj,double dwj,
 // Calculates the coupling of two exponential wave packets.
 //
 //--------------------------------------------------
-cmplx exp_coup(double ti,double wi, double txi, double tj, double wj, double txj,double tri,double trj){
+cmplx exp_coup(double ti,double wi, double txi, double tj, double wj, double txj){
 //  double ti;      // Packet i characteristic time
 //  double tj;      // Packet j characteristic time
 //  double wi;      // Packet i characteristic frequency
 //  double wj;      // Packet j characteristic frequency
 //  double txi;     // Packet i characteristic decay time
 //  double txj;     // Packet j characteristic decay time
-//  double tri;     // Packet i phase time
-//  double trj;     // Packet j phase time
 //  Variables
+    int   sgn;      // Do we should return the complex conjugate? 1=Yes/0=No
     cmplx dt;       // Difference of time between packets
-    cmplx ctri;     // Same than tri but if tri < 0 that means no phase configuration.
-    cmplx ctrj;     // Same than trj but if trj < 0 that means no phase configuration.
-    cmplx dtr;      // Difference of phase time between packets
     cmplx dw;       // Difference of frequency between packets
     cmplx txm;      // Minimum characteristic time
     cmplx wm;       // Minimum frequency of the two packets
     cmplx denom;    // Denominator value of the result
-    int   sgn;      // Do we should return the complex conjugate? 1=Yes/0=No
     cmplx result;   // Final result
 
 
-    // Interpret and remove negative values.
-    ctri=tri;
-    ctrj=trj;
-    if(tri<xcut) ctri=0.0;
-    if(trj<xcut) ctrj=0.0;
-
     // Calculate derived variables
-    if(tj>=ti){
+    if((tj-ti)>0){
         dt  = tj-ti;
         dw  = wj-wi;
-        dtr = ctrj-ctri;
         txm = txi;
         wm  = wi;
-        sgn =0;
+        sgn = 0;
     }else{
         dt  = ti-tj;
         dw  = wi-wj;
-        dtr = ctri-ctrj;
         txm = txj;
         wm  = wj;
-        sgn=1;
+        sgn = 1;
     }
 
     // Expression calculation
     denom=(txi+txj+2.0*jm*txi*txj*dw)/(2*sqrt(txi*txj));
-    result=(exp(-0.5*dt/txm + jm*wm*dtr))/denom;
+    result=(exp(-0.5*dt/txm + jm*wm*dt))/denom;
     if(sgn==1) result=conj(result);
-    if(abs(result)<xcut) result=0.0;
 
     // Return result
     return result;

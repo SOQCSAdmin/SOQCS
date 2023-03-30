@@ -3,7 +3,7 @@
 * @author Javier Osca
 * @author Jiri Vala
 *
-* @copyright Copyright © 2022 National University of Ireland Maynooth, Maynooth University. All rights reserved.
+* @copyright Copyright © 2023 National University of Ireland Maynooth, Maynooth University. All rights reserved.
 *            The contents of this file are subject to the licence terms detailed in LICENCE.TXT available in the
 *            root directory of this source tree. Use of the source code in this file is only permitted under the
 *            terms of the licence in LICENCE.TXT.
@@ -41,10 +41,12 @@ public:
     void add_reduced_state(int ndec,mati def,veci chlist,state* input, qocircuit *qoc); // Adds a conditional detection and traces out channels
     void add_state_cond(int ndec, mati def,state *in_state,qocircuit *qoc);             // Adds a conditional detection
     void sum_state(state *newstate);                              // Adds new state to the density matrix
-    dmatrix *calc_measure(qocircuit *qoc);                        // Adds a conditional detection from sampling results.
+    dmatrix *calc_measure(qocircuit *qoc);                        // Adds a conditional detection from sampling results
     dmatrix *calc_measure(qodev *dev);                            // Adds a conditional detection from sampling results (uses qodev instead of qocircuit)
-    dmatrix *get_counts(int npack,qocircuit *qoc);                // Returns a density matrix independent of the wave packet degrees of freedom
-    dmatrix *partial_trace(mati pack_def,qocircuit *qoc);         // Calculates the partial trace of the density matrix (the result is another matrix)
+    dmatrix *get_counts(qocircuit *qoc);                          // Returns a density matrix independent of the wave packet degrees of freedom
+    dmatrix *get_period(qocircuit *qoc);                          // Classify photons by period
+    dmatrix *get_times(qocircuit *qoc);                           // Classify photons by times
+     dmatrix *relabel(veci label_idx,qocircuit *qoc);             // Relabels the dictionary entries of the density matrix
 
     // Print functions
     void prnt_mtx();                                              // Print the matrix ( numerically )
@@ -57,8 +59,8 @@ public:
 
 protected:
     // Auxiliary function. (This ones can not be private).
-    void create_dmtx(int i_mem);                                                        // Create density matrix auxiliary function
-    int ketcompatible(state* A, state*B,mati pack_idx,qocircuit *qoc);                  // Check ket "compatibility"
+    void create_dmtx(int i_mem);                                              // Create density matrix auxiliary function
+    int ketcompatible(state* A, state*B,mati pack_idx,qocircuit *qoc);        // Check ket "compatibility"
 };
 ***********************************************************************************/
 
@@ -70,7 +72,7 @@ const int DEFWIDTH = 6;   ///< Default number of spaces to print matrix entries
 
 
 /** @defgroup Dens Density matrix
-*   Density matrix classes and methods
+*   Density matrix classes and methods.
 */
 
 /** \class dmatrix
@@ -80,7 +82,7 @@ const int DEFWIDTH = 6;   ///< Default number of spaces to print matrix entries
 *   \author Javier Osca
 *   \author Jiri Vala
 *
-*   \copyright Copyright &copy; 2022 National University of Ireland Maynooth, Maynooth University. All rights reserved. <br>
+*   \copyright Copyright &copy; 2023 National University of Ireland Maynooth, Maynooth University. All rights reserved. <br>
 *              The contents and use of this document and the related code are subject to the licence terms detailed in <a  href="../assets/LICENCE.TXT"> LICENCE.txt </a>.
 *
 *    @ingroup Dens
@@ -92,7 +94,7 @@ public:
     int mem;            ///< Reserved memory for the matrix dictionaries.
 
     ket_list *dicc;     ///< Base elements that correspond with each of the rows in the matrix.
-    matd     dens;      ///< Density matrix coefficients.
+    matc     dens;      ///< Density matrix coefficients.
 
 
     // Management functions
@@ -181,7 +183,7 @@ public:
     *                            <br>
     * @param qocircuit *qoc Circuit to which the outcomes are referred.
     * @return It is returned the probability of the event defined by mati def.
-    * @see get_counts(int npack,qocircuit *qoc);
+    * @see get_counts(qocircuit *qoc);
     * @ingroup Dens_basic
     */
     double get_result(mati def,qocircuit *qoc);
@@ -199,7 +201,7 @@ public:
     *   Update operations of the density matrix.
     */
     /**
-    *  Adds a new state to the density matrix using the post-selection condition defined by the circuit detectors.
+    *  Adds a new state to the density matrix using the post-selection condition defined by the circuit detectors. ( Circuit version).
     *
     *  @param state *newrun State to be added to the density matrix.
     *  @param qocircuit *qoc Circuit where the detectors are defined.
@@ -207,7 +209,7 @@ public:
     */
     void add_state(state *newrun, qocircuit *qoc);
     /**
-    *  Adds a new state to the density matrix using the post-selection condition defined by the device detectors.
+    *  Adds a new state to the density matrix using the post-selection condition defined by the device detectors.  ( Device version).
     *
     *  @param state *newrun State to be added to the density matrix.
     *  @param qodev *dev Device where the detectors are defined.
@@ -251,43 +253,55 @@ public:
     */
     void sum_state(state *newstate);
     /**
-    *  Calculate measure. It means to trace out the frequency degrees of freedom or both the frequency and time degrees of freedom depending on the circuit configuration of the detectors.
+    *  Calculate measure. It means to remove degrees of freedom depending on the circuit configuration of the detectors. ( Circuit version ).
     *
     *  @param qocircuit *qoc Circuit to which the density matrix is related.
-    *  @return A new smaller matrix with the integrated degrees of freedom.
+    *  @return A new smaller matrix with the removed degrees of freedom.
     *  @ingroup Dens_update
     */
     dmatrix *calc_measure(qocircuit *qoc);
     /**
-    *  Calculate measure. It means to trace out the frequency degrees of freedom or both the frequency and time degrees of freedom depending on the device configuration of the detectors.
+    *  Calculate measure. It means to remove degrees of freedom depending on the circuit configuration of the detectors. ( Device version ).
     *
     *  @param qodev *dev Device to which the density matrix is related.
-    *  @return A new smaller matrix with the integrated degrees of freedom.
+    *  @return A new smaller matrix with the removed degrees of freedom.
     *  @ingroup Dens_update
     */
     dmatrix *calc_measure(qodev *dev);
     /**
-    *  Integrates the frequency and time degrees of freedom to have only the total probability count by channel (and polarization).
+    *   Returns a reduced density matrix where the entries are independent of the wave packet degrees of freedom.
     *
-    *  @param int npack Number of defined packets. Note that the actual number of defined packets may be inferior to the circuit maximum of them.
     *  @param qocircuit *qoc Circuit to which the density matrix is related.
-    *  @return A new smaller matrix with the integrated degrees of freedom.
+    *  @return A new reduced matrix without packet indexes.
     *  @ingroup Dens_update
     */
-    dmatrix *get_counts(int npack,qocircuit *qoc);
+    dmatrix *get_counts(qocircuit *qoc);
     /**
-    *  Calculates the partial trace of the elements of the density matrix. Usually is used to integrate the frequency degree of
-    *  freedom to have only the total probability count by channel, polarization and time.
+    *  Counts and classifies the photons by periods.
     *
-    *  @param mati pack_def Integer matrix of three rows and as many columns as photon packets where:<br>
-    *               1st-Row: is the packet number.<br>
-    *               2nd-Row: is the number assigned to designate the collective set of degrees of freedom not traced out. <br>
-    *               3rd-Row: is the number assigned to the collective set of degrees of freedom that are being traced out. <br>
     *  @param qocircuit *qoc Circuit to which the density matrix is related.
-    *  @return Returns a smaller partially traced density matrix.
+    *  @return A new smaller matrix with the output indexed by periods.
     *  @ingroup Dens_update
     */
-    dmatrix *partial_trace(mati pack_def,qocircuit *qoc);
+    dmatrix *get_period(qocircuit *qoc);
+    /**
+    *  Counts and classifies the photons by orthogonal components of time.
+    *
+    *  @param qocircuit *qoc Circuit to which the density matrix is related.
+    *  @return A new smaller matrix with the output indexed by time labels.
+    *  @ingroup Dens_update
+    */
+    dmatrix *get_times(qocircuit *qoc);
+    /**
+    *
+    *  Relabels the dictionary entries of the density matrix. A new reduced density matrix
+    *  is obtained if various entries are relabeled to the same labels.
+    *
+    *  @param veci label_def Vector that indicates the new label to be assigned by packet.<br>
+    *  @return Returns a smaller relabeled density matrix.
+    *  @ingroup Dens_update
+    */
+    dmatrix *relabel(veci label_idx,qocircuit *qoc);
 
     // Print functions
     /** @defgroup Dens_print Density matrix output
@@ -366,7 +380,7 @@ protected:
     */
     void create_dmtx(int i_mem);
     /**
-    *  Auxiliary method to check if a density matrix element has an non-zero partial trace.<br>
+    *  Auxiliary method to check if a density matrix entry has the same packets numbers at the two sides of an entry.<br>
     *  <b> Intended for internal use of the library. </b>
     *
     *  @param state *A Row dictionary state.
@@ -375,7 +389,7 @@ protected:
     *  @see partial_trace(mati pack_def,qocircuit *qoc);
     *  @ingroup Dens_aux
     */
-    int ketcompatible(int A, int B,mati pack_idx,qocircuit *qoc);
+    int ketcompatible(int A, int B, qocircuit *qoc);
     /**
     *  Auxiliary method to print density matrix. <br>
     *  <b> Intended for internal use of the library. </b>

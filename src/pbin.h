@@ -3,7 +3,7 @@
 * @author Javier Osca
 * @author Jiri Vala
 *
-* @copyright Copyright © 2022 National University of Ireland Maynooth, Maynooth University. All rights reserved.
+* @copyright Copyright © 2023 National University of Ireland Maynooth, Maynooth University. All rights reserved.
 *            The contents of this file are subject to the licence terms detailed in LICENCE.TXT available in the
 *            root directory of this source tree. Use of the source code in this file is only permitted under the
 *            terms of the licence in LICENCE.TXT.
@@ -32,12 +32,13 @@ public:
 
     // Bin update methods
     int add_count(int *occ);                                                   // Counts a new sample
-    void add_bin(p_bin *input);                                                // Adds the statistics from another bin
-    void add_state(state *input);                                              // Adds the statistics of a quantum state
+    int add_bin(p_bin *input);                                                 // Adds the statistics from another bin
+    int add_state(state *input);                                               // Adds the statistics of a quantum state
 
     // Bin manipulation methods
     p_bin *calc_measure(qocircuit *qoc);                                       // Calculates a measurement as described by the detectors in the circuit
     p_bin *post_selection(state *prj);                                         // Perform post-selection over the bins given a projector
+    p_bin *meas_window(qocircuit* qoc);                                        // Filter photons out of the detectors measurement window.
     p_bin *dark_counts(int S, qocircuit* qoc);                                 // Computes dark counts effects
     p_bin *blink(int S, qocircuit* qoc);                                       // Computes detector dead time effects
     p_bin *compute_loss(qocircuit *qoc);                                       // Remove the additional channels to compute losses
@@ -47,7 +48,8 @@ public:
     p_bin *post_select_cond(int ndec, mati def,qocircuit *qoc);                // Applies the detection conditions from a list
     p_bin *remove_freq(qocircuit* qoc);                                        // Remove frequencies and leaves only times
     p_bin *perform_count(qocircuit* qoc);                                      // Sum all the contributions to a channel independently of time or frequency
-    p_bin *remove_time(qocircuit *qoc);                                        // Rome the all the packet definitions that are not 0
+    p_bin *remove_time(qocircuit *qoc);                                        // Remove all the packet definitions that are not 0
+    p_bin *classify_period(qocircuit* qoc);                                    // Classify photons by their period
     p_bin *white_noise(double stdev);                                          // Adds Gaussian white noise
 
     //Bin consultation methods
@@ -65,6 +67,9 @@ public:
     void prnt_bins( int format, double thresh, bool loss, qodev *dev);         // Prints the bin list ( in human readable form )
     void aux_prnt_bins( int format, double thresh, bool loss, qocircuit *qoc); // Auxiliary method to print the bin list
 
+    // Qubit codification methods.
+    p_bin *translate(mati qdef,qocircuit *qoc);                                // Encodes the bin labels from photonic to qubit representation ( circuit version )
+    p_bin *translate(mati qdef,qodev *dev);                                    // Encodes the bin labels from photonic to qubit representation ( device version )
 };
 
 ***********************************************************************************/
@@ -82,7 +87,7 @@ public:
 *   \author Javier Osca
 *   \author Jiri Vala
 *
-*   \copyright Copyright &copy; 2022 National University of Ireland Maynooth, Maynooth University. All rights reserved. <br>
+*   \copyright Copyright &copy; 2023 National University of Ireland Maynooth, Maynooth University. All rights reserved. <br>
 *              The contents and use of this document and the related code are subject to the licence terms detailed in <a  href="../assets/LICENCE.TXT"> LICENCE.txt </a>.
 *
 *   @ingroup P_Bin
@@ -149,7 +154,7 @@ public:
     void clear();
 
     // Bin basic operations
-    /** @defgroup Bin_basic Set of probability basic operations
+    /** @defgroup Bin_basic Set of probability bins basic operations
     *   @ingroup P_Bin
     *   List of basic set of probability bins operations
     */
@@ -157,6 +162,7 @@ public:
     *  Obtains the total probability of the set of bins.
     *  It may be inferior to one due post-selection or encoding procedures.
     *
+    *  @return Normalization value of the set of probability bins.
     *  @ingroup Bin_basic
     */
     double trace();
@@ -176,6 +182,7 @@ public:
     *  Counts a new sample.
     *
     *  @param int   *occ    Occupation of the sampled state.
+    *  @return the bin index if the operation is successful and -1 otherwise.
     *  @ingroup Bin_update
     */
     int add_count(int *occ);
@@ -183,16 +190,18 @@ public:
     *  Adds the statistics from another bin.
     *
     *  @param p_bin *input  Probability bins with additional statistics.
+    *  @return 0 if the operation is successful and -1 otherwise.
     *  @ingroup Bin_update
     */
-    void add_bin(p_bin *input);
+    int add_bin(p_bin *input);
     /**
     *  Adds the statistics of a quantum state.
     *
     *  @param state *input  Quantum state.
+    *  @return 0 if the operation is successful and -1 otherwise.
     *  @ingroup Bin_update
     */
-    void add_state(state *input);
+    int add_state(state *input);
 
 
     // Bin manipulation methods
@@ -206,6 +215,7 @@ public:
     *
     *  @param qocircuit *qoc  Circuit where the detectors are defined.
     *  @return Returns a list of outcome probabilities considering the effects of physical detectors.
+    *  @see meas_window(qocircuit* qoc);
     *  @see dark_counts(int S, qocircuit* qoc);
     *  @see blink(int S, qocircuit* qoc);
     *  @see compute_loss(qocircuit *qoc);
@@ -214,6 +224,7 @@ public:
     *  @see remove_freq(qocircuit* qoc);
     *  @see remove_time(qocircuit *qoc);
     *  @see perform_count(qocircuit* qoc);
+    *  @see classify_period(qocircuit* qoc);
     *  @see white_noise(double stdev);
     *  @ingroup Bin_manipulation
     */
@@ -237,6 +248,15 @@ public:
     *  @ingroup Bin_manipulation
     */
     p_bin *dark_counts(int S, qocircuit* qoc);
+    /**
+    *  Filters the photons out of the measurement window established by the detectors. <br>
+    *  <b> Intended for internal use of the library </b>
+    *
+    *  @param qocircuit *qoc  Circuit where the detectors are defined.
+    *  @return Returns a list of outcome probabilities considering the effects of a measurement window
+    *  @ingroup Bin_manipulation
+    */
+    p_bin *meas_window(qocircuit* qoc);
     /**
     *  Computes detector dead time effects due other previous measurements. <br>
     *  <b> Intended for internal use of the library </b>.
@@ -330,6 +350,15 @@ public:
     */
     p_bin *remove_time(qocircuit *qoc);
     /**
+    *  Classifies  the photons in their corresponding periods.<br>
+    *  <b> Intended for internal use of the library </b>.
+    *
+    *  @param qocircuit *qoc  Circuit where the detectors are defined.
+    *  @return Returns a list of outcome probabilities independent of the packet indexes but dependent on period indexes.
+    *  @ingroup Bin_manipulation
+    */
+    p_bin *classify_period(qocircuit* qoc);
+    /**
     *  Computes Gaussian white noise effects in the output. <br>
     *  <b> Intended for internal use of the library </b>.
     *
@@ -403,7 +432,7 @@ public:
 
     /**
     *  Prints a set of probability bins.<br>
-    *  Bin tags are printed in the same format that prnt_ket for the case where format = 3
+    *  Bin tags are printed in the same format that prnt_ket for the case where format = 0.
     *
     *  @see prnt_ket(int iket, int format, bool loss,qocircuit *qoc);
     *  @ingroup Bin_output
@@ -411,7 +440,7 @@ public:
     void  prnt_bins();
     /**
     *  Prints a set of probability bins.<br>
-    *  Bin tags are printed in the same format that prnt_ket for the case where format = 3.
+    *  Bin tags are printed in the same format that prnt_ket for the case where format = 0.
     *
     *  @param double thresh Probabilities below this value are not printed.
     *  @see prnt_ket(int iket, int format, bool loss,qocircuit *qoc);
@@ -472,4 +501,30 @@ public:
     */
     void aux_prnt_bins( int format, double thresh, bool loss, qocircuit *qoc);
 
+    // Qubit codification methods.
+    /** @defgroup Bin_qubit Qubit codification support
+    *   @ingroup P_Bin
+    *   Support to encode photonic outcomes into qubit outcomes using path encoding.
+    */
+
+    /**
+    *  It encodes the bin labels from a photonic to a qubit representation (path encoding). Circuit version. <br>
+    *  <b> Only for ideal circuits. nm=1 and nd=1 </b>
+    *
+    *  @param mati qbits Qubit definition. Matrix with a column entry for each qubit where they are defined the two photonic channels needed to encode the qubit. A 01 occupation means Q=0 and a 10 occupation Q=1.
+    *  @param qocircuit *qoc Circuit to which the set of probability bins is related.
+    *  @return Encoded set of probability bins.
+    *  @ingroup Bin_qubit
+    */
+    p_bin *translate(mati qdef,qocircuit *qoc);
+    /**
+    *  It encodes the bin labels from a photonic to a qubit representation (path encoding). Device version. <br>
+    *  <b> Only for ideal circuits. nm=1 and nd=1 </b>
+    *
+    *  @param mati qbits Qubit definition. Matrix with a column entry for each qubit where they are defined the two photonic channels needed to encode the qubit. A 01 occupation means Q=0 and a 10 occupation Q=1.
+    *  @param qodev *dev Device to which the set of probability bins is related.
+    *  @return Encoded set of probability bins.
+    *  @ingroup Bin_qubit
+    */
+    p_bin *translate(mati qdef,qodev *dev);
 };

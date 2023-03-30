@@ -3,7 +3,7 @@
 //
 // DENSITY MATRIX LIBRARY
 //
-// Copyright © 2022 National University of Ireland Maynooth, Maynooth University. All rights reserved.
+// Copyright © 2023 National University of Ireland Maynooth, Maynooth University. All rights reserved.
 // The contents of this file are subject to the licence terms detailed in LICENCE.TXT available in the
 // root directory of this source tree. Use of the source code in this file is only permitted under the
 // terms of the licence in LICENCE.TXT.
@@ -86,7 +86,7 @@ dmatrix *dmatrix:: clone(){
     dmatrix *aux;      // New copy of this density matrix.
 
 
-    // Initialize configuratin
+    // Initialize configuration
     aux=new dmatrix(mem);
     aux->N=N;
 
@@ -164,14 +164,14 @@ void dmatrix:: add(dmatrix *addm){
 //----------------------------------------
 double dmatrix::trace(){
 //  Variables
-    double tr;      // Trace
+    cmplx tr;      // Trace
 //  Auxilaty index
     int    i;       // Aux index
 
 
     tr=0.0;
     for (i=0;i<dicc->nket;i++) tr=tr+dens(i,i);
-    return tr;
+    return real(tr);
 }
 
 
@@ -264,7 +264,10 @@ void dmatrix::aux_prnt_mtx(int format, double thresh, qocircuit *qoc){
 //  Auxiliary index
     int  i;          // Aux index
     int  j;          // Aux index
+    int ketformat;
+    int kind;
 
+    ketformat=format%NFORMATS;
 
     nbase=dicc->nket;
 
@@ -285,11 +288,28 @@ void dmatrix::aux_prnt_mtx(int format, double thresh, qocircuit *qoc){
    // Print non-zero rows and columns of the density matrix (to avoid screen cluttering)
     for(i=0;i<nbase;i++){
         if(rowsum(i)>thresh){
-            dicc->prnt_ket(i,format,qoc);
+            dicc->prnt_ket(i,ketformat,qoc);
             cout << " ";
             for(j=0;j<nbase;j++){
                 if(colsum(j)>thresh){
-                    cout  << setw(DEFWIDTH+1) << std::fixed << std::setprecision(4) << dens(i,j)/N << RESET <<" ";
+                    kind=format/NFORMATS;
+                    switch (kind){
+                        case 0:
+                            cout  << setw(DEFWIDTH+1) << std::fixed << std::setprecision(4) << dens(i,j)/double(N) << RESET <<" ";
+                            break;
+                        case 1:
+                            cout  << setw(DEFWIDTH+1) << std::fixed << std::setprecision(4) << real(dens(i,j))/double(N) << RESET <<" ";
+                            break;
+                        case 2:
+                            cout  << setw(DEFWIDTH+1) << std::fixed << std::setprecision(4) << imag(dens(i,j))/double(N) << RESET <<" ";
+                            break;
+                        case 3:
+                            cout  << setw(DEFWIDTH+1) << std::fixed << std::setprecision(4) << sign(real(dens(i,j)))*abs(dens(i,j))/double(N) << RESET <<" ";
+                            break;
+                        default:
+                            cout  << "aux_prnt_mtx error: Format number too larger/Format not recognized" << endl;
+                            break;
+                    }
                 }
             }
             cout << endl;
@@ -326,7 +346,7 @@ void dmatrix::prnt_results(int format,qocircuit *qoc){
     for(i=0;i<dicc->nket;i++){
         dicc->prnt_ket(i,format,qoc);
         cout << ": ";
-        cout << std::fixed << std::setprecision(4) << dens(i,i)/N <<endl;
+        cout << std::fixed << std::setprecision(4) << real(dens(i,i))/double(N) <<endl;
 
     }
 }
@@ -353,7 +373,7 @@ double dmatrix::get_result(mati def,qocircuit *qoc){
     delete bra;
 
     // Return density matrix value if present.
-    if(irow>=0) return dens(irow,irow);
+    if(irow>=0) return real(dens(irow,irow));
 
     return 0.0;
 }
@@ -379,7 +399,7 @@ p_bin *dmatrix::get_pbin(){
     // Store the values
     for(i=0;i<dicc->maxket;i++){
         j=aux->add_count(dicc->ket[i]);
-        aux->p[j]=dens(i,i);
+        aux->p[j]=real(dens(i,i));
     }
     aux->N=N;
 
@@ -760,7 +780,7 @@ void dmatrix:: add_state_cond(int ndec, mati def,state *in_state,qocircuit *qoc)
 void dmatrix:: sum_state(state *newstate){
 //  state *newstate                // New state to be added to the density matrix.
 //  Variables
-    double P;                      // Probability
+    cmplx P;                      // Probability
 //  Auxiliary index
     int    irow;                   // Index of rows
     int    icol;                   // Index of columns
@@ -781,7 +801,7 @@ void dmatrix:: sum_state(state *newstate){
         for(l=0;l<newstate->nket;l++){
             icol=dicc->add_ket(newstate->ket[l]);
 
-            P=(real(conj(newstate->ampl[k])*newstate->ampl[l]));
+            P=(conj(newstate->ampl[k])*newstate->ampl[l]);
 
             // We update the density coefficient at the proper row and column
             if(abs(P)>xcut) dens(irow,icol)=dens(irow,icol)+P;
@@ -805,23 +825,25 @@ dmatrix *dmatrix::calc_measure(qocircuit *qoc){
     if(qoc->ns>1){
         switch(qoc->timed){
             case 0:  // Counter
-                aux=get_counts(qoc->ns,qoc);
+                aux=get_counts(qoc);
                 break;
-            case 1:  // Clock: Partial trace
-                aux=partial_trace(qoc->emitted->pack_def,qoc);
+            case 1:  // Times
+                aux=get_times(qoc);
                 break;
-            case 3:  // Clock: Manual mode
-                aux=partial_trace(qoc->emitted->pack_def,qoc);
-                break;
-            case 2:  // Clock + Spectrum: Full
+            case 2:  // Full (Packets)
                 aux=this->clone();
                 break;
-            default: // Default: Error
+            case 3:  // Times: Manual mode
+                aux=get_times(qoc);
+                break;
+            case 4:  // Periods
+                aux=get_period(qoc);
+                break;
+            default: // Default (Error)
                 cout << "Dmatrix calc_measure: Error. Timed has a non valid value" << endl;
                 exit(0);
                 break;
         }
-
     }else{
         aux=this->clone();  // If there is only one wave-packet the density matrix is just copied
     }
@@ -829,28 +851,35 @@ dmatrix *dmatrix::calc_measure(qocircuit *qoc){
 }
 
 
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------
 //
-// Calculates the partial trace of a matrix using a packet definition of the degrees of freedom
+// Relabels the dictionary entries of the density matrix.
 //
-//-------------------------------------------------------------------------------------------------
-dmatrix *dmatrix::partial_trace(mati pack_def,qocircuit *qoc){
-//  mati pack_def       // Packet definition that relates the packet number with the numbers of the additional degrees of freedom
-//  qocircuit *qoc      // Circuit to which the density matrix is referred.
+//-----------------------------------------------------------
+dmatrix *dmatrix::relabel(veci label_idx, qocircuit *qoc){
+//  veci label_idx          // Label transformation vector
+//  qocircuit *qoc          // Circuit to which the density matrix is referred.
 //  Variables.
-    mati pack_idx;      // Packet index. Degrees of freedom of each packet indexed by the packet number.
-    int *rowocc;        // New dictionary ket occupation of the new partial traced density matrix (referred to rows).
-    int *colocc;        // New dictionary ket occupation of the new partial traced density matrix (referred to columns).
-    dmatrix *newdmat;   // New partial traced density matrix.
+    int     *rowocc;        // New dictionary ket occupation of the new relabeled density matrix (referred to rows).
+    int     *colocc;        // New dictionary ket occupation of the new relabeled density matrix (referred to columns).
+    dmatrix *newdmat;       // New relabeled density matrix.
 //  Transformation variables
-    int  ch;            // Channel
-    int  pol;           // Polarization
-    int  ns;            // New wavepacket
-    int  newk;          // Level index
-    int  istore;        // Level to store index
-    int  auxstore;      // Aux index with the un-traslated level to store index.
-    int  irow;          // Density matrix row index
-    int  icol;          // Density matrix col index
+    bool     isempty;       // Is the state zero? True=Yes/False=No
+    int      ch;            // Channel
+    int      pol;           // Polarization
+    int      is;            // Packet number
+    int      ip;            // Period number
+    int      nwi;           // Initial detection window.
+    int      nwf;           // Final detection window.
+    int      ns;            // New wavepacket number
+    int      newk;          // Level index
+    int      istore;        // Level to store index
+    int      auxstore;      // Aux index with the un-traslated level to store index.
+    int      irow;          // Density matrix row index
+    int      icol;          // Density matrix col index
+    double   faci;          // Renormalization factor i
+    double   facj;          // Renormalization factor j
+    vecd     prob;          // Probabilities by common labels
     // Note that the division between rows and columns is conceptual. There is only one hash table for both.
     // Auxiliary index
     int  i;             // Aux index
@@ -858,71 +887,130 @@ dmatrix *dmatrix::partial_trace(mati pack_def,qocircuit *qoc){
     int  k;             // Aux index
 
 
+    // Set up measurement period.
+    nwi=qoc->mpi;
+    nwf=qoc->mpf+1;
+    if(qoc->mpi<0) nwi=0;
+    if(qoc->mpf<0) nwf=qoc->np+1;
+
     // Reserve memory for new partial matrix
     newdmat=new dmatrix(mem);
-    // Update level index to the ones of the current matrix
+    // Update visibility
     delete newdmat->dicc;
     newdmat->dicc=new ket_list(dicc->nlevel,mem,dicc->vis);
-    // Reorganize  the information of the pac
-    if(pack_def.rows()>2){                              // Some backward compatibility
-        pack_idx=create_packet_idx(pack_def);
-    }else{
-        pack_idx=pack_def;
-    }
 
-    // For each element of the base int rows and columns
+
+    // DIAGONAL ELEMENTS and PROBABILITES BY COMMON LABELS
+    prob.setZero(dicc->nket);
     for(i=0;i<dicc->nket;i++){
-    for(j=0;j<dicc->nket;j++){
-        // The result of the traced degrees of freedom can be only 0 or 1.
-        // If it is one we store the remaining degrees of freedom not traced.
-        // That means to assign to the base elements a new label/number that identifies
-        // uniquely those degrees of freedom.
-        if(ketcompatible(i,j,pack_idx,qoc)==1){
-            // A new row and column dictionary element are created
-            rowocc=new int[dicc->nlevel]();
-            colocc=new int[dicc->nlevel]();
-            // We process each level to determine the index of the remaining degrees of freedom
-            for(k=0;k<dicc->nlevel;k++){
-                //Remember that the order/label of a level may have changed after post-selection.
-                // We need their original ordering in the circuit index.
-                newk=dicc->vis[k];
+    for(j=i;j<dicc->nket;j++){
+    if(ketcompatible(i,j,qoc)==1){
+        // Reserve memory
+        rowocc=new int[dicc->nlevel]();
+        colocc=new int[dicc->nlevel]();
+        isempty=true;
+        for(k=0;k<dicc->nlevel;k++){
+            // Remember labels after post-selection
+            newk=dicc->vis[k];
 
-                // We recover the channel and polarization of the level.
-                ch=qoc->idx[newk].ch;
-                pol=qoc->idx[newk].m;
-                // We change the label for a new one representing the remaining degrees of freedom.
-                // Note that doing so we are re-interpreting the meaning of the levels. Therefore
-                // we have new occupation vectors.
+            // Obtain degrees of freedom and period.
+            ch=qoc->idx[newk].ch;
+            pol=qoc->idx[newk].m;
+            is=qoc->idx[newk].s;
+            ip=qoc->idx[newk].s/qoc->nsp;
 
-                if(qoc->idx[newk].s<pack_idx.cols()){ // This is a safety measure. Sometimes we don't use all labels.The remaining ones are zero
-                    // We select the new label following the premises of our packet definitions.
-                    // Each packet is labeled by a number, but is composed of different degrees of freedom also labeled by numbers.
-                    // Here we change the label by the remaining one not traced out.
-                    ns=pack_idx(0,qoc->idx[newk].s);
-                    // Wich level correspond with that wavefunction number. Here the reinterpretation.
-                    auxstore=qoc->i_idx[ch][pol][ns];
-                    istore=0;
-                    while(auxstore!=newdmat->dicc->vis[istore]) istore++; // Don't like it very much. But those list are not very large and this operation is not looped.
-                    // We compute the new dictionary element
-                    rowocc[istore]=rowocc[istore]+dicc->ket[i][k];
-                    colocc[istore]=colocc[istore]+dicc->ket[j][k];
-                }
+            // Update packet number
+            ns=label_idx(is);
 
+            // Reinterpretation
+            auxstore=qoc->i_idx[ch][pol][ns];
+            istore=0;
+            while(auxstore!=newdmat->dicc->vis[istore]) istore++; // Don't like it very much. But those list are not very large.
+
+            // Store level
+            // Only stored if is a visible period.
+            if((ip>=nwi)&&(ip<nwf)){
+                rowocc[istore]=rowocc[istore]+dicc->ket[i][k];
+                colocc[istore]=colocc[istore]+dicc->ket[j][k];
+                if((dicc->ket[i][k]>0)||(dicc->ket[j][k]>0)) isempty=false;
             }
 
-            // Now we store the dictionary element and the density matrix entry
-            // Check rows. If present recover the index otherwise create a new one
-            irow=newdmat->dicc->add_ket(rowocc);
-            icol=newdmat->dicc->add_ket(colocc);
-            delete[] rowocc;
-            delete[] colocc;
-
-            // Store matrix element for the new dictionary entries
-            newdmat->dens(irow,icol)=newdmat->dens(irow,icol)+dens(i,j);
         }
-    }}
 
-    // Copy additional information (normalization information)
+        //Store entry
+        irow=newdmat->dicc->add_ket(rowocc);
+        icol=newdmat->dicc->add_ket(colocc);
+
+        // Diagonal element
+        if((isempty==false)&&(i==j)){
+            newdmat->dens(irow,icol)=newdmat->dens(irow,icol)+dens(i,j);
+            prob(i)= prob(i)+real(dens(i,i));
+        }
+
+        // Probability by common labels
+        if((isempty==false)&&(irow==icol)&&(i!=j)){
+            prob(i)= prob(i)+real(dens(j,j));
+            prob(j)= prob(j)+real(dens(i,i));
+        }
+
+        // Free memory
+        delete[] rowocc;
+        delete[] colocc;
+    }}}
+
+
+    // OFF DIAGONAL ELEMENTS
+    for(i=0;i<dicc->nket;i++){
+    for(j=0;j<dicc->nket;j++){
+    if(ketcompatible(i,j,qoc)==1){
+        // Reserve memory
+        rowocc=new int[dicc->nlevel]();
+        colocc=new int[dicc->nlevel]();
+        isempty=true;
+        for(k=0;k<dicc->nlevel;k++){
+            // Remember labels after post-selection
+            newk=dicc->vis[k];
+
+            // Obtain degrees of freedom and period.
+            ch=qoc->idx[newk].ch;
+            pol=qoc->idx[newk].m;
+            is=qoc->idx[newk].s;
+            ip=qoc->idx[newk].s/qoc->nsp;
+
+            // Update packet number
+            ns=label_idx(is);
+
+            // Reinterpretation
+            auxstore=qoc->i_idx[ch][pol][ns];
+            istore=0;
+            while(auxstore!=newdmat->dicc->vis[istore]) istore++; // Don't like it very much. But those list are not very large.
+
+            // Store level
+            // Only stored if is a visible period.
+            if((ip>=nwi)&&(ip<nwf)){
+                rowocc[istore]=rowocc[istore]+dicc->ket[i][k];
+                colocc[istore]=colocc[istore]+dicc->ket[j][k];
+                if((dicc->ket[i][k]>0)||(dicc->ket[j][k]>0)) isempty=false;
+            }
+
+        }
+
+        //Store entry
+        irow=newdmat->dicc->add_ket(rowocc);
+        icol=newdmat->dicc->add_ket(colocc);
+        faci=0.0;
+        facj=0.0;
+
+        if(prob(i)>xcut) faci=sqrt(real(dens(i,i)))/sqrt(prob(i));
+        if(prob(j)>xcut) facj=sqrt(real(dens(j,j)))/sqrt(prob(j));
+        if((isempty==false)&&(irow!=icol)) newdmat->dens(irow,icol)=newdmat->dens(irow,icol)+faci*facj*dens(i,j);
+
+        // Free memory
+        delete[] rowocc;
+        delete[] colocc;
+    }}}
+
+    // Copy normalization information.
     newdmat->N=N;
 
     // Return new matrix
@@ -932,100 +1020,156 @@ dmatrix *dmatrix::partial_trace(mati pack_def,qocircuit *qoc){
 
 //-------------------------------------------------------------------------------------------------
 //
-// Returns a density matrix where the entries are independent of the wave packet degrees of freedom.
-// This is independent of time and frequency
+// Returns a reduced density matrix where the entries are independent of the wave packet degrees
+// of freedom.
 //
 //-------------------------------------------------------------------------------------------------
-dmatrix *dmatrix::get_counts(int npack,qocircuit *qoc){
-//  int npack;                 // Number of packet definitions.
+dmatrix *dmatrix::get_counts(qocircuit *qoc){
 //  qocircuit *qoc;            // Circuit to which the density matrix is referred.
 //  Variables
     dmatrix   *aux;            // Auxiliary density matrix
     ket_list  *newdicc;        // New dictionary definition
-    mati       new_pack_def;   // New packet definitions
+    veci       label_idx;       // New label definitions
 //  Auxiliary index
     int        i;              // Aux index
 
 
-    // Create the packet definition
-    new_pack_def.resize(3,npack);
-    for(i=0;i<npack;i++){
-        new_pack_def(0,i)=i;
-        new_pack_def(1,i)=0;
-        new_pack_def(2,i)=i;
-    }
+    // Create the label definition
+    label_idx.resize(qoc->ns);
+    for(i=0;i<qoc->ns;i++) label_idx(i)=0;
 
-    // Perform the partial trace
-    aux=partial_trace(new_pack_def,qoc);
+    // Perform the relabeling
+    aux=relabel(label_idx,qoc);
 
-    // Update the dictionary "labels"
+    // Update the dictionary labels
     newdicc=aux->dicc->remove_time(qoc);
     delete aux->dicc;
     aux->dicc=newdicc;
 
+    // Return new density matrix
     return aux;
 }
 
 
 //-------------------------------------------------------------------------------------------------
 //
-// Ket "compatibility". Do they have the same instance of the degree of freedom that is going to be traced out.
+// Returns a reduced density matrix where the entries are labeled by period
+//
+//-------------------------------------------------------------------------------------------------
+dmatrix *dmatrix::get_period(qocircuit *qoc){
+//  qocircuit *qoc;            // Circuit to which the density matrix is referred.
+//  Variables
+    dmatrix   *aux;            // Auxiliary density matrix
+    veci       label_idx;      // New label definitions
+//  Auxiliary index
+    int        i;              // Aux index
+
+
+    // Create the label definition
+    label_idx.resize(qoc->ns);
+    for(i=0;i<qoc->ns;i++) label_idx(i)=i/qoc->nsp;
+
+    // Perform the relabeling
+    aux=relabel(label_idx,qoc);
+
+    // Return new density matrix
+    return aux;
+}
+
+
+//-------------------------------------------------------------------------------------------------
+//
+// Returns a reduced density matrix where the entries are labeled by times
+//
+//-------------------------------------------------------------------------------------------------
+dmatrix *dmatrix::get_times(qocircuit *qoc){
+//  qocircuit *qoc;            // Circuit to which the density matrix is referred.
+//  Variables
+    int npack;                 // Number of packet
+    int nt;                    // Number of times
+    dmatrix   *aux;            // Auxiliary density matrix
+    veci       label_idx;      // New label definitions
+//  Auxiliary index
+    int        i;              // Aux index
+
+
+    // Set up packet and times numbers
+    npack=qoc->emitted->pack_def.cols();
+    nt=qoc->emitted->times.size();
+
+    // Create the label definition
+    label_idx.resize(qoc->ns);
+    for(i=0;i<qoc->ns;i++){
+        if(i%qoc->nsp<npack) label_idx(i)=qoc->emitted->pack_def(0,i%qoc->nsp)+(i/qoc->nsp)*nt;
+    }
+
+    // Perform the relabeling
+    aux=relabel(label_idx,qoc);
+
+    // Return new density matrix
+    return aux;
+}
+
+
+
+//-------------------------------------------------------------------------------------------------
+//
+// Ket "compatibility". Both kets have the same photons packets?
 // Auxiliary private function. Not intended for external use.
 //
 //-------------------------------------------------------------------------------------------------
-int dmatrix::ketcompatible(int A, int B,mati pack_idx,qocircuit *qoc){
+int dmatrix::ketcompatible(int A, int B, qocircuit *qoc){
 //  state *A           // State A
 //  state *B           // State B
-//  mati pack_idx      // Packet index of the degrees of freedom
 //  qocircuit *qoc     // Circuit to which the density matrix is referred.
 //  Variables
-    veci    flistA;    // List of the index to be traced out in ket A
-    veci    flistB;    // List of the index to be traced out in ket B
-    int     maxA;      // Maximum number of elements in flist A
-    int     maxB;      // Maximum number of elements in flist B
+    veci   flistA;     // List of the index to be traced out in ket A
+    veci   flistB;     // List of the index to be traced out in ket B
     int    compatible; // Are A an B compatible 0=No/1=Yes
     int    lev;        // Level of state A
-    int    s;          // Level 2 wave packet
-    int    w;          // Degree of freedom to be traced of level 1. Usually frequency.
+    int    is;         // Level 2 wave packet
+    int    ip;         // Period number
+    int    nwi;        // Initial detection window.
+    int    nwf;        // Final detection window.
     // Auxiliary index
     int    i;          // Aux index
-    int    j;          // Aux index
+
+
+//    cout << pack_idx << endl;
+   // Set up measurement period.
+    nwi=qoc->mpi;
+    nwf=qoc->mpf+1;
+    if(qoc->mpi<0) nwi=0;
+    if(qoc->mpf<0) nwf=qoc->np+1;
 
 
     // Reserve memory
-    flistA.resize(maxnph);
-    flistB.resize(maxnph);
+    flistA.resize(qoc->ns);
+    flistB.resize(qoc->ns);
+
 
     // Initialize lists an variables
-    maxA=0;
-    maxB=0;
-    flistA.setZero(maxnph);
-    flistB.setZero(maxnph);
+    flistA.setZero(qoc->ns);
+    flistB.setZero(qoc->ns);
 
     // Create list of indexes to compatibility comparison
     for(i=0;i<dicc->nlevel;i++){
         lev=dicc->vis[i];
-        s=qoc->idx[lev].s;
-        if(s<pack_idx.cols()){
-            w=pack_idx(1,s);
-            for(j=0;j<dicc->ket[A][i];j++){
-                flistA[maxA]=w;
-                maxA=maxA+1;
-            }
 
-            for(j=0;j<dicc->ket[B][i];j++){
-                flistB[maxB]=w;
-                maxB=maxB+1;
-            }
+        is=qoc->idx[lev].s;
+        ip=qoc->idx[lev].s%qoc->nsp;
+
+        // We compute the new dictionary element
+        if((ip>=nwi)&&(ip<nwf)){
+            flistA[is]=flistA[is]+dicc->ket[A][i];
+            flistB[is]=flistB[is]+dicc->ket[B][i];
         }
     }
 
     // Comparison between the lists.
-    // States are compatible if the list are compatible
     i=0;
     compatible=1;
-    if(maxA!=maxB) compatible=0;
-    while((compatible==1)&&(i<maxA)){
+    while((compatible==1)&&(i<qoc->ns)){
         if(flistA[i]!=flistB[i]) compatible=0;
         i=i+1;
     }

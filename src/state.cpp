@@ -3,7 +3,7 @@
 //
 // STATE DEFINITION LIBRARY.
 //
-// Copyright © 2022 National University of Ireland Maynooth, Maynooth University. All rights reserved.
+// Copyright © 2023 National University of Ireland Maynooth, Maynooth University. All rights reserved.
 // The contents of this file are subject to the licence terms detailed in LICENCE.TXT available in the
 // root directory of this source tree. Use of the source code in this file is only permitted under the
 // terms of the licence in LICENCE.TXT.
@@ -215,7 +215,7 @@ int ket_list::add_ket(int *occ){
     // Check and warn about memory limits.
     if(nket>=maxket){
         cout << "Ket list add ket error #1: Memory limit exceeded." << endl;
-        exit(0);
+        return -1;
     }
 
     // Update amplitude and occupation
@@ -279,39 +279,49 @@ int ket_list::add_ket(hterm term, qocircuit *qoc){
         // The number of rows of the matrix determines its format.
         switch (term.rows()){
             case 4:     //We fully describe the state.
+                if (term(0,i)>=qoc->nch){ cout  << "add_ket: Warning! channel not defined." << endl; return -1;}
+                if (term(1,i)>=qoc->nm ){ cout  << "add_ket: Warning! mode/polarization not defined." << endl; return -1;}
+                if (term(2,i)>=qoc->ns ){ cout  << "add_ket: Warning! packet not defined."  << endl; return -1;}
+
                 olevel=qoc->i_idx[term(0,i)][term(1,i)][term(2,i)];
                 ilevel=ivis[olevel];
                 if(ilevel<0){
-                    cout << "Add_term error: That level no longer exist in this Hilbert space" << endl;
+                    cout << "add_ket error: That level no longer exist in this Hilbert space" << endl;
                     exit(0);
                 }
                 occ[ilevel]=term(3,i);
                 break;
             case 3:     // We skip bunch (time and frequency)
                         // There are relevant in just a few problems.
+                if (term(0,i)>=qoc->nch){ cout  << "add_ket: Warning! channel not defined." << endl; return -1;}
+                if (term(1,i)>=qoc->nm ){ cout  << "add_ket: Warning! mode/polarization not defined." << endl; return -1;}
+
                 olevel=qoc->i_idx[term(0,i)][term(1,i)][0];
                 ilevel=ivis[olevel];
                 if(ilevel<0){
-                    cout << "Add_term error: That level no longer exist in this Hilbert space" << endl;
+                    cout << "add_ket error: That level no longer exist in this Hilbert space" << endl;
                     exit(0);
                 }
                 occ[ilevel]=term(2,i);
                 break;
             case 2:     // We consider there is no polarization in this problem. (Just channel and occupation).
+                if (term(0,i)>=qoc->nch){ cout  << "add_ket: Warning! channel not defined." << endl; return -1;}
+
                 olevel=qoc->i_idx[term(0,i)][0][0];
                 ilevel=ivis[olevel];
                 if(ilevel<0){
-                    cout << "Add_term error: That level no longer exist in this Hilbert space" << endl;
+                    cout << "add_ket error: That level no longer exist in this Hilbert space" << endl;
                     exit(0);
                 }
                 occ[ilevel]=term(1,i);
                 break;
             case 1:     //  Like before we can just input occupations.
                         //  However in this case we must define all of them.
+                if (num>qoc->nlevel){ cout << "Add ket: Warning! level not defined." << endl; return -1;}
                 olevel=qoc->i_idx[i][0][0];
                 ilevel=ivis[olevel];
                 if(ilevel<0){
-                    cout << "Add_term error: That level no longer exist in this Hilbert space" << endl;
+                    cout << "add_ket error: That level no longer exist in this Hilbert space" << endl;
                     exit(0);
                 }
                 occ[ilevel]=term(0,i);
@@ -457,41 +467,7 @@ void  ket_list::prnt_ket(int iket, int format, bool loss, qocircuit *qoc){
             nchm=qoc->nch/2;
             // We print in different formats depending on the circuit flag for printing
             switch (format){
-                case 0: // Numerical form
-                    if(writeprev==1) cout << ", ";
-                    if((qoc->idx[lev].ch>=nchm)&&(loss)) cout  << RED;
-                    cout << "( ";
-                    cout << qoc->idx[lev].ch;
-                    if(qoc->nm>1)    cout << ", " << qoc->idx[lev].m;
-                    if(qoc->ns>1)    cout << ", " << qoc->idx[lev].s;
-                    cout <<" ): " << ket[iket][k];
-                    cout  << CYAN;
-                    writeprev=1;
-                    break;
-                case 1: // Human readable form. Some numbers are changed by letters
-                    if(writeprev==1) cout << ", ";
-                    if((qoc->idx[lev].ch>=nchm)&&(loss)) cout  << RED;
-                    cout << "( ";
-                    cout << qoc->idx[lev].ch;
-                    if(qoc->nm>1)    cout << ", " << pl[qoc->idx[lev].m];
-                    if(qoc->ns>1)    cout << ", " << qoc->idx[lev].s;
-                    cout <<" ): " << ket[iket][k];
-                    cout  << CYAN;
-                    writeprev=1;
-                    break;
-                case 2: // Human readable condensed form. A condensed form particularly apt for Baso Baset problem and similars.
-                    if(ket[iket][k]>0){
-                        if(writeprev==1) cout << ", ";
-                        if((qoc->idx[lev].ch>=nchm)&&(loss)) cout  << RED;
-                        if(ket[iket][k]>1) cout << "[" << ket[iket][k] << "]";
-                        if(qoc->nm>1)    cout << pl[qoc->idx[lev].m];
-                        if(qoc->ns>1)    cout << "(" << qoc->idx[lev].s << ")";
-                        cout << qoc->idx[lev].ch;
-                        cout  << CYAN;
-                        writeprev=1;
-                    }
-                    break;
-                case 3: // Human readable condensed form. A condensed form particularly apt for Baso Baset problem and similars.
+                case 0: // Straightforward form
                     if(writeprev==1) cout << ", ";
                     if((qoc->idx[lev].ch>=nchm)&&(loss)) cout  << BLUE;
                     if(ket[iket][k]>=0){
@@ -503,6 +479,19 @@ void  ket_list::prnt_ket(int iket, int format, bool loss, qocircuit *qoc){
                     writeprev=1;
                     break;
 
+
+                case 1: // Human readable condensed form. A condensed form particularly apt for Baso Baset problem and similars.
+                    if(ket[iket][k]>0){
+                        if(writeprev==1) cout << ", ";
+                        if((qoc->idx[lev].ch>=nchm)&&(loss)) cout  << RED;
+                        if(ket[iket][k]>1) cout << "[" << ket[iket][k] << "]";
+                        if(qoc->nm>1)    cout << pl[qoc->idx[lev].m];
+                        if(qoc->ns>1)    cout << "(" << qoc->idx[lev].s << ")";
+                        cout << qoc->idx[lev].ch;
+                        cout  << CYAN;
+                        writeprev=1;
+                    }
+                    break;
                 default:
                     cout << "Prnt_state error: Format "<< format << " does not exist." << endl;
                     exit(0);
@@ -637,7 +626,7 @@ int state::add_term(cmplx i_ampl, int *occ){
 
 
     index=add_ket(occ);
-    ampl[index]=ampl[index]+i_ampl;
+    if(index>=0) ampl[index]=ampl[index]+i_ampl;
 
     return index;
 }
@@ -657,7 +646,7 @@ int state::add_term(cmplx i_ampl,hterm term, qocircuit *qoc){
 
 
     index=add_ket(term,qoc);
-    ampl[index]=ampl[index]+i_ampl;
+    if(index>=0) ampl[index]=ampl[index]+i_ampl;
 
     return index;
 }
@@ -715,6 +704,39 @@ void state::normalize(){
     }
 
 }
+
+
+//---------------------------------------------------
+//
+// Changes the global phase of the state.
+// Def defines the term we want to rephase to a real value.
+//
+//---------------------------------------------------
+int state::rephase(hterm def,qocircuit *qoc){
+//  hterm def;      // State definition
+//  qocircuit *qoc; // Circuit to which def is referred
+//  Variables
+    double re;      // Real part
+    double im;      // Imaginary part
+    double phase;   // Phase.
+    cmplx ampl_def; // Amplitude of def state
+    int idx;        // Index. Position of the state on the ket list.
+//  Auxiliary index
+    int    i;       // Aux index
+
+
+    idx=find_ket(def,qoc);
+    if(idx<0) return idx;
+
+    ampl_def=ampl[idx];
+    re=real(ampl_def);
+    im=imag(ampl_def);
+    phase=atan2(im,re);
+
+    for(i=0;i<nket;i++) ampl[i]=ampl[i]*exp(-jm*phase);
+    return idx;
+}
+
 
 //--------------------------------------------
 //
@@ -1053,11 +1075,11 @@ void  state::prnt_in_cols(int format, bool loss, qocircuit *qoc){
             cout << ": ";
 
             if(real(ampl[i])>=0){
-                if(imag(ampl[i])>=0) cout << " " << fixed <<  setprecision(8) << abs(real(ampl[i])) << " + " << abs(imag(ampl[i])) << endl;
-                else                 cout << " " << fixed <<  setprecision(8) << abs(real(ampl[i])) << " - " << abs(imag(ampl[i])) << endl;
+                if(imag(ampl[i])>=0) cout << " " << fixed <<  setprecision(8) << abs(real(ampl[i])) << " + " << abs(imag(ampl[i])) << " j" << endl;
+                else                 cout << " " << fixed <<  setprecision(8) << abs(real(ampl[i])) << " - " << abs(imag(ampl[i])) << " j" << endl;
             }else{
-                if(imag(ampl[i])>=0) cout << "-" << fixed <<  setprecision(8) << abs(real(ampl[i])) << " + " << abs(imag(ampl[i])) << endl;
-                else                 cout << "-" << fixed <<  setprecision(8) << abs(real(ampl[i])) << " - " << abs(imag(ampl[i])) << endl;
+                if(imag(ampl[i])>=0) cout << "-" << fixed <<  setprecision(8) << abs(real(ampl[i])) << " + " << abs(imag(ampl[i])) << " j" << endl;
+                else                 cout << "-" << fixed <<  setprecision(8) << abs(real(ampl[i])) << " - " << abs(imag(ampl[i])) << " j" << endl;
             }
 
         }
@@ -1074,7 +1096,7 @@ void  state::prnt_in_cols(int format, bool loss, qocircuit *qoc){
 //  Polarization encoding.
 //
 //----------------------------------------------------------------------
-void state::Bell_Pol(int i_ch0, int i_ch1, veci i_t, char kind, double phi, qocircuit *qoc){
+int state::Bell_Pol(int i_ch0, int i_ch1, veci i_t, char kind, double phi, qocircuit *qoc){
 //  int    i_ch0;       // Channel 0
 //  int    i_ch1;       // Channel 1
 //  veci   i_t;         // Vector with the wavepacket numbers to be assigned to each photon.
@@ -1166,18 +1188,19 @@ void state::Bell_Pol(int i_ch0, int i_ch1, veci i_t, char kind, double phi, qoci
 
     if(nket==0){
         // If the state is not initialized just add the terms of the Bell state
-        add_term( A1,Bell1,qoc);
-        add_term( A2,Bell2,qoc);
+        if (add_term( A1,Bell1,qoc) <0 ) return -1;
+        if (add_term( A2,Bell2,qoc) <0 ) return -1;
     }else{
         // If the state is initialized we have to do the direct product with
         // the already existent term. We are assuming here the pre-existing
         // initialization is for different channels.
         auxemitter=new state(nlevel,maxket);
-        auxemitter->add_term( A1,Bell1,qoc);
-        auxemitter->add_term( A2,Bell2,qoc);
-        this->dproduct(auxemitter);
+        if ( auxemitter->add_term( A1,Bell1,qoc) <0 ) return -1;
+        if ( auxemitter->add_term( A2,Bell2,qoc) <0 ) return -1;
+        if ( this->dproduct(auxemitter) <0 ) return -1;
         delete auxemitter;
     }
+    return 0;
 }
 
 
@@ -1187,7 +1210,7 @@ void state::Bell_Pol(int i_ch0, int i_ch1, veci i_t, char kind, double phi, qoci
 //  Auxiliary method.
 //
 //----------------------------------------------------------------------
-void state::Rand_Pol(int i_ch0,int i_ch1, veci i_t, qocircuit *qoc){
+int state::Rand_Pol(int i_ch0,int i_ch1, veci i_t, qocircuit *qoc){
 //  int    i_ch0;       // Channel 0
 //  int    i_ch1;       // Channel 1
 //  veci   i_t;         // Vector with the wavepacket numbers to be assigned to each photon.
@@ -1255,16 +1278,17 @@ void state::Rand_Pol(int i_ch0,int i_ch1, veci i_t, qocircuit *qoc){
 
     if(nket==0){
         // If the state is not initialized just add the terms of the Bell state
-        add_term( 1.0,Rand,qoc);
+        if( add_term( 1.0,Rand,qoc) < 0 ) return -1;
     }else{
         // If the state is initialized we have to do the direct product with
         // the already existent term. We are assuming here the pre-existing
         // initialization is for different channels.
         auxemitter=new state(nlevel,maxket);
-        auxemitter->add_term(1.0,Rand,qoc);
-        this->dproduct(auxemitter);
+        if( auxemitter->add_term(1.0,Rand,qoc) < 0 ) return -1;
+        if( this->dproduct(auxemitter) < 0 ) return -1;
         delete auxemitter;
     }
+    return 0;
 }
 
 
@@ -1274,7 +1298,7 @@ void state::Rand_Pol(int i_ch0,int i_ch1, veci i_t, qocircuit *qoc){
 //  Auxiliary method.
 //
 //----------------------------------------------------------------------
-void state::Corr_Pol(int i_ch0,int i_ch1, veci i_t, qocircuit *qoc){
+int state::Corr_Pol(int i_ch0,int i_ch1, veci i_t, qocircuit *qoc){
 //  int    i_ch0;       // Channel 0
 //  int    i_ch1;       // Channel 1
 //  veci   i_t;         // Vector with the wavepacket numbers to be assigned to each photon.
@@ -1324,16 +1348,18 @@ void state::Corr_Pol(int i_ch0,int i_ch1, veci i_t, qocircuit *qoc){
 
     if(nket==0){
         // If the state is not initialized just add the terms of the Bell state
-        add_term( 1.0,Corr,qoc);
+        if( add_term( 1.0,Corr,qoc) < 0 ) return -1;
     }else{
         // If the state is initialized we have to do the direct product with
         // the already existent term. We are assuming here the pre-existing
         // initialization is for different channels.
         auxemitter=new state(nlevel,maxket);
-        auxemitter->add_term( 1.0,Corr,qoc);
-        this->dproduct(auxemitter);
+        if( auxemitter->add_term( 1.0,Corr,qoc) < 0 ) return -1;
+        if( this->dproduct(auxemitter) < 0 ) return -1;
         delete auxemitter;
     }
+
+    return 0;
 }
 
 
@@ -1343,7 +1369,7 @@ void state::Corr_Pol(int i_ch0,int i_ch1, veci i_t, qocircuit *qoc){
 //  Auxiliary method.
 //
 //----------------------------------------------------------------------
-void state:: QDPair(int i_ch0,int i_ch1, veci i_t,double dt, double k, double S, double tss, double thv, qocircuit *qoc){
+int state:: QDPair(int i_ch0,int i_ch1, veci i_t,double dt, double k, double S, double tss, double thv, qocircuit *qoc){
 //  int    i_ch0;   // Channel 0
 //  int    i_ch1;   // Channel 1
 //  veci   i_t;     // Vector with the wavepacket numbers to be assigned to each photon.
@@ -1358,12 +1384,12 @@ void state:: QDPair(int i_ch0,int i_ch1, veci i_t,double dt, double k, double S,
 
     if(urand()<(k*exp(-(dt/tss)))){
         if(urand()<exp(-(dt/thv))){
-            Bell_Pol(i_ch0,i_ch1,i_t,'+',S*dt,qoc);
+            return Bell_Pol(i_ch0,i_ch1,i_t,'+',S*dt,qoc);
         }else{
-            Corr_Pol(i_ch0,i_ch1,i_t,qoc);
+            return Corr_Pol(i_ch0,i_ch1,i_t,qoc);
         }
     }else{
-        Rand_Pol(i_ch0,i_ch1,i_t,qoc);
+        return Rand_Pol(i_ch0,i_ch1,i_t,qoc);
     }
 
 }
@@ -1375,7 +1401,7 @@ void state:: QDPair(int i_ch0,int i_ch1, veci i_t,double dt, double k, double S,
 //  Simplified version.
 //
 //----------------------------------------------------------------------
-void state:: QD(mati ch, double k, double S, double tx, double tss, double thv, qocircuit *qoc){
+int state:: QD(mati ch, double k, double S, double tx, double tss, double thv, qocircuit *qoc){
 //  mati   ch;      // Configuration matrix of the QD. First row channels. Second and third wave packet numbers of the H and V photons respectively.
 //  double k;       // Fraction of the emitted photon pairs which originate both from a XX-X cascade in presence of background light or multi-photon emission.
 //  double S;       // S/hbar FSS constant.
@@ -1405,8 +1431,9 @@ void state:: QD(mati ch, double k, double S, double tx, double tss, double thv, 
 
         // Emit pair
         dt=tx*expi(urand());
-        QDPair(ch0,ch1,vt,dt,k,S,tss,thv,qoc);
+        if ( QDPair(ch0,ch1,vt,dt,k,S,tss,thv,qoc) < 0 ) return -1;
     }
+    return 0;
 }
 
 
@@ -1417,7 +1444,7 @@ void state:: QD(mati ch, double k, double S, double tx, double tss, double thv, 
 //  Path encoding.
 //
 //----------------------------------------------------------------------
-void state::Bell_Path(int i_ch0, int i_ch1, veci i_t, char kind, double phi,  qocircuit *qoc){
+int state::Bell_Path(int i_ch0, int i_ch1, veci i_t, char kind, double phi,  qocircuit *qoc){
 //  int    i_ch0;       // Channel 0
 //  int    i_ch1;       // Channel 1
 //  veci   i_t;         // Vector with the wavepacket numbers to be assigned to each photon.
@@ -1504,18 +1531,20 @@ void state::Bell_Path(int i_ch0, int i_ch1, veci i_t, char kind, double phi,  qo
 
     if(nket==0){
         // If the state is not initialized just add the terms of the Bell state
-        add_term( A1,Bell1,qoc);
-        add_term( A2,Bell2,qoc);
+        if ( add_term( A1,Bell1,qoc) < 0 ) return -1;
+        if ( add_term( A2,Bell2,qoc) < 0 ) return -1;
     }else{
         // If the state is initialized we have to do the direct product with
         // the already existent term. We are assuming here the pre-existing
         // initialization is for different channels.
         auxemitter=new state(nlevel,maxket);
-        auxemitter->add_term( A1,Bell1,qoc);
-        auxemitter->add_term( A2,Bell2,qoc);
-        this->dproduct(auxemitter);
+        if ( auxemitter->add_term( A1,Bell1,qoc) < 0 ) return -1;
+        if ( auxemitter->add_term( A2,Bell2,qoc) < 0 ) return -1;
+        if ( this->dproduct(auxemitter) < 0 ) return -1;
         delete auxemitter;
     }
+
+    return 0;
 }
 
 
@@ -1525,7 +1554,7 @@ void state::Bell_Path(int i_ch0, int i_ch1, veci i_t, char kind, double phi,  qo
 //  Path encoding.
 //
 //----------------------------------------------------------------------
-void state:: Bell(mati ch, char kind, double phi, qocircuit *qoc){
+int state:: Bell(mati ch, char kind, double phi, qocircuit *qoc){
 //  mati   ch;      // Configuration matrix of the Bell emitter. First row channels, second row wave packet numbers.
 //  char   kind;    // Kind of bell state +=Phi+/-=Phi-/p=Psi+/m=Psi-
 //  double phi;     // Non-ideal emission phase
@@ -1545,7 +1574,7 @@ void state:: Bell(mati ch, char kind, double phi, qocircuit *qoc){
     vt(1)=ch(1,1);
 
     // Emit pair
-    Bell_Path(ch0,ch1,vt,kind,phi,qoc);
+    return Bell_Path(ch0,ch1,vt,kind,phi,qoc);
 
 }
 
@@ -1556,7 +1585,7 @@ void state:: Bell(mati ch, char kind, double phi, qocircuit *qoc){
 //  Polarization encoding.
 //
 //----------------------------------------------------------------------
-void state:: BellP(mati ch, char kind, double phi, qocircuit *qoc){
+int state:: BellP(mati ch, char kind, double phi, qocircuit *qoc){
 //  mati   ch;      // Configuration matrix of the Bell emitter. First row channels. Second and third wave packet numbers of the H and V photons respectively.
 //  char   kind;    // Kind of bell state +=Phi+/-=Phi-/p=Psi+/m=Psi-
 //  double phi;     // Non-ideal emission phase
@@ -1578,7 +1607,7 @@ void state:: BellP(mati ch, char kind, double phi, qocircuit *qoc){
     vt(3)=ch(1,1);
 
     // Emit pair
-    Bell_Pol(ch0,ch1,vt,kind,phi,qoc);
+    return Bell_Pol(ch0,ch1,vt,kind,phi,qoc);
 
 }
 
@@ -1588,9 +1617,10 @@ void state:: BellP(mati ch, char kind, double phi, qocircuit *qoc){
 //  (Not to be used in general therefore private)
 //
 //----------------------------------------------------------------------
-void state::dproduct(state *rhs){
+int state::dproduct(state *rhs){
 //  state *rhs      // State in the right hand side to do the d-product
 //  Variables
+    int    index;   // Ket list position where a new term of the dproduct.
     int   *occ;     // Occupation
     state *aux;     // Auxiliary state
 //  Auxiliary index
@@ -1611,13 +1641,234 @@ void state::dproduct(state *rhs){
             for(k=0;k<aux->nlevel;k++){
                 occ[k]=aux->ket[i][k]+rhs->ket[j][k];
             }
-            add_term(aux->ampl[i]*rhs->ampl[j],occ);
+            index=add_term(aux->ampl[i]*rhs->ampl[j],occ);
+            if(index<0){
+                cout << "Dproduct: Warning! Memory exceeded. Operation cancelled." << endl;
+                // Free memory
+                delete[] occ;
+                delete aux;
+                return -1;
+            }
         }
     }
 
     // Free memory
     delete[] occ;
     delete aux;
+    return 0;
+}
+
+
+//---------------------------------------------------------------------------
+//
+//  Encode state into a qubit representation using path encoding
+//
+//----------------------------------------------------------------------------
+state *state::encode(mati qdef,qocircuit *qoc){
+//  mati       qdef; // Integer matrix with the q-bit to channel definitions
+//  qocircuit *qoc;  // Quatum optical circuit to which this state is referred
+//  Variables
+    bool   valid;   // Is the ket valid for codification true=Yes/false=No
+    bool   print;   // A warning has been printed. True=Yes/False=No
+    int    val0;    // value of channel 0
+    int    val1;    // value of channel 1
+    int    qval;    // Q-bit equivalent value of channels 0 and 1.
+    int    idx;     // Index of the stored state.
+    int    nvalid;  // Number of encoded kets
+    int   *values;  // Vector of the values of each q-bit
+    state *qstate;  // Q-Bit encoded state
+//  Auxiliary index
+    int    i;       // Aux index
+    int    j;       // Aux index
+    int    k;       // Aux index
+    int    l;       // Aux index
+    int    m;       // Aux index
+    int    n;       // Aux index
+
+
+    // Reserve memory
+    qstate=new state(qdef.cols(),maxket);
+
+    // Check encoding conditions
+    if((qoc->nm>1)||(qoc->ns>1)){
+        cout << "Encode error: The circuit number of modes nm and packets ns can only be one for encoding." << endl;
+        return qstate;
+    }
+
+    // Encode each ket
+    nvalid=0;
+    print=false;
+    for(i=0;i<nket;i++){
+        values=new int[qdef.cols()]();
+        valid=true;
+        for(j=0;j<qdef.cols();j++){
+            // Find the channels
+            m=qoc->i_idx[qdef(0,j)][0][0];
+            n=qoc->i_idx[qdef(1,j)][0][0];
+
+            // Read the values
+            // qdef is given over circuit definition.
+            // Levels number may change after post-selection
+            k=0;
+            l=0;
+            while((vis[k]!=m)&&(k<nlevel)) k=k+1; // Not efficient but small search
+            while((vis[l]!=n)&&(l<nlevel)) l=l+1; // Not efficient but small search
+            val0=ket[i][k];
+            val1=ket[i][l];
+
+            // Encode the values
+            qval=-1;
+            if((val0==0)&&(val1==1)) qval=0;
+            if((val0==1)&&(val1==0)) qval=1;
+            if(qval<0) valid=false;
+            values[j]=qval;
+        }
+        // If the resulting state is valid store it
+        if(valid==true){
+                idx=qstate->add_term(ampl[i],values);
+                if((idx!=nvalid)&&(print==false)){
+                    cout << "Encode: Warning! encoding leads to collision. Invalid result" << endl;
+                    print=true;
+                }
+                nvalid=nvalid+1;
+        }
+        delete values;
+    }
+
+    // Return encoded state
+    return qstate;
+}
+
+
+//---------------------------------------------------------------------------
+//
+//  Decode the state from a qubit representation into a photon representation in
+//  path encoding. State version.
+//
+//----------------------------------------------------------------------------
+state *state::decode(mati qdef,state *anzilla,qocircuit *qoc){
+// mati       qdef; // Integer matrix with the q-bit to channel definitions
+// state *anzilla;  // We need an anzilla state to inform the decoding process of the auxiliary non-qbit channels values
+// qocircuit *qoc;  // Quatum optical circuit to which this state is referred
+// Variables
+    int    val0;    // value of channel 0
+    int    val1;    // value of channel 1
+    int   *occ;     // Occupation vector
+    state *phstate; // Photonic state
+//  Auxiliary index
+    int    i;       // Aux index
+    int    j;       // Aux index
+    int    k;       // Aux index
+    int    l;       // Aux index
+    int    m;       // Aux index
+    int    n;       // Aux index
+
+
+    // Reserve and initialize memory
+    phstate=new state(anzilla->nlevel,maxket);
+
+    // Check decoding conditions
+    if((qoc->nm>1)||(qoc->ns>1)){
+        cout << "Decode error: The circuit number of modes nm and packets ns can only be one for encoding." << endl;
+        return phstate;
+    }
+
+    for(j=0;j<phstate->nlevel;j++) phstate->vis[j]=anzilla->vis[j];
+
+    // Decode each ket
+    for(i=0;i<nket;i++){
+        occ=new int[phstate->nlevel]();
+        for(j=0;j<phstate->nlevel;j++) occ[j]=anzilla->ket[0][j];
+        for(j=0;j<qdef.cols();j++){
+            // Find the channels
+            m=qoc->i_idx[qdef(0,j)][0][0];
+            n=qoc->i_idx[qdef(1,j)][0][0];
+
+            // qdef is given over circuit definition.
+            // Levels number may change after post-selection
+            k=0;
+            l=0;
+            while((phstate->vis[k]!=m)&&(k<phstate->nlevel)) k=k+1; // Not efficient but small search
+            while((phstate->vis[l]!=n)&&(l<phstate->nlevel)) l=l+1; // Not efficient but small search
+
+
+            // Decode q-bit values
+            if(ket[i][j]==0){
+                val0=0;
+                val1=1;
+            }else{
+                val0=1;
+                val1=0;
+            }
+            occ[k]=val0;
+            occ[l]=val1;
+        }
+        // Store the decoded ket into a new state
+        phstate->add_term(ampl[i],occ);
+        delete occ;
+    }
+
+    // Return result
+    return phstate;
+}
+
+
+//---------------------------------------------------------------------------
+//
+//  Decode the state from a qubit representation into a photon representation in
+//  path encoding. Vector version.
+//
+//----------------------------------------------------------------------------
+state *state::decode(mati qdef,veci anzilla,qocircuit *qoc){
+//  mati       qdef;     // Integer matrix with the q-bit to channel definitions
+//  veci anzilla;        // Vector defining the values of the anzilla channels in order ( from smaller to larger channel number )
+//  qocircuit *qoc;      // Quantum optical circuit to which this state is referred
+//  Variables
+    int   *isquch;       // Is a qubit channel ?. For every channel 0=Anzilla/1= Qubit channel
+    mati   def_state;    // State definition
+    state *anzstate;     // Ansatz state. State with the ansatz channel values defined.
+    state *decoded;      // Decoded state.
+//  Auxiliary index
+    int    i;            // Aux index
+    int    k;            // Aux index
+
+
+    // Determine which channel is ansatz
+    isquch=new int[qoc->nch]();
+    for(i=0;i<qdef.cols();i++){
+        isquch[qdef(0,i)]=1;
+        isquch[qdef(1,i)]=1;
+    }
+
+    // Define the state
+    k=0;
+    def_state.resize(2,qoc->nch);
+    for(i=0;i<qoc->nch;i++){
+        if(isquch[i]==1){
+            // Is not anzilla
+            def_state(0,i)=i;
+            def_state(1,i)=0;
+        }else{
+            // Is anzilla
+            def_state(0,i)=i;
+            def_state(1,i)=anzilla[k];
+            k=k+1;
+        }
+    }
+
+    // Create the ansatz state
+    anzstate=new state(qoc->nlevel,1);
+    anzstate->add_term(1.0,def_state,qoc);
+
+    // Decode
+    decoded=decode(qdef,anzstate,qoc);
+
+    // Free memory.
+    delete isquch;
+    delete anzstate;
+
+    // Return state
+    return decoded;
 }
 
 

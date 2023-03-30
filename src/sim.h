@@ -3,7 +3,7 @@
 * @author Javier Osca
 * @author Jiri Vala
 *
-* @copyright Copyright © 2022 National University of Ireland Maynooth, Maynooth University. All rights reserved.
+* @copyright Copyright © 2023 National University of Ireland Maynooth, Maynooth University. All rights reserved.
 *            The contents of this file are subject to the licence terms detailed in LICENCE.TXT available in the
 *            root directory of this source tree. Use of the source code in this file is only permitted under the
 *            terms of the licence in LICENCE.TXT.
@@ -35,6 +35,9 @@ public:
     p_bin *sample( state *istate,qocircuit *qoc, int N );             // Calculate output sample as function of the input state
     p_bin *sample( ph_bunch *input, qocircuit *qoc, int N );          // Calculate output sample as obtained from physical detector from an input photon bunch
 
+    // SHOES. Assembler methods
+    matc assemble(mati in_qdef, mati out_qdef,state* anzilla,qocircuit *qoc);          // Assemble circuit matrix in q-bit encoding
+    matc init_mtx(mati qdef, state* input,qocircuit *qoc);            // Assemble initialization matrix in q-bit encoding
 protected:
     state *DirectF(state *istate,qocircuit *qoc );                    // Direct  full distribution
     state *DirectR( state *istate,qocircuit *qoc );                   // DirectR restricted distribution
@@ -65,7 +68,7 @@ const int DEFSIMMEM=1000;          ///< Default simulator reserved memory for ou
 *   \author Javier Osca
 *   \author Jiri Vala
 *
-*   \copyright Copyright &copy; 2022 National University of Ireland Maynooth, Maynooth University. All rights reserved. <br>
+*   \copyright Copyright &copy; 2023 National University of Ireland Maynooth, Maynooth University. All rights reserved. <br>
 *              The contents and use of this document and the related code are subject to the licence terms detailed in <a  href="../assets/LICENCE.TXT"> LICENCE.txt </a>.
 *
 *   @ingroup Simulator
@@ -171,25 +174,23 @@ public:
     state *run( state *istate, ket_list *olist, qocircuit *qoc );
     /**
     *  Sampling of a device using Clifford A algorithm. <br>
-    *  <b>Warning!</b> Clifford A is defined to be used with a single input term. Therefor neither Bell or QD initializations are recommended.
+    *  <b>Warning!</b> Clifford A is defined to be used with a single input ket. Therefore neither Bell or QD initializations are recommended.
     *
     *  @param qodev  *input  Device to be simulated.
     *  @param int N Number of samples.
     *  @return Returns a set of probability bins with the number of samples for each state.
     *  @ingroup Simulation_execution
-    *  \xrefitem know "KnowIss" "Known Issues" Clifford sampling can not be used in conjunction with partial distinguishability because of intrinsic limitations of the sampling method.
     */
     p_bin *sample( qodev *input, int N );
     /**
     *  Sampling of a circuit using Clifford A algorithm.<br>
-    *  <b>Warning!</b> Clifford A is defined to be used with a single input term. Input states with multiple terms are not recommended.
+    *  <b>Warning!</b> Clifford A is defined to be used with a single input ket. Input states with multiple kets are not recommended.
     *
     *  @param state     *istate Initial state.
     *  @param qocircuit *qoc    Circuit to be simulated.
     *  @param int N Number of samples.
     *  @return Returns a set of probability bins with the number of samples for each state.
     *  @ingroup Simulation_execution
-    *  \xrefitem know "KnowIss" "Known Issues" Clifford sampling can not be used in conjunction with partial distinguishability because intrinsic limitations of the method.
     */
     p_bin *sample( state *istate,qocircuit *qoc, int N );
 
@@ -267,6 +268,7 @@ protected:
     *  @return Returns the final state that correspond to an application of the circuit to the
     *  initial state.
     *  @ingroup Simulation_auxiliary
+    *  @see DirectF(state *istate,qocircuit *qoc );
     */
     state *DirectS( state *istate, ket_list *olist, qocircuit *qoc );
     /**
@@ -280,6 +282,7 @@ protected:
     *  @return Returns the final state that correspond to an application of the circuit to the
     *  initial state.
     *  @ingroup Simulation_auxiliary
+    *  @see GlynnF( state *istate,qocircuit *qoc );
     */
     state *GlynnS( state *istate, ket_list *olist, qocircuit *qoc );
 };

@@ -1,11 +1,11 @@
 /**************************************************************************
 * @file soqcs.h
 
-* @version 4.4
+* @version 1.2 (Beta)
 * @author Javier Osca
 * @author Jiri Vala
 *
-* @copyright Copyright © 2022 National University of Ireland Maynooth, Maynooth University. All rights reserved.
+* @copyright Copyright © 2023 National University of Ireland Maynooth, Maynooth University. All rights reserved.
 *            The contents of this file are subject to the licence terms detailed in LICENCE.TXT available in the
 *            root directory of this source tree. Use of the source code in this file is only permitted under the
 *            terms of the licence in LICENCE.TXT.
@@ -41,6 +41,7 @@
  *  Please cite the most appropriate of these works if you make use of this library:<br>
  * <br>
  *  Javier Osca and Jiri Vala. <i style="color:blue;">Implementation of photon partial distinguishability in a quantum optical circuit simulation</i>. <b> arXiv:2208.03250 (2022)</b>. <br>
+ *  Javier Osca and Jiri Vala. <i style="color:blue;">Implementation of a Stochastic Optical Quantum Circuit Simulator ( SOQCS ) </i>. <b> In preparation </b>. <br>
  * <br>
  *
  * \section StructureP Library structure
@@ -81,17 +82,27 @@
  *          - Basic python support. <br>
  *
  *   Version <b>RV1.1</b>:
- *          - Various bugs solved.<br>
  *          - Extended python support.<br>
- *          - Various QOL improvements and simplified configuration. <br>
- *          - Basic support to MacOsX. <br>
+ *          - QOL improvements.<br>
+ *          - Various bugs solved.<br>
+ *          - Simplified configuration.<br>
+ *          - Basic MacOsX support.<br>
+ *
+ *   Version <b>RV1.2</b>:
+ *          - Qubit codification.<br>
+ *          - More examples.<br>
+ *          - QOL improvements. <br>
+ *          - Various bugs solved.<br>
+ *          - Automated configuration. <br>
+ *          - Extended MacOsX support. <br>
  * <br>
  *
  * \section lic License and copyright
- *  Copyright (c) 2022 National University of Ireland Maynooth, Maynooth University. All rights reserved.
+ *  Copyright (c) 2023 National University of Ireland Maynooth, Maynooth University. All rights reserved.
  *  This library and its related files are subject to the licence terms detailed in <a href="../assets/LICENCE.TXT">LICENCE.TXT</a> .<br>
  *  Use of SOQCS is only permitted under the terms of the licence in <a href="../assets/LICENCE.TXT">LICENCE.TXT</a>.<br>
  * <br>
+ *
  *
  * \page install Compilation and installation
  * \section requisites Requirements
@@ -118,25 +129,12 @@
  * permissions to the scripts present in SOQCS root folder.
  * @code
     chmod 744 *.sh
-
     ./config.sh
  * @endcode
- *
- * <b>Note for advanced users</b>: The script is configured to download V3.4 of Eigen. If V3.4 becomes unavailable the script can be reconfigured for other versions changing the number in the configuration variable
- * <i>VER</i> within the  <i>download.sh</i> script. <br>
  *
  * \subsection step4 Step 4: Build the library.
  * Inside the SOQCS library main folder type <i>make</i>. This will build the library and all the examples. The examples may be found in the subfolder <i>/SOQCS root folder/examples</i>.
  *
- * \subsection macinstall MacOsX Installation
- * By default SOQCS is configured to work in a Linux environment. To build the library in MacOsX it is necessary to change the flags of the compiler in the compilers section of the configuration file <i>conf.inc</i> to those used by clang (the C++ compiler in Mac). Suggestions are already included in the form of
- * commented text. Additionally, it is necessary to change in the file  <i>download.sh</i> the line of code labeled as Linux by the one labeled as MacOsX. This changes the automated downloader needed for the Eigen3 install
- * from wget (in Linux) to curl (in MacOsX).
- *
- * \subsection Trouble Troubleshooting
- * If some of the previous steps fail it is recommended to check the configuration file <i>conf.inc</i> in SOQCS root directory. If the command of the compiler or the linker in your computer has a different name or some compilation
- * flags are troublesome in your system they can be reconfigured in this file.
- * <br>
  *
  * \section start How to use it?
  * \subsection startcpp Quick start in C++
@@ -237,7 +235,7 @@
  *  <br>
  * - <b>Alternative: Use density matrices </b>.<br>
  *  It is also possible to create and print density matrices with a more complete information about the outputs and to obtain the statistics of mixed states.
- *  In live4.cpp can be found an example of the use of density matrices in SOQCS.
+ *  In live8.cpp can be found an example of the use of density matrices in SOQCS.
  * <br>
  * \section guidelines2 Performing an output state calculation.
  *  Alternatively, we can simulate directly quantum bosonic states. Please, check the section about states in the manual to know more about the addition of terms to a state (see also live1.cpp).
@@ -262,16 +260,20 @@
  *  @endcode
  *
  * \section Examples Examples of SOQCS programs
- * Five examples in C++ can be found in the <i>/SOQCS root folder/examples/</i> subfolder. They can be compiled with the whole library following the instructions above or
+ * Eight examples in C++ can be found in the <i>/SOQCS root folder/examples/</i> subfolder. They can be compiled with the whole library following the instructions above or
  * typing <i>make</i> within the examples folder after compiling the library.
  *
  * - Live1.cpp: Elementary example program to show a basic simulation in SOQCS. <br>
- * - Live2.cpp: An example of HOM visibility using a beamsplitter and physical detectors. <br>
- * - Live3.cpp: An example of the delay gate. <br>
- * - Live4.cpp: A simulation of the entanglement swapping protocol. Example of use of density matrices in SOQCS. <br>
- * - Live5.cpp: A boson sampling example. <br>
+ * - Live2.cpp: Example of a CNOT gate simulation in SOQCS. <br>
+ * - Live3.cpp: Example of a CSign gate simulation in SOQCS. <br>
+ * - Live4.cpp: An example of HOM visibility using a beamsplitter and physical detectors. <br>
+ * - Live5.cpp: An example of partial distinguishability. <br>
+ * - Live6.cpp: An example of the delay gate. <br>
+ * - Live7.cpp: A boson sampling example. <br>
+ * - Live8.cpp: A simulation of the entanglement swapping protocol. Example of use of density matrices in SOQCS. <br>
  *
  * <b> All the examples have their corresponding version in Python</b> that can be found in the same folder as Jupyter notebooks.
+ *
  *
  * \section catalog Circuit elements catalog.
  * This section is a brief summary of the catalog of optical circuit elements available in SOQCS. We refer to the documentation of each one of them for details.
@@ -290,7 +292,8 @@
  * <br>
  * * <b>Polarization elements:</b>
  *     - <b style="color:blue;">rotator</b>(int i_ch, double d_theta, double d_phi): Adds a rotator to the circuit. <br>
- *     - <b style="color:blue;">polbeamsplitter</b>(int i_ch1, int i_ch2, int P): Adds a polarizing beamsplitter. <br>
+ *     - <b style="color:blue;">pol_beamsplitter</b>(int i_ch1, int i_ch2, int P): Adds a polarizing beamsplitter. <br>
+ *     - <b style="color:blue;">pol_phase_shifter</b>(int i_ch, int P, double phi): Adds a polarized phase shifter. <br>
  *     - <b style="color:blue;">half</b>(int i_ch, int P, double alplha, double gamma): Adds a half-waveplate. <br>
  *     - <b style="color:blue;">quarter</b>(int i_ch, int P, double alplha, double gamma): Adds a quarter-waveplate. <br>
  * <br>

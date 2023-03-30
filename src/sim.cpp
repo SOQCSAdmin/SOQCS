@@ -3,7 +3,7 @@
 //
 // SIMULATOR LIBRARY
 //
-// Copyright © 2022 National University of Ireland Maynooth, Maynooth University. All rights reserved.
+// Copyright © 2023 National University of Ireland Maynooth, Maynooth University. All rights reserved.
 // The contents of this file are subject to the licence terms detailed in LICENCE.TXT available in the
 // root directory of this source tree. Use of the source code in this file is only permitted under the
 // terms of the licence in LICENCE.TXT.
@@ -147,6 +147,7 @@ state *simulator::run( state *istate, qocircuit *qoc ){
             return GlynnR(istate,qoc);
             break;
         default:
+            cout << "Run error: No recognized backend." << endl;
             empty_state=new state(qoc->nlevel,mem);
             return empty_state;
             break;
@@ -195,6 +196,7 @@ state *simulator::DirectF( state *istate, qocircuit *qoc ){
 //  Variables
     int    tocc;            // Number of photons present in ket.
     int    nlevel;          // Number of levels (qoc has this information, but it is put in this variable for easy access)
+    int    index;           // Ket list position where a new term of the output state is stored.
     double sqfact;          // Global sqrt factor to divide to get proper normalization
     long   int ncoef;       // Number of coefficients
     cmplx  coef;            // Coefficient for the transformation of a ket.
@@ -257,7 +259,13 @@ state *simulator::DirectF( state *istate, qocircuit *qoc ){
             }
             // Normalize
             coef=istate->ampl[iket]*coef/sqfact;
-            if(abs(coef)>xcut) ostate->add_term(coef,(int *)(occs.data()));
+            if(abs(coef)>xcut){
+                index=ostate->add_term(coef,(int *)(occs.data()));
+                if(index<0){
+                    cout << "Simulator(DirectF): Warning! Simulation canceled because the memory limit has been exceeded.  Increase *mem* for more memory." << endl;
+                    return ostate;
+                }
+            }
         }
     }
     }
@@ -280,6 +288,7 @@ state *simulator::DirectR( state *istate, qocircuit *qoc ){
 //  Variables
     int    tocc;            // Number of photons present in ket.
     int    nlevel;          // Number of levels (qoc has this information, but it is put in this variable for easy access)
+    int    index;           // Ket list position where a new term of the output state is stored.
     double sqfact;          // Global sqrt factor to divide to get proper normalization
     cmplx  coef;            // Coefficient for the transformation of a ket.
     veci   occs;            // Occupations of the states involved in the transformation of a ket.
@@ -363,7 +372,14 @@ state *simulator::DirectR( state *istate, qocircuit *qoc ){
                 coef=istate->ampl[iket]*coef/sqfact;
 
                 // Store
-                if(abs(coef)>xcut) ostate->add_term(coef,(int *)(occs.data()));
+                if(abs(coef)>xcut){
+                    index=ostate->add_term(coef,(int *)(occs.data()));
+                    if(index<0){
+                        cout << "Simulator(DirectR): Warning! Simulation canceled because the memory limit has been exceeded.  Increase *mem* for more memory." << endl;
+                        return ostate;
+                    }
+                }
+
 
             }while (next_permutation(perm.begin(), perm.end()));
         }while (next_permutation(bitmask.begin(), bitmask.end()));
@@ -386,6 +402,7 @@ state *simulator::GlynnF( state *istate, qocircuit *qoc ){
 //  Variables
     int    nph;                  // Number of photons present in input ket.
     int    nlevel;               // Number of levels (qoc has this information, but it is put in this variable for easy access)
+    int    index;                // Ket list position where a new term of the output state is stored.
     int   *pos;                  // Level where each photon is located. "Photon position"
     int   *occ;                  // Occupation
     cmplx  coef;                 // Coefficient for the transformation of a ket.
@@ -459,7 +476,17 @@ state *simulator::GlynnF( state *istate, qocircuit *qoc ){
 
 
             // Store
-            if(abs(coef)>xcut) ostate->add_term(coef,occ);
+            if(abs(coef)>xcut){
+                index= ostate->add_term(coef,occ);
+                if(index<0){
+                    cout << "Simulator(GlynnF): Warning! Simulation canceled because the memory limit has been exceeded.  Increase *mem* for more memory." << endl;
+                    // Free memory
+                    delete[] pos;
+                    delete[] occ;
+                    // Return partial calculation
+                    return ostate;
+                }
+            }
 
 
             // Obtain new photon level "position"
@@ -496,6 +523,7 @@ state *simulator::GlynnR( state *istate, qocircuit *qoc ){
 //  Variables
     int    nph;                // Number of photons present in input ket.
     int    nlevel;             // Number of levels (qoc has this information, but it is put in this variable for easy access)
+    int    index;              // Ket list position where a new term of the output state is stored.
     int   *occ;                // Occupation
     cmplx  coef;               // Coefficient for the transformation of a ket.
     cmplx  s;                  // Normalization coefficient of the input ket
@@ -576,7 +604,16 @@ state *simulator::GlynnR( state *istate, qocircuit *qoc ){
             }
 
             // Store
-            if(abs(coef)>xcut) ostate->add_term(coef,occ);
+            if(abs(coef)>xcut){
+                index= ostate->add_term(coef,occ);
+                if(index<0){
+                    cout << "Simulator(GlynnR): Warning! Simulation canceled because the memory limit has been exceeded.  Increase *mem* for more memory." << endl;
+                    // Free memory
+                    delete occ;
+                    // Return partial calculation
+                    return ostate;
+                }
+            }
 
         } while (std::next_permutation(bitmask.begin(), bitmask.end()));
 
@@ -602,6 +639,7 @@ state *simulator::DirectS( state *istate, ket_list *olist, qocircuit *qoc ){
     int    tocc;                 // Number of photons present in the input  ket.
     int    nph;                  // Number of photons present in the output ket.
     int    nlevel;               // Number of levels (qoc has this information, but it is put in this variable for easy access)
+    int    index;                // Ket list position where a new term of the output state is stored.
     double sqfacti;              // Global sqrt factor to divide to get proper normalization of the input ket
     double sqfacto;              // Global sqrt factor to divide to get proper normalization of the output ket
     cmplx  coef;                 // Coefficient for the transformation of a ket.
@@ -686,7 +724,14 @@ state *simulator::DirectS( state *istate, ket_list *olist, qocircuit *qoc ){
                 coef=istate->ampl[iket]*sqfacto*coef/sqfacti;
 
                 // Store
-                if(abs(coef)>xcut) ostate->add_term(coef,olist->ket[oket]);
+                if(abs(coef)>xcut){
+                    index= ostate->add_term(coef,olist->ket[oket]);
+                    if(index<0){
+                        cout << "Simulator(DirectS): Warning! Simulation canceled because the memory limit has been exceeded.  Increase *mem* for more memory." << endl;
+                        return ostate;
+                    }
+                }
+
 
                 }while (next_permutation(perm.begin(), perm.end()));
             }
@@ -712,6 +757,7 @@ state *simulator::GlynnS( state *istate, ket_list *olist, qocircuit *qoc ){
     int    tocc;               // Number of photons present in input ket.
     int    nph;                // Number of photons present in output ket.
     int    nlevel;             // Number of levels (qoc has this information, but it is put in this variable for easy access)
+    int    index;              // Ket list position where a new term of the output state is stored.
     cmplx  coef;               // Coefficient for the transformation of a ket.
     cmplx  s;                  // Normalization coefficient of the input ket
     cmplx  t;                  // Normalization coefficient of the output ket
@@ -779,7 +825,14 @@ state *simulator::GlynnS( state *istate, ket_list *olist, qocircuit *qoc ){
                 }
 
                 // Store
-                if(abs(coef)>xcut) ostate->add_term(coef,olist->ket[oket]);
+                if(abs(coef)>xcut){
+                    index= ostate->add_term(coef,olist->ket[oket]);
+                    if(index<0){
+                        cout << "Simulator(GlynnS): Warning! Simulation canceled because the memory limit has been exceeded.  Increase *mem* for more memory." << endl;
+                        return ostate;
+                    }
+                }
+
             }
         }
     }}
@@ -828,6 +881,7 @@ p_bin *simulator::sample( state *istate, qocircuit *qoc ,int N){
 //  Variables
     int     maxnph;         // Maximum number of photons in the input kets
     int     nlevel;         // Number of levels (qoc has this information, but it is put in this variable for easy access)
+    int     index;          // Bin position where a new output count is stored.
     int    *nph;            // Number of photons present in the input ket.
     int    *ilist;          // Sequence of input photons
     int    *occ;            // Occupation
@@ -966,8 +1020,22 @@ p_bin *simulator::sample( state *istate, qocircuit *qoc ,int N){
             occ[r[i]]=occ[r[i]]+1;
         }
         // Store the count
-        obin->add_count(occ);
+        index=obin->add_count(occ);
         delete[] occ;
+
+        if(index<0){
+            cout << "Sample: Warning! Sampling canceled because the memory limit has been exceeded.  Increase *mem* for more memory." << endl;
+
+            // Free memory
+            delete[] r;
+            delete[] w;
+            delete[] iw;
+            delete[] nph;
+            delete[] ilist;
+
+            // Return partial calculation.
+            return obin;
+        }
     }
 
     // Free memory

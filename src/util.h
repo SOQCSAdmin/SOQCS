@@ -3,7 +3,7 @@
 * @author Javier Osca
 * @author Jiri Vala
 *
-* @copyright Copyright © 2022 National University of Ireland Maynooth, Maynooth University. All rights reserved.
+* @copyright Copyright © 2023 National University of Ireland Maynooth, Maynooth University. All rights reserved.
 *            The contents of this file are subject to the licence terms detailed in LICENCE.TXT available in the
 *            root directory of this source tree. Use of the source code in this file is only permitted under the
 *            terms of the licence in LICENCE.TXT.
@@ -179,7 +179,7 @@ long long int decval(int *chainv,int n,int base);
 *  @param double trj  Packet j phase time.
 *  @return The coupling between two Gaussian wave packets.
 */
-cmplx gauss_coup(double ti,double wi,double dwi, double tj,double wj,double dwj, double tri,double trj);
+cmplx gauss_coup(double ti,double wi,double dwi, double tj,double wj,double dwj);
 
 /**
 * Calculates the coupling between two exponential wave packets of defined parameters.
@@ -194,7 +194,7 @@ cmplx gauss_coup(double ti,double wi,double dwi, double tj,double wj,double dwj,
 *  @param double trj  Packet j phase time.
 *  @return The coupling between two exponential wave packets.
 */
-cmplx exp_coup(double ti,double wi, double txi, double tj, double wj, double txj,double tri,double trj);
+cmplx exp_coup(double ti,double wi, double txi, double tj, double wj, double txj);
 
 /**
 * Gram-Schmidt orthonormalization procedure.
@@ -270,4 +270,22 @@ double expi(double u);
 * @return Inverse of the error function for the value u.
 */
 double erfi(double u);
+
+
+/**
+* Sign of a real number.
+*
+* @param double x Real number x
+* @return 1 if x is positive and -1 if x is negative.
+*/
+constexpr int sign(double x){
+//-----------------------------------------------
+//
+// Sign of a real number.
+// Solution reported by Chux in
+// https://stackoverflow.com/questions/1903954/is-there-a-standard-sign-function-signum-sgn-in-c-c
+//
+//-----------------------------------------------
+    return (signbit(x) ?  -1 : 1);
+}
 
