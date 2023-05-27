@@ -1,7 +1,7 @@
 /**************************************************************************
 * @file soqcs.h
 
-* @version 1.2 (Beta)
+* @version 1.3 (Beta)
 * @author Javier Osca
 * @author Jiri Vala
 *
@@ -40,7 +40,9 @@
  * \section Pub Related publications
  *  Please cite the most appropriate of these works if you make use of this library:<br>
  * <br>
- *  Javier Osca and Jiri Vala. <i style="color:blue;">Implementation of photon partial distinguishability in a quantum optical circuit simulation</i>. <b> arXiv:2208.03250 (2022)</b>. <br>
+ *  Javier Osca and Jiri Vala. <i style="color:blue;">Implementation of photon partial distinguishability in a quantum optical circuit simulation</i>. <br>
+ *  <b> Computer Physics Communications, Volume 289, 2023, 108773, ISSN 0010-4655</b>, https://doi.org/10.1016/j.cpc.2023.108773 . <br>
+ *  <br>
  *  Javier Osca and Jiri Vala. <i style="color:blue;">Implementation of a Stochastic Optical Quantum Circuit Simulator ( SOQCS ) </i>. <b> In preparation </b>. <br>
  * <br>
  *
@@ -89,12 +91,19 @@
  *          - Basic MacOsX support.<br>
  *
  *   Version <b>RV1.2</b>:
- *          - Qubit codification.<br>
+ *          - Qubit encoding.<br>
  *          - More examples.<br>
  *          - QOL improvements. <br>
  *          - Various bugs solved.<br>
  *          - Automated configuration. <br>
  *          - Extended MacOsX support. <br>
+ *
+ *   Version <b>RV1.3</b>:
+ *          - Qubit polarizarion encoding. <br>
+ *          - Post selection by polarization. <br>
+ *          - Use of circuits as custom gates. <br>
+ *          - QOL improvements. <br>
+ *          - Various bugs solved.<br>
  * <br>
  *
  * \section lic License and copyright
@@ -260,7 +269,7 @@
  *  @endcode
  *
  * \section Examples Examples of SOQCS programs
- * Eight examples in C++ can be found in the <i>/SOQCS root folder/examples/</i> subfolder. They can be compiled with the whole library following the instructions above or
+ * Nine examples in C++ can be found in the <i>/SOQCS root folder/examples/</i> subfolder. They can be compiled with the whole library following the instructions above or
  * typing <i>make</i> within the examples folder after compiling the library.
  *
  * - Live1.cpp: Elementary example program to show a basic simulation in SOQCS. <br>
@@ -271,6 +280,7 @@
  * - Live6.cpp: An example of the delay gate. <br>
  * - Live7.cpp: A boson sampling example. <br>
  * - Live8.cpp: A simulation of the entanglement swapping protocol. Example of use of density matrices in SOQCS. <br>
+ * - Live9.cpp: An example of a dielectric film simulation in SOQCS including losses. <br>
  *
  * <b> All the examples have their corresponding version in Python</b> that can be found in the same folder as Jupyter notebooks.
  *
@@ -294,6 +304,7 @@
  *     - <b style="color:blue;">rotator</b>(int i_ch, double d_theta, double d_phi): Adds a rotator to the circuit. <br>
  *     - <b style="color:blue;">pol_beamsplitter</b>(int i_ch1, int i_ch2, int P): Adds a polarizing beamsplitter. <br>
  *     - <b style="color:blue;">pol_phase_shifter</b>(int i_ch, int P, double phi): Adds a polarized phase shifter. <br>
+ *     - <b style="color:blue;">pol_filter</b>(int i_ch, int P): Adds a filter that removes polarization P. <br>
  *     - <b style="color:blue;">half</b>(int i_ch, int P, double alplha, double gamma): Adds a half-waveplate. <br>
  *     - <b style="color:blue;">quarter</b>(int i_ch, int P, double alplha, double gamma): Adds a quarter-waveplate. <br>
  * <br>

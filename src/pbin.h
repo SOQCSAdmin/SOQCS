@@ -38,10 +38,10 @@ public:
     // Bin manipulation methods
     p_bin *calc_measure(qocircuit *qoc);                                       // Calculates a measurement as described by the detectors in the circuit
     p_bin *post_selection(state *prj);                                         // Perform post-selection over the bins given a projector
-    p_bin *meas_window(qocircuit* qoc);                                        // Filter photons out of the detectors measurement window.
     p_bin *dark_counts(int S, qocircuit* qoc);                                 // Computes dark counts effects
     p_bin *blink(int S, qocircuit* qoc);                                       // Computes detector dead time effects
     p_bin *compute_loss(qocircuit *qoc);                                       // Remove the additional channels to compute losses
+    p_bin *meas_window(qocircuit* qoc);                                        // Filter photons out of the detectors measurement window.
     p_bin *compute_ignored(qocircuit *qoc);                                    // Remove channels flagged to be ignored
     p_bin *remove_channels(veci ch, qocircuit *qoc);                           // Remove channels given by a list
     p_bin *compute_cond(qocircuit *qoc);                                       // Applies the detection conditions from the circuit
@@ -68,8 +68,10 @@ public:
     void aux_prnt_bins( int format, double thresh, bool loss, qocircuit *qoc); // Auxiliary method to print the bin list
 
     // Qubit codification methods.
-    p_bin *translate(mati qdef,qocircuit *qoc);                                // Encodes the bin labels from photonic to qubit representation ( circuit version )
-    p_bin *translate(mati qdef,qodev *dev);                                    // Encodes the bin labels from photonic to qubit representation ( device version )
+    p_bin *translate(mati qdef,qocircuit *qoc);                                // Encodes the bin labels from photonic to qubit representation ( Path encoding, circuit version )
+    p_bin *translate(mati qdef,qodev *dev);                                    // Encodes the bin labels from photonic to qubit representation ( Path encoding, device version )
+    p_bin *pol_translate(veci qdef,qocircuit *qoc);                            // Encodes the bin labels from photonic to qubit representation ( Polarization encoding, circuit version )
+    p_bin *pol_translate(veci qdef,qodev *dev);                                // Encodes the bin labels from photonic to qubit representation ( Polarization encoding, device version )
 };
 
 ***********************************************************************************/
@@ -211,14 +213,14 @@ public:
     */
     /**
     *  Calculates the effect of the detectors defined in a circuit over the outcome contained in this set of probability bins.
-    *  This effect are post-selection-conditions, dark counts, detector dead time, loss computations and circuit noise.
+    *  These effect are post-selection-conditions, detection window ,dark counts, detector dead time, losses and circuit noise.
     *
     *  @param qocircuit *qoc  Circuit where the detectors are defined.
     *  @return Returns a list of outcome probabilities considering the effects of physical detectors.
-    *  @see meas_window(qocircuit* qoc);
     *  @see dark_counts(int S, qocircuit* qoc);
     *  @see blink(int S, qocircuit* qoc);
     *  @see compute_loss(qocircuit *qoc);
+    *  @see meas_window(qocircuit* qoc);
     *  @see compute_ignored(qocircuit *qoc);
     *  @see compute_cond(qocircuit *qoc);
     *  @see remove_freq(qocircuit* qoc);
@@ -249,15 +251,6 @@ public:
     */
     p_bin *dark_counts(int S, qocircuit* qoc);
     /**
-    *  Filters the photons out of the measurement window established by the detectors. <br>
-    *  <b> Intended for internal use of the library </b>
-    *
-    *  @param qocircuit *qoc  Circuit where the detectors are defined.
-    *  @return Returns a list of outcome probabilities considering the effects of a measurement window
-    *  @ingroup Bin_manipulation
-    */
-    p_bin *meas_window(qocircuit* qoc);
-    /**
     *  Computes detector dead time effects due other previous measurements. <br>
     *  <b> Intended for internal use of the library </b>.
     *
@@ -280,6 +273,15 @@ public:
     */
     p_bin *compute_loss(qocircuit *qoc);
     /**
+    *  Filters the photons out of the measurement window established by the detectors. <br>
+    *  <b> Intended for internal use of the library </b>
+    *
+    *  @param qocircuit *qoc  Circuit where the detectors are defined.
+    *  @return Returns a list of outcome probabilities considering the effects of a measurement window
+    *  @ingroup Bin_manipulation
+    */
+    p_bin *meas_window(qocircuit* qoc);
+    /**
     *  It removes channels flagged to be ignored by the user. <br>
     *  <b> Intended for internal use of the library </b>.
     *
@@ -300,7 +302,6 @@ public:
     *  @ingroup Bin_manipulation
     */
     p_bin *remove_channels(veci ch, qocircuit *qoc);
-
     /**
     *  It perform post-selections compatible with the detector conditions defined in the circuit. <br>
     *  <b> Intended for internal use of the library </b>.
@@ -504,12 +505,12 @@ public:
     // Qubit codification methods.
     /** @defgroup Bin_qubit Qubit codification support
     *   @ingroup P_Bin
-    *   Support to encode photonic outcomes into qubit outcomes using path encoding.
+    *   Support to encode photonic outcomes into qubit outcomes.
     */
 
     /**
     *  It encodes the bin labels from a photonic to a qubit representation (path encoding). Circuit version. <br>
-    *  <b> Only for ideal circuits. nm=1 and nd=1 </b>
+    *  <b> Only for ideal circuits. nm=1 and ns=1 </b>
     *
     *  @param mati qbits Qubit definition. Matrix with a column entry for each qubit where they are defined the two photonic channels needed to encode the qubit. A 01 occupation means Q=0 and a 10 occupation Q=1.
     *  @param qocircuit *qoc Circuit to which the set of probability bins is related.
@@ -519,7 +520,7 @@ public:
     p_bin *translate(mati qdef,qocircuit *qoc);
     /**
     *  It encodes the bin labels from a photonic to a qubit representation (path encoding). Device version. <br>
-    *  <b> Only for ideal circuits. nm=1 and nd=1 </b>
+    *  <b> Only for ideal circuits. nm=1 and ns=1 </b>
     *
     *  @param mati qbits Qubit definition. Matrix with a column entry for each qubit where they are defined the two photonic channels needed to encode the qubit. A 01 occupation means Q=0 and a 10 occupation Q=1.
     *  @param qodev *dev Device to which the set of probability bins is related.
@@ -527,4 +528,24 @@ public:
     *  @ingroup Bin_qubit
     */
     p_bin *translate(mati qdef,qodev *dev);
+    /**
+    *  It encodes the bin labels from a photonic to a qubit representation (polarization encoding). Circuit version. <br>
+    *  <b> Only for ideal circuits ns=1 </b>
+    *
+    *  @param veci qbits Qubit definition. Vector that specifies which channel corresponds to each qubit. A horizontal polarization H means Q=0 and a vertical one V means Q=1.
+    *  @param qocircuit *qoc Circuit to which the set of probability bins is related.
+    *  @return Encoded set of probability bins.
+    *  @ingroup Bin_qubit
+    */
+    p_bin *pol_translate(veci qdef,qocircuit *qoc);
+    /**
+    *  It encodes the bin labels from a photonic to a qubit representation (polarization encoding). Device version. <br>
+    *  <b> Only for ideal circuits ns=1 </b>
+    *
+    *  @param veci qbits Qubit definition. Vector that specifies which channel corresponds to each qubit. A horizontal polarization H means Q=0 and a vertical one V means Q=1.
+    *  @param qodev *dev Device to which the set of probability bins is related.
+    *  @return Encoded set of probability bins.
+    *  @ingroup Bin_qubit
+    */
+    p_bin *pol_translate(veci qdef,qodev *dev);
 };

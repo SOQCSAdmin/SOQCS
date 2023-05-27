@@ -809,6 +809,104 @@ state *state::post_selection(state *prj){
         }
     }
 
+    // Free memory
+    delete[] occ;
+    delete[] islincl;
+
+    // Return state.
+    return nstate;
+}
+
+
+//--------------------------------------------
+//
+//  Post selection process of the output state
+//  It ignores photons out of the detection window.
+//  Intended for internal use only by dmatrix.
+//
+//--------------------------------------------
+state *state::post_selection(state *prj,qocircuit *qoc){
+//  state *prj;      // Projector with the description of the levels (and their occupations) to be post-selected
+//  qocircuit *qoc;  // Circuit to which the projector is referred
+//  Variables
+    int    npost;    // Number of levels in which post selection is performed
+    int    selected; // Is this state selected 0=No/1=Yes
+    int    nwi;      // Initial period of the window of detection
+    int    nwf;      // Last period (+1) of the window of detection
+    int    ch;       // Channel
+    int    s;        // Packet number
+    int   *islincl;  // Is level included? 0=No/1=Yes
+    int   *occ;      // Occupation
+    state *nstate;   // New post-selected state
+// Auxiliary index
+    int    i;        // Aux index
+    int    j;        // Aux index
+    int    k;        // Aux index
+    int    l;        // Aux index
+
+
+    // Determined the number of post-selected levels and which ones
+    // will be included in nstate or not.
+    npost=0;
+    islincl=new int[nlevel];
+    for(i=0;i<prj->nlevel;i++){
+        if(prj->ket[0][i]>=0){
+            islincl[i]=0;
+            npost++;
+        }else{
+            islincl[i]=1;
+        }
+    }
+
+    // Create new post-selected state / Reserve memory
+    nstate=new state(nlevel-npost,maxket);
+    k=0;
+    for(l=0;l<nlevel;l++){
+        if(islincl[l]==1){
+            nstate->vis[k]=vis[l];
+            k++;
+        }
+    }
+
+    // For each projector term
+    occ=new int[nlevel-npost]();
+    for(i=0;i<prj->nket;i++){
+        // Post-select each ket
+        for(j=0;j<nket;j++){
+            // Check selection condition
+            selected=1;
+            k=0;
+            while((k<nlevel)&&(selected==1)){
+                ch=qoc->idx[k].ch;
+                s=qoc->idx[k].s;
+                if((qoc->losses==0)||(ch<qoc->nch/2)){
+                    nwi=qoc->det_win(0,ch);
+                    nwf=qoc->det_win(1,ch)+1;
+                    if(qoc->det_win(0,ch)<0) nwi=0;
+                    if(qoc->det_win(1,ch)<0) nwf=qoc->np+1;
+                }else{
+                    nwi=0;
+                    nwf=qoc->np+1;
+                }
+
+                if ((ket[j][k]!=prj->ket[i][k])&&(prj->ket[i][k]>=0)&&(s>=nwi*qoc->nsp)&&(s<nwf*qoc->nsp))  selected=0;
+                k++;
+            }
+
+            // If is selected create the list of levels and
+            // occupations for those not post-selected
+            if(selected==1){
+                k=0;
+                for(l=0;l<nlevel;l++){
+                    if(islincl[l]==1){
+                        occ[k]=ket[j][l];
+                        k++;
+                    }
+                }
+                nstate->add_term(ampl[j]*conj(prj->ampl[i]),occ);
+            }
+        }
+    }
 
     // Free memory
     delete[] occ;
@@ -1665,25 +1763,25 @@ int state::dproduct(state *rhs){
 //
 //----------------------------------------------------------------------------
 state *state::encode(mati qdef,qocircuit *qoc){
-//  mati       qdef; // Integer matrix with the q-bit to channel definitions
+//  mati       qdef; // Integer matrix with the qubit to channel definitions
 //  qocircuit *qoc;  // Quatum optical circuit to which this state is referred
 //  Variables
-    bool   valid;   // Is the ket valid for codification true=Yes/false=No
-    bool   print;   // A warning has been printed. True=Yes/False=No
-    int    val0;    // value of channel 0
-    int    val1;    // value of channel 1
-    int    qval;    // Q-bit equivalent value of channels 0 and 1.
-    int    idx;     // Index of the stored state.
-    int    nvalid;  // Number of encoded kets
-    int   *values;  // Vector of the values of each q-bit
-    state *qstate;  // Q-Bit encoded state
+    bool   valid;    // Is the ket valid for codification true=Yes/false=No
+    bool   print;    // A warning has been printed. True=Yes/False=No
+    int    val0;     // value of channel 0
+    int    val1;     // value of channel 1
+    int    qval;     // qubit equivalent value of channels 0 and 1.
+    int    idx;      // Index of the stored state.
+    int    nvalid;   // Number of encoded kets
+    int   *values;   // Vector of the values of each qubit
+    state *qstate;   // qubit encoded state
 //  Auxiliary index
-    int    i;       // Aux index
-    int    j;       // Aux index
-    int    k;       // Aux index
-    int    l;       // Aux index
-    int    m;       // Aux index
-    int    n;       // Aux index
+    int    i;        // Aux index
+    int    j;        // Aux index
+    int    k;        // Aux index
+    int    l;        // Aux index
+    int    m;        // Aux index
+    int    n;        // Aux index
 
 
     // Reserve memory
@@ -1746,10 +1844,10 @@ state *state::encode(mati qdef,qocircuit *qoc){
 //  path encoding. State version.
 //
 //----------------------------------------------------------------------------
-state *state::decode(mati qdef,state *anzilla,qocircuit *qoc){
-// mati       qdef; // Integer matrix with the q-bit to channel definitions
-// state *anzilla;  // We need an anzilla state to inform the decoding process of the auxiliary non-qbit channels values
-// qocircuit *qoc;  // Quatum optical circuit to which this state is referred
+state *state::decode(mati qdef,state *ancilla,qocircuit *qoc){
+// mati       qdef; // Integer matrix with the qubit to channel definitions
+// state *ancilla;  // We need an ancilla state to inform the decoding process of the auxiliary non-qubit channels values
+// qocircuit *qoc;  // Quantum optical circuit to which this state is referred
 // Variables
     int    val0;    // value of channel 0
     int    val1;    // value of channel 1
@@ -1765,7 +1863,7 @@ state *state::decode(mati qdef,state *anzilla,qocircuit *qoc){
 
 
     // Reserve and initialize memory
-    phstate=new state(anzilla->nlevel,maxket);
+    phstate=new state(ancilla->nlevel,maxket);
 
     // Check decoding conditions
     if((qoc->nm>1)||(qoc->ns>1)){
@@ -1773,12 +1871,12 @@ state *state::decode(mati qdef,state *anzilla,qocircuit *qoc){
         return phstate;
     }
 
-    for(j=0;j<phstate->nlevel;j++) phstate->vis[j]=anzilla->vis[j];
+    for(j=0;j<phstate->nlevel;j++) phstate->vis[j]=ancilla->vis[j];
 
     // Decode each ket
     for(i=0;i<nket;i++){
         occ=new int[phstate->nlevel]();
-        for(j=0;j<phstate->nlevel;j++) occ[j]=anzilla->ket[0][j];
+        for(j=0;j<phstate->nlevel;j++) occ[j]=ancilla->ket[0][j];
         for(j=0;j<qdef.cols();j++){
             // Find the channels
             m=qoc->i_idx[qdef(0,j)][0][0];
@@ -1792,7 +1890,7 @@ state *state::decode(mati qdef,state *anzilla,qocircuit *qoc){
             while((phstate->vis[l]!=n)&&(l<phstate->nlevel)) l=l+1; // Not efficient but small search
 
 
-            // Decode q-bit values
+            // Decode qubit values
             if(ket[i][j]==0){
                 val0=0;
                 val1=1;
@@ -1819,12 +1917,12 @@ state *state::decode(mati qdef,state *anzilla,qocircuit *qoc){
 //  path encoding. Vector version.
 //
 //----------------------------------------------------------------------------
-state *state::decode(mati qdef,veci anzilla,qocircuit *qoc){
-//  mati       qdef;     // Integer matrix with the q-bit to channel definitions
-//  veci anzilla;        // Vector defining the values of the anzilla channels in order ( from smaller to larger channel number )
+state *state::decode(mati qdef,veci ancilla,qocircuit *qoc){
+//  mati       qdef;     // Integer matrix with the qubit to channel definitions
+//  veci ancilla;        // Vector defining the values of the ancilla channels in order ( from smaller to larger channel number )
 //  qocircuit *qoc;      // Quantum optical circuit to which this state is referred
 //  Variables
-    int   *isquch;       // Is a qubit channel ?. For every channel 0=Anzilla/1= Qubit channel
+    int   *isquch;       // Is a qubit channel? For every channel 0=Ancilla/1= Qubit channel
     mati   def_state;    // State definition
     state *anzstate;     // Ansatz state. State with the ansatz channel values defined.
     state *decoded;      // Decoded state.
@@ -1845,14 +1943,234 @@ state *state::decode(mati qdef,veci anzilla,qocircuit *qoc){
     def_state.resize(2,qoc->nch);
     for(i=0;i<qoc->nch;i++){
         if(isquch[i]==1){
-            // Is not anzilla
+            // Is not ancilla
             def_state(0,i)=i;
             def_state(1,i)=0;
         }else{
-            // Is anzilla
+            // Is ancilla
             def_state(0,i)=i;
-            def_state(1,i)=anzilla[k];
+            def_state(1,i)=ancilla[k];
             k=k+1;
+        }
+    }
+
+    // Create the ansatz state
+    anzstate=new state(qoc->nlevel,1);
+    anzstate->add_term(1.0,def_state,qoc);
+
+    // Decode
+    decoded=decode(qdef,anzstate,qoc);
+
+    // Free memory.
+    delete isquch;
+    delete anzstate;
+
+    // Return state
+    return decoded;
+}
+
+
+//---------------------------------------------------------------------------
+//
+//  Encode state into a qubit representation using polarization encoding
+//
+//----------------------------------------------------------------------------
+state *state::pol_encode(veci qdef,qocircuit *qoc){
+//  mati       qdef; // Integer matrix with the qubit to channel definitions
+//  qocircuit *qoc;  // Quatum optical circuit to which this state is referred
+//  Variables
+    bool   valid;    // Is the ket valid for codification true=Yes/false=No
+    bool   print;    // A warning has been printed. True=Yes/False=No
+    int    valH;     // value of channel 0
+    int    valV;     // value of channel 1
+    int    qval;     // qubit equivalent value of channels 0 and 1.
+    int    idx;      // Index of the stored state.
+    int    nvalid;   // Number of encoded kets
+    int   *values;   // Vector of the values of each qubit
+    state *qstate;   // qubit encoded state
+//  Auxiliary index
+    int    i;        // Aux index
+    int    j;        // Aux index
+    int    k;        // Aux index
+    int    l;        // Aux index
+    int    m;        // Aux index
+    int    n;        // Aux index
+
+
+    // Reserve memory
+    qstate=new state(qdef.size(),maxket);
+
+    // Check encoding conditions
+    if((qoc->nm!=2)||(qoc->ns>1)){
+        cout << "Pol_encode error: The circuit number of modes nm and packets ns should be nm=2 and ns=1 for encoding." << endl;
+        return qstate;
+    }
+
+    // Encode each ket
+    nvalid=0;
+    print=false;
+    for(i=0;i<nket;i++){
+        values=new int[qdef.size()]();
+        valid=true;
+        for(j=0;j<qdef.size();j++){
+            // Find the channels
+            m=qoc->i_idx[qdef(j)][H][0];
+            n=qoc->i_idx[qdef(j)][V][0];
+
+            // Read the values
+            // qdef is given over circuit definition.
+            // Levels number may change after post-selection
+            k=0;
+            l=0;
+            while((vis[k]!=m)&&(k<nlevel)) k=k+1; // Not efficient but small search
+            while((vis[l]!=n)&&(l<nlevel)) l=l+1; // Not efficient but small search
+            valH=ket[i][k];
+            valV=ket[i][l];
+
+            // Encode the values
+            qval=-1;
+            if((valH==1)&&(valV==0)) qval=0;
+            if((valH==0)&&(valV==1)) qval=1;
+            if(qval<0) valid=false;
+            values[j]=qval;
+        }
+        // If the resulting state is valid store it
+        if(valid==true){
+                idx=qstate->add_term(ampl[i],values);
+                if((idx!=nvalid)&&(print==false)){
+                    cout << "Pol_encode: Warning! encoding leads to collision. Invalid result" << endl;
+                    print=true;
+                }
+                nvalid=nvalid+1;
+        }
+        delete values;
+    }
+
+    // Return encoded state
+    return qstate;
+}
+
+
+//---------------------------------------------------------------------------
+//
+//  Decode the state from a qubit representation into a photon representation in
+//  polarization encoding. State version.
+//
+//----------------------------------------------------------------------------
+state *state::pol_decode(veci qdef,state *ancilla,qocircuit *qoc){
+// mati       qdef; // Integer matrix with the qubit to channel definitions
+// state *ancilla;  // We need an ancilla state to inform the decoding process of the auxiliary non-qubit channels values
+// qocircuit *qoc;  // Quatum optical circuit to which this state is referred
+// Variables
+    int    valH;    // value of channel 0
+    int    valV;    // value of channel 1
+    int   *occ;     // Occupation vector
+    state *phstate; // Photonic state
+//  Auxiliary index
+    int    i;       // Aux index
+    int    j;       // Aux index
+    int    k;       // Aux index
+    int    l;       // Aux index
+    int    m;       // Aux index
+    int    n;       // Aux index
+
+
+    // Reserve and initialize memory
+    phstate=new state(ancilla->nlevel,maxket);
+
+    // Check decoding conditions
+    if((qoc->nm!=2)||(qoc->ns>1)){
+        cout << "Pol_decode error: The circuit number of modes nm and packets ns should be nm=2 and ns=1 for encoding." << endl;
+        return phstate;
+    }
+
+    for(j=0;j<phstate->nlevel;j++) phstate->vis[j]=ancilla->vis[j];
+
+    // Decode each ket
+    for(i=0;i<nket;i++){
+        occ=new int[phstate->nlevel]();
+        for(j=0;j<phstate->nlevel;j++) occ[j]=ancilla->ket[0][j];
+        for(j=0;j<qdef.size();j++){
+            // Find the channels
+            m=qoc->i_idx[qdef(j)][H][0];
+            n=qoc->i_idx[qdef(j)][V][0];
+
+            // qdef is given over circuit definition.
+            // Levels number may change after post-selection
+            k=0;
+            l=0;
+            while((phstate->vis[k]!=m)&&(k<phstate->nlevel)) k=k+1; // Not efficient but small search
+            while((phstate->vis[l]!=n)&&(l<phstate->nlevel)) l=l+1; // Not efficient but small search
+
+
+            // Decode qubit values
+            if(ket[i][j]==0){
+                valH=1;
+                valV=0;
+            }else{
+                valH=0;
+                valV=1;
+            }
+            occ[k]=valH;
+            occ[l]=valV;
+        }
+        // Store the decoded ket into a new state
+        phstate->add_term(ampl[i],occ);
+        delete occ;
+    }
+
+    // Return result
+    return phstate;
+}
+
+
+//---------------------------------------------------------------------------
+//
+//  Decode the state from a qubit representation into a photon representation in
+//  polarization encoding. Vector version.
+//
+//----------------------------------------------------------------------------
+state *state::pol_decode(veci qdef,mati ancilla,qocircuit *qoc){
+//  veci       qdef;     // Integer vector with the qubit to channel definitions
+//  veci ancilla;        // Vector defining the values of the ancilla channels in order ( from smaller to larger channel number )
+//  qocircuit *qoc;      // Quantum optical circuit to which this state is referred
+//  Variables
+    int   *isquch;       // Is a qubit channel? For every channel 0=Ancilla/1= Qubit channel
+    mati   def_state;    // State definition
+    state *anzstate;     // Ansatz state. State with the ansatz channel values defined.
+    state *decoded;      // Decoded state.
+//  Auxiliary index
+    int    i;            // Aux index
+    int    j;            // Aux index
+    int    k;            // Aux index
+    int    l;            // Aux index
+
+
+    // Determine which channel is ansatz
+    isquch=new int[qoc->nch]();
+    for(i=0;i<qdef.size();i++){
+        isquch[qdef(i)]=1;
+    }
+
+    // Define the state
+    k=0;
+    l=0;
+    def_state.resize(3,qoc->nch*qoc->nm);
+    for(i=0;i<qoc->nch;i++){
+        for(j=0;j<qoc->nm;j++){
+            if(isquch[i]==1){
+                // Is not ancilla
+                def_state(0,l)=i;
+                def_state(1,l)=j;
+                def_state(2,l)=0;
+            }else{
+                // Is ancilla
+                def_state(0,l)=i;
+                def_state(1,l)=j;
+                def_state(2,l)=ancilla(j,k);
+                k=k+1;
+            }
+            l=l+1;
         }
     }
 

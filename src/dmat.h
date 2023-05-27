@@ -32,7 +32,7 @@ public:
     void   normalize();                                           // Normalize to trace=1 density matrix
     void   add(dmatrix *addm);                                    // Sum two compatible density matrix
     double fidelity(state* input);                                // Calculate the Fidelity of a density matrix with respect to a state.
-    double get_result(mati def,qocircuit *qoc);                   //Gets the probability of an event defined by def.
+    double get_result(mati def,qocircuit *qoc);                   // Gets the probability of an event defined by def.
     p_bin *get_pbin();                                            // Returns the diagonal elements of a density matrix as a set of probability bins
 
     // Update matrix operations
@@ -46,7 +46,7 @@ public:
     dmatrix *get_counts(qocircuit *qoc);                          // Returns a density matrix independent of the wave packet degrees of freedom
     dmatrix *get_period(qocircuit *qoc);                          // Classify photons by period
     dmatrix *get_times(qocircuit *qoc);                           // Classify photons by times
-     dmatrix *relabel(veci label_idx,qocircuit *qoc);             // Relabels the dictionary entries of the density matrix
+    dmatrix *relabel(mati label_idx,qocircuit *qoc);              // Relabels the dictionary entries of the density matrix
 
     // Print functions
     void prnt_mtx();                                              // Print the matrix ( numerically )
@@ -56,6 +56,12 @@ public:
     void aux_prnt_mtx(int format, double thresh, qocircuit *qoc); // Auxiliary method to print matrix
     void prnt_results();                                          // Prints the diagonal elements of a density matrix
     void prnt_results(int format, qocircuit *qoc);                // Prints the diagonal elements of a density matrix
+
+    // Qubit codification methods.
+    dmatrix *translate(mati qdef,qocircuit *qoc);                 // Encodes the bin labels from photonic to qubit representation ( Path encoding, circuit version )
+    dmatrix *translate(mati qdef,qodev *dev);                     // Encodes the bin labels from photonic to qubit representation ( Path encoding, device version )
+    dmatrix *pol_translate(mati qdef,qocircuit *qoc);             // Encodes the bin labels from photonic to qubit representation ( Polarization encoding, circuit version )
+    dmatrix *pol_translate(mati qdef,qodev *dev);                 // Encodes the bin labels from photonic to qubit representation ( Polarization encoding, device version )
 
 protected:
     // Auxiliary function. (This ones can not be private).
@@ -258,6 +264,7 @@ public:
     *  @param qocircuit *qoc Circuit to which the density matrix is related.
     *  @return A new smaller matrix with the removed degrees of freedom.
     *  @ingroup Dens_update
+    * \xrefitem know "KnowIss" "Known Issues" Non-general assumptions about the measurement process are taken if the density matrix information is reduced (in agreement to the configuration of the detectors).
     */
     dmatrix *calc_measure(qocircuit *qoc);
     /**
@@ -266,6 +273,7 @@ public:
     *  @param qodev *dev Device to which the density matrix is related.
     *  @return A new smaller matrix with the removed degrees of freedom.
     *  @ingroup Dens_update
+    * \xrefitem know "KnowIss" "Known Issues" Non-general assumptions about the measurement process are taken if the density matrix information is reduced (in agreement to the configuration of the detectors).
     */
     dmatrix *calc_measure(qodev *dev);
     /**
@@ -297,11 +305,12 @@ public:
     *  Relabels the dictionary entries of the density matrix. A new reduced density matrix
     *  is obtained if various entries are relabeled to the same labels.
     *
-    *  @param veci label_def Vector that indicates the new label to be assigned by packet.<br>
+    *  @param mati label_def Matrix that indicates the label transformation by packet.
+    *  @param qocircuit *qoc Circuit to which the density matrix is related.
     *  @return Returns a smaller relabeled density matrix.
     *  @ingroup Dens_update
     */
-    dmatrix *relabel(veci label_idx,qocircuit *qoc);
+    dmatrix *relabel(mati label_idx,qocircuit *qoc);
 
     // Print functions
     /** @defgroup Dens_print Density matrix output
@@ -364,6 +373,54 @@ public:
     */
     void prnt_results(int format, qocircuit *qoc);
 
+
+    // Qubit codification methods.
+    /** @defgroup Dens_qubit Qubit codification support
+    *   @ingroup Dens
+    *   Support to encode photonic outcomes into qubit outcomes.
+    */
+
+    /**
+    *  It encodes the density matrix labels from a photonic to a qubit representation (path encoding). Circuit version. <br>
+    *  <b> Only for ideal circuits. nm=1 and ns=1 </b>
+    *
+    *  @param mati qbits Qubit definition. Matrix with a column entry for each qubit where they are defined the two photonic channels needed to encode the qubit. A 01 occupation means Q=0 and a 10 occupation Q=1.
+    *  @param qocircuit *qoc Circuit to which the density matrix is related.
+    *  @return Encoded density matrix.
+    *  @ingroup Dens_qubit
+    */
+    dmatrix *translate(mati qdef,qocircuit *qoc);
+    /**
+    *  It encodes the density matrix labels from a photonic to a qubit representation (path encoding). Device version. <br>
+    *  <b> Only for ideal circuits. nm=1 and ns=1 </b>
+    *
+    *  @param mati qbits Qubit definition. Matrix with a column entry for each qubit where they are defined the two photonic channels needed to encode the qubit. A 01 occupation means Q=0 and a 10 occupation Q=1.
+    *  @param qodev *dev Device to which the density matrix is related.
+    *  @return Encoded density matrix.
+    *  @ingroup Dens_qubit
+    */
+    dmatrix *translate(mati qdef,qodev *dev);
+    /**
+    *  It encodes the density matrix labels from a photonic to a qubit representation (polarization encoding). Circuit version. <br>
+    *  <b> Only for ideal circuits ns=1 </b>
+    *
+    *  @param veci qbits Qubit definition. Vector that specifies which channel corresponds to each qubit. A horizontal polarization H means Q=0 and a vertical one V means Q=1.
+    *  @param qocircuit *qoc Circuit to which the density matrix is related.
+    *  @return Encoded density matrix.
+    *  @ingroup Dens_qubit
+    */
+    dmatrix *pol_translate(veci qdef,qocircuit *qoc);
+    /**
+    *  It encodes the density matrix labels from a photonic to a qubit representation (polarization encoding). Device version. <br>
+    *  <b> Only for ideal circuits ns=1 </b>
+    *
+    *  @param veci qbits Qubit definition. Vector that specifies which channel corresponds to each qubit. A horizontal polarization H means Q=0 and a vertical one V means Q=1.
+    *  @param qodev *dev Device to which the density matrix is related.
+    *  @return Encoded density matrix.
+    *  @ingroup Dens_qubit
+    */
+    dmatrix *pol_translate(veci qdef,qodev *dev);
+
 protected:
     // Auxiliary functions.
     /** @defgroup Dens_aux Density matrix auxiliary methods
@@ -385,11 +442,12 @@ protected:
     *
     *  @param state *A Row dictionary state.
     *  @param state *B Column dictionary state.
+    *  @param mati label_def Matrix that indicates the label transformation by packet (and therefore if kets are compatible).<br>
     *  @param qocircuit *qoc    Circuit to which the density matrix is related.
     *  @see partial_trace(mati pack_def,qocircuit *qoc);
     *  @ingroup Dens_aux
     */
-    int ketcompatible(int A, int B, qocircuit *qoc);
+    int ketcompatible(int A, int B, mati label_idx, qocircuit *qoc);
     /**
     *  Auxiliary method to print density matrix. <br>
     *  <b> Intended for internal use of the library. </b>

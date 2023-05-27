@@ -114,8 +114,6 @@ int qocircuit::create_circuit(int i_nch, int i_nm, int i_ns, int i_np, double i_
     ns=i_ns*i_np;
     np=i_np;
     nsp=i_ns;
-    mpi=-1;
-    mpf=-1;
     dtp=i_dtp;
 
     // If we are going to compute losses.
@@ -133,7 +131,8 @@ int qocircuit::create_circuit(int i_nch, int i_nm, int i_ns, int i_np, double i_
     nignored=0;
     ncond=0;
     timed=clock;
-    det_def.resize(2,i_nch);
+    det_def.resize(3,i_nch);
+    det_win.resize(2,i_nch);
     det_par.resize(2,i_nch);
     ch_ignored.resize(i_nch);
 
@@ -256,8 +255,8 @@ qocircuit *qocircuit::clone(){
     newcircuit= new qocircuit(nch,nm,ns,1,dtp, timed, 0, false, ckind);
     newcircuit->np=np;
     newcircuit->nsp=nsp;
-    newcircuit->mpi=mpi;
-    newcircuit->mpf=mpf;
+//    newcircuit->mpi=mpi;
+//    newcircuit->mpf=mpf;
 
     newcircuit->losses=losses; // It has to be cloned that way. Otherwise the full constructor will double again the number of channels.
 
@@ -280,6 +279,7 @@ qocircuit *qocircuit::clone(){
     newcircuit->nignored=nignored;
     newcircuit->ncond=ncond;
     newcircuit->det_def=det_def;
+    newcircuit->det_win=det_win;
     newcircuit->det_par=det_par;
     newcircuit->ch_ignored=ch_ignored;
 
@@ -347,6 +347,7 @@ int qocircuit::concatenate(qocircuit *qoc){
     ndetc=qoc->ndetc;
     nignored=qoc->nignored;
     det_def=qoc->det_def;
+    det_win=qoc->det_win;
     det_par=qoc->det_par;
     ch_ignored=qoc->ch_ignored;
 
@@ -756,6 +757,7 @@ int qocircuit:: MMI2(int i_ch1, int i_ch2){
     return dielectric(i_ch1,i_ch2,1/sqrt(2.0),jm/sqrt(2.0));
 }
 
+
 //------------------------------------------------
 //
 // Rewires / swaps two channels (of the same mode)
@@ -786,6 +788,140 @@ int qocircuit:: rewire(int i_ch1,int i_ch2){
 }
 
 
+//------------------------------------------------
+//
+// Adds a gate using other circuit as the gate definition
+//
+//------------------------------------------------
+int qocircuit:: add_gate(veci chlist, qocircuit *qoc){
+//  veci chlist;     // List of channels where the gate is added
+//  qocircuit *qoc;  // Quantum optical circuit
+//  Variables
+    int    ch;       // Channel
+    int    m;        // Polarization
+    int    ch1;      // Channel 1
+    int    ch2;      // Channel 2
+    int    m1;       // Polarization channel 1
+    int    m2;       // Polarization channel 2
+    int    nclose;   // number of detectors needed to close the circuit.
+    matc   U;        // Gate matrix definition
+    mati   W;        // Channels to which U refers
+//  Auxiliary index
+    int    i;        // Aux index
+    int    j;        // Aux index
+    int    k;        // Aux index
+    int    l;        // Aux index
+
+    // Check limitations
+    if (chlist.size()!=qoc->nch){
+        cout << "add_gate error (qocircuit) #1: The number of channels in the list has to be the same than in the gate circuit." << endl;
+        return -1;
+    }
+
+    if (qoc->losses>0){
+        cout << "add_gate error (qocircuit) #2: Losses must be configured to False in the gate circuit." << endl;
+        return -1;
+    }
+
+    if ((qoc->emiss==0)&&(remdec()==qoc->ndetc)){
+        cout << "add_gate error (qocircuit) #3: Photons should be emitted before adding all detectors." << endl;
+        return -1;
+    }
+
+    if ((qoc->emiss==1)&&(remdec()!=qoc->ndetc)){
+        cout << "add_gate error (qocircuit) #4: Photons have been already emitted." << endl;
+        cout << "Note that this may happen because the definition of a delay inside the gate. Delays are forbidden in gates." << endl;
+        return -1;
+    }
+
+
+    if (qoc->np>1){
+        cout << "add_gate error (qocircuit) #5: The number of periods must be one. We can not define periods in gates." << endl;
+        return -1;
+    }
+
+
+    // Copy gate definition
+    if(qoc->ns>1){
+        // From a non-ideal circuit with packets
+        U.resize(qoc->nch*qoc->nm,qoc->nch*qoc->nm);
+        W.resize(2,qoc->nm*qoc->nch);
+        i=0;
+        for(ch1=0; ch1<qoc->nch; ch1++){
+        for(m1=0; m1<qoc->nm; m1++){
+            j=0;
+            W(0,i)=chlist(ch1);
+            W(1,i)=m1;
+            for(ch2=0; ch2<qoc->nch; ch2++){
+            for(m2=0; m2<qoc->nm; m2++){
+                k=qoc->i_idx[ch1][m1][0];
+                l=qoc->i_idx[ch2][m2][0];
+
+                U(i,j)=qoc->circmtx(k,l);
+                j=j+1;
+            }}
+            i=i+1;
+        }}
+    }else{
+        // From an ideal circuit
+        U=qoc->circmtx;
+        W.resize(2,qoc->nm*qoc->nch);
+        for(i=0; i<qoc->nlevel; i++){
+            ch=qoc->idx[i].ch;
+            m=qoc->idx[i].m;
+            W(0,i)=chlist(ch);
+            W(1,i)=m;
+
+        }
+    }
+
+    // Create gate
+    custom_gate(W,U);
+
+
+    // Update detectors if post-selection is defined
+    ndetc=ndetc+qoc->ndetc;
+    if(ndetc>nch){
+        cout << "add_gate error (qocircuit) #6: More detectors than channels are being declared." << endl;
+        return -1;
+    }
+
+    for(i=0;i<qoc->ncond;i++){
+        det_def(0,ncond)=chlist(qoc->det_def(0,i));
+        det_def(1,ncond)=qoc->det_def(1,i);
+        det_def(2,ncond)=qoc->det_def(2,i);
+        ncond=ncond+1;
+    }
+
+    for(i=0;i<qoc->nignored;i++){
+        ch_ignored(nignored)=chlist(qoc->ch_ignored(i));
+        nignored=nignored+1;
+    }
+
+    for(i=0;i<qoc->nch;i++){
+        det_win(0,chlist(i))=qoc->det_win(0,i);
+        det_win(1,chlist(i))=qoc->det_win(1,i);
+        det_par(0,chlist(i))=qoc->det_par(0,i);
+        det_par(1,chlist(i))=qoc->det_par(1,i);
+    }
+
+    // Evaluate if the circuit is closed.
+    // If the circuit is closed take the same action than in detector.
+
+    // The total number of channels to put a detector is different depending if we are computing losses
+    if(losses==0) nclose=nch;
+    else nclose=nch/2;
+
+    // If this is the last detector compute losses if needed.
+    if((losses==1)&&(ndetc==nclose)) compute_losses();
+
+    // If this is the last detector add the emitter matrix
+    // at the beginning. (Otherwise computing the losses breaks the calculation)
+    if((emiss==1)&&(ndetc==nclose)) circmtx=circmtx*init_dmat;
+
+    // Return success
+    return 0;
+}
 //----------------------------------------
 //
 //  Adds a custom gate to the circuit
@@ -1028,8 +1164,8 @@ int qocircuit:: phase_shifter(int i_ch, cmplx t){
 //
 //----------------------------------------
 int qocircuit:: pol_phase_shifter(int i_ch, int P, double d_phi){
-//  int    i_ch               // Phase shifter input channel
-//  int    P                  // Polarization to which the phase shifter is sensitive
+//  int    i_ch;              // Phase shifter input channel
+//  int    P;                 // Polarization to which the phase shifter is sensitive
 //  double d_phi;             // Angle phi in degrees
 //  Variables
     double phi;               // Aux index.
@@ -1048,9 +1184,9 @@ int qocircuit:: pol_phase_shifter(int i_ch, int P, double d_phi){
 //
 //----------------------------------------
 int qocircuit:: pol_phase_shifter(int i_ch, int P, cmplx t){
-//  int   i_ch                // Phase shifter input channel
-//  int   P                   // Polarization to which the phase shifter is sensitive
-//  cmplx t                   // Phase shifter transmission amplitude of probability.
+//  int   i_ch;               // Phase shifter input channel
+//  int   P;                  // Polarization to which the phase shifter is sensitive
+//  cmplx t;                  // Phase shifter transmission amplitude of probability.
 //  Constants
     const  int nbmch=1;       // U square matrix row/column dimension
 //  Variables
@@ -1070,13 +1206,29 @@ int qocircuit:: pol_phase_shifter(int i_ch, int P, cmplx t){
 
 //----------------------------------------
 //
+// Polarization filter
+//
+//----------------------------------------
+int qocircuit:: pol_filter(int i_ch, int P){
+//  int i_ch;     // Polarization filter input channel
+//  int P;        // Polarization to be removed/filtered
+
+
+    // Call to general phase shifter
+    return pol_phase_shifter(i_ch, P, (cmplx)0.0);
+
+}
+
+
+//----------------------------------------
+//
 // Lossy medium.
 // It is an alias to a general phase shifter
 // but with a double as input parameter.
 //
 //----------------------------------------
 int qocircuit:: loss(int i_ch, double l){
-//  int    i_ch           // Phase shifter input channel
+//  int    i_ch;          // Phase shifter input channel
 //  double l;             // Loss probability
 
 
@@ -1476,9 +1628,12 @@ int qocircuit:: delay(int i_ch, int ip){
 //  Adds a virtual circuit element to define a detector
 //
 //--------------------------------------------------
-int qocircuit:: detector(int i_ch, int cond, double eff, double blnk, double gamma){
+int qocircuit:: detector(int i_ch, int cond, int pol, int mpi, int mpo, double eff, double blnk, double gamma){
 //  int    i_ch;        // Chanel where detection is performed
 //  int    cond;        // Post selection condition. If cond<0 there is none.
+//  int    pol;         // Post selection polarization condition. If pol<0 there is none.
+//  int    mpi;         // Initial detection period (if -1 takes the first one as default)
+//  int    mpo;         // Last detection period (if -1 takes the last one as default)
 //  double eff;         // Efficiency of the detector
 //  double blnk;        // Fraction of time blinking
 //  double gamma;       // Dark counts rate
@@ -1489,6 +1644,8 @@ int qocircuit:: detector(int i_ch, int cond, double eff, double blnk, double gam
     // Adds a new detector definition entry to the corresponding matrices
     // If cond>=0 Adds a new entry to the matrix of post-selection condition.
     ndetc=ndetc+1;
+
+    // Check configuration errors
     if(ndetc>nch){
         cout << "detector error: More detectors than channels are being declared." << endl;
         return -1;
@@ -1498,9 +1655,11 @@ int qocircuit:: detector(int i_ch, int cond, double eff, double blnk, double gam
         return -1;
     }
 
+    // Update post-selection condition
     if(cond>=0){
         det_def(0,ncond)=i_ch;
         det_def(1,ncond)=cond;
+        det_def(2,ncond)=pol;
         ncond=ncond+1;
     }
     // If cond==-1 There is no condition
@@ -1509,6 +1668,10 @@ int qocircuit:: detector(int i_ch, int cond, double eff, double blnk, double gam
         ch_ignored(nignored)=i_ch;
         nignored=nignored+1;
     }
+
+    // Set up window of detection by channel
+    det_win(0,i_ch)=mpi;
+    det_win(1,i_ch)=mpo;
 
     // Adds a new entry to the matrix of detector parameters
     det_par(0,i_ch)=blnk;
@@ -1568,7 +1731,7 @@ int qocircuit:: detector(int i_ch){
 //  int    i_ch;        // Chanel where detection is performed
 
 
-    return detector(i_ch,-1,1.0,0.0,0.0);
+    return detector(i_ch,-1,-1,-1,-1,1.0,0.0,0.0);
 }
 
 
@@ -1582,9 +1745,25 @@ int qocircuit:: detector(int i_ch, int cond){
 //  int    cond;        // Post selection condition. If cond<0 there is none.
 
 
-    return detector(i_ch,cond,1.0,0.0,0.0);
+    return detector(i_ch,cond,-1,-1,-1,1.0,0.0,0.0);
 }
 
+
+//--------------------------------------------------
+//
+//  Adds a virtual circuit element to define a detector
+//
+//--------------------------------------------------
+int qocircuit:: detector(int i_ch, int cond, double eff, double blnk, double gamma){
+//  int    i_ch;        // Chanel where detection is performed
+//  int    cond;        // Post selection condition. If cond<0 there is none.
+//  double eff;         // Efficiency of the detector
+//  double blnk;        // Fraction of time blinking
+//  double gamma;       // Dark counts rate
+
+
+    return detector(i_ch,cond,-1,-1,-1,eff,blnk,gamma);
+}
 
 //--------------------------------------------------
 //
@@ -1595,7 +1774,7 @@ int qocircuit:: ignore(int i_ch){
 //  int    i_ch;        // Chanel where detection is performed
 
 
-    return detector(i_ch,-2,1.0,0.0,0.0);
+    return detector(i_ch,-2,-1,-1,-1,1.0,0.0,0.0);
 }
 
 
@@ -1828,13 +2007,18 @@ double photon_mdl:: visibility(int i,int j, int nsp){
     // Calculate the packet matrix from the photon model
     P=create_packet_mtx();
 
+    // Obtain period and packet number
     pi=i/nsp;
     pj=j/nsp;
-
     ri=i%nsp;
     rj=j%nsp;
 
+    // Check  validity
     if(pi!=pj) return 0.0;
+    if((ri>=P.cols())||(rj>=P.cols())){
+            cout << "Visibility error: One of the demanded packets does not exist!" << endl;
+            return 0.0;
+    }
 
     // Obtain the parameters from the packet matrix
     ti=  P(0,ri);

@@ -143,6 +143,7 @@ void qodev::create_qodev(int i_level, int i_maxket, int i_ns){
 //----------------------------------------
 qodev::~qodev(){
 
+
     delete circ;
     delete inpt;
 
@@ -157,6 +158,7 @@ qodev::~qodev(){
 void qodev::reset(){
 //  Variables
     int       *occ;       // Level occupation
+
 
     // Reset packet table
     npack=0;
@@ -177,12 +179,107 @@ void qodev::reset(){
 //  Concatenates two devices
 //
 //----------------------------------------
-void qodev::concatenate(qodev *dev){
+int qodev::concatenate(qodev *dev){
 //  qodev *dev;      // Meta Circuit to be appended
 
 
     if((circ->emiss==0)&&(dev->circ->remdec()==0)) send2circuit();
-    circ->concatenate(dev->circ);
+    return circ->concatenate(dev->circ);
+}
+
+
+//------------------------------------------------
+//
+// Adds a gate using other device as the gate definition
+//
+//------------------------------------------------
+int qodev::add_gate(veci chlist, qodev *dev){
+//  veci chlist;     // List of channels where the gate is added
+//  qodev *dev;      // Meta Circuit to be appended
+//  Variables
+    int    ch;       // Channel
+    int    P;        // Polarization
+    int    S;        // Packet number
+    int    error;    // Error if adding a new term
+    int   *occ;      // Occupation
+    double t;        // Time
+    double f;        // Frequency
+    double w;        // Width/Characteristic time
+    hterm  in_term;  // Input term definition
+    veci   T;        // List of packet numbers
+    state *aux;      // Auxiliary state. ( State that contain the ancilla definitions of dev translated to this device indexes )
+    state *newinpt;  // New input state. New input state of this device after adding the ancilla values of the gate.
+//  Auxiliary index
+    int    i;        // Aux index
+    int    j;        // Aux index
+
+
+    // Check limitations
+    if (chlist.size()!=dev->circ->nch){
+        cout << "add_gate error (qodev) #1: The number of channels in the list has to be the same than in the gate circuit." << endl;
+        return -1;
+    }
+
+    // Update packets with gate packets
+    T.resize(dev->npack);
+    for(i=0;i<dev->npack;i++){
+        t=dev->pack_list(1,i);
+        f=dev->pack_list(2,i);
+        w=dev->pack_list(3,i);
+        T(i)=add_photons(0,0,0,t,f,w);
+        if (T(i)<0){
+            cout << "add_gate error (qodev) #2: The number of packets of the device has been exceeded." << endl;
+            return -1;
+        }
+    }
+
+    // Update the input state information with the gate ancillas.
+    // First, compute the gate contribution (ancilla values).
+    in_term.resize(4,dev->circ->nlevel);
+    for(i=0;i<dev->circ->nlevel;i++){
+        ch=dev->circ->idx[i].ch;
+        P=dev->circ->idx[i].m;
+        S=dev->circ->idx[i].s;
+
+        in_term(0,i) = chlist(ch);
+        in_term(1,i) = P;
+        if(S<dev->npack) in_term(2,i) = T(S); // OK. Because it can not be photons in packet that do not exist.
+        else in_term(2,i) = 0;
+        in_term(3,i) = dev->inpt->ket[0][i];
+
+    }
+
+    aux=new state(inpt->nlevel,1);
+    error=aux->add_term(1.0,in_term,circ);
+    if(error<0){
+        cout << "add_gate error (qodev) #3: Photons are being created at levels not defined in the circuit." << endl;
+        delete aux;
+        return -1;
+    }
+
+    // Second, add the gate contribution (ancilla values) to the input state.
+    newinpt=new state(inpt->nlevel,inpt->maxket);
+    for(j=0;j<inpt->nket;j++){
+        occ=new int[inpt->nlevel]();
+        for(i=0;i<inpt->nlevel;i++){
+            occ[i]=inpt->ket[j][i]+aux->ket[0][i];
+        }
+
+        newinpt->add_term(1.0,occ);
+        delete occ;
+    }
+
+    //Free memory.
+    delete aux;
+    delete inpt;
+
+    // Update input state.
+    inpt=newinpt;
+
+    // Update circuit mtx.
+    if((circ->emiss==0)&&(circ->remdec()==dev->circ->ndetc))  send2circuit();
+    return circ->add_gate(chlist,dev->circ);
+
 }
 
 
@@ -255,7 +352,7 @@ int qodev::add_photons(int N, int ch, int P, double t, double f, double w){
     // Update the wave-packet information
     if(add==1){
         if(npack>=circ->nsp){
-            cout << "add_photons error #3: Not enough ns degrees of freedom! Needed at least: "<< npack+1 << endl;
+            cout << "add_photons error #2: Not enough ns degrees of freedom! Needed at least: "<< npack+1 << endl;
             return -1;
         }
         // If not exists add it
@@ -283,7 +380,7 @@ int qodev::add_photons(int N, int ch, int P, double t, double f, double w){
     aux=new state(inpt->nlevel,1);
     error=aux->add_term(1.0,in_term,circ);
     if(error<0){
-        cout << "add_photons: Warning! photons are being created at levels not defined in the circuit." << endl;
+        cout << "add_photons error #3: Photons are being created at levels not defined in the circuit." << endl;
         return -1;
     }
 
@@ -294,10 +391,12 @@ int qodev::add_photons(int N, int ch, int P, double t, double f, double w){
             occ[i]=inpt->ket[j][i]+aux->ket[0][i];
         }
 
-        newinpt->add_term(1.0,occ);
+        newinpt->add_term(inpt->ampl[j],occ);
         delete occ;
     }
+
     //Update internally the bunch
+    delete aux;
     delete inpt;
     inpt=newinpt;
 
@@ -694,6 +793,7 @@ int qodev::add_BellP(int ch1, int ch2, char kind, double phi, double t1, double 
     // Update state
     qdstate=new state(inpt->nlevel,inpt->maxket);
     qdstate->BellP(ch,kind,phi,circ);
+//    qdstate->prnt_state(1,1,false,circ);
     error=inpt->dproduct(qdstate);
     delete qdstate;
 
@@ -987,9 +1087,23 @@ int qodev::pol_phase_shifter(int i_ch, int P, double phi){
 //  double  phi;             // Phase
 
 
-
     return circ->pol_phase_shifter(i_ch, P, phi);
 }
+
+
+//----------------------------------------
+//
+//  Adds a polarization filter
+//
+//----------------------------------------
+int qodev::pol_filter(int i_ch, int P){
+//  int     i_ch             // Filter input channel
+//  int     P;               // Polarization
+
+
+    return circ->pol_filter(i_ch, P);
+}
+
 
 //----------------------------------------
 //
@@ -1028,7 +1142,7 @@ int qodev::ignore(int i_ch){
 //  int    i_ch;        // Chanel where detection is performed
 
 
-    return detector(i_ch,-2,1.0,0.0,0.0);
+    return detector(i_ch,-2,-1,-1,-1,1.0,0.0,0.0);
 }
 
 
@@ -1055,7 +1169,7 @@ int qodev::detector(int i_ch, int cond){
 //  int    cond;        // Post selection condition. If cond<0 there is none.
 
 
-    return detector(i_ch,cond,1.0,0.0,0.0);
+    return detector(i_ch,cond,-1,-1,-1,1.0,0.0,0.0);
 }
 
 
@@ -1071,9 +1185,29 @@ int qodev::detector(int i_ch, int cond, double eff, double blnk, double gamma){
 //  double blnk;        // Fraction of time blinking
 //  double gamma;       // Dark counts rate
 
-    if((circ->emiss==0)&&(circ->remdec()==1)) send2circuit();  // Send to circuit the photons.
-    if((npack==0)&&(circ->losses==1)) circ->losses=2;          // The circuit has losses but it does not compute the full matrix yet
-    return circ->detector(i_ch, cond, eff, blnk, gamma);
+    return detector(i_ch,cond,-1,-1,-1, eff, blnk, gamma);
+}
+
+
+//----------------------------------------------------------------------------------------------------------
+//
+//  Adds a general physical detector with a window of detection (and conditional detection by polarization)
+//
+//----------------------------------------------------------------------------------------------------------
+int qodev::detector(int i_ch, int cond, int pol, int mpi, int mpo, double eff, double blnk, double gamma){
+//  int    i_ch;        // Chanel where detection is performed
+//  int    cond;        // Post selection condition. If cond<0 there is none.
+//  int    pol;         // Post selection polarization condition. If pol<0 there is none.
+//  int    mpi;         // Initial detection period (if -1 takes the first one as default)
+//  int    mpo;         // Last detection period (if -1 takes the last one as default)
+//  double eff;         // Efficiency of the detector
+//  double blnk;        // Fraction of time blinking
+//  double gamma;       // Dark counts rate
+
+
+    if((circ->emiss==0)&&(circ->remdec()==1)) send2circuit();           // Send to circuit the photons.
+    if((npack==0)&&(circ->losses==1)) circ->losses=2;                   // The circuit has losses but it does not compute the full matrix yet
+    return circ->detector(i_ch, cond, pol, mpi, mpo, eff, blnk, gamma); // Adds a detector to the circuit
 }
 
 
@@ -1145,7 +1279,7 @@ int qodev::dispersion(int ch, int P, double dt){
 //----------------------------------------
 //
 // Apply the post-selection condition defined
-// by the detectors (to ideal devices nm=1 and nd=1).
+// by the detectors (to ideal devices ns=1).
 //
 //----------------------------------------
 state* qodev:: apply_condition(state *input, bool ignore){
@@ -1165,17 +1299,22 @@ state* qodev:: apply_condition(state *input, bool ignore){
     int    i;           // Aux index
     int    j;           // Aux index
     int    k;           // Aux index
+    int ch;
 
 
     // Initialize post-selection condition
     // We are limited to a single ket projector
-    cond.resize(4,circ->ncond);
+    cond.resize(4,circ->nm*circ->ncond);
+    k=0;
     for(i=0;i<circ->ncond;i++){
-        cond(0,i)=circ->det_def(0,i);
-        cond(1,i)=0;
-        cond(2,i)=0;
-        cond(3,i)=circ->det_def(1,i);;
-
+        for(j=0;j<circ->nm;j++){
+            cond(0,k)=circ->det_def(0,i);
+            cond(1,k)=j;
+            cond(2,k)=0;
+            if ((j==circ->det_def(2,i))||(circ->det_def(2,i)<0)) cond(3,k)=circ->det_def(1,i);
+            else cond(3,k)=0;
+            k=k+1;
+        }
     }
 
     // Perform post-selection
@@ -1191,13 +1330,14 @@ state* qodev:: apply_condition(state *input, bool ignore){
     // Remove ignored channels
     if(ignore==true){
         // Reserve memory for the new state
-        newnlevels=(pselected->nlevel)-(circ->nignored);
+        newnlevels=(pselected->nlevel)-(circ->nm*circ->nignored);
         ignored=new state(newnlevels,pselected->maxket);
 
         // Update visibility
         for(i=0;i<circ->nignored;i++){
             for(j=0;j<pselected->nlevel;j++){
-                if(pselected->vis[j]==circ->ch_ignored(i)) pselected->vis[j]=-2;
+                ch=circ->idx[pselected->vis[j]].ch;
+                if(ch==circ->ch_ignored(i)) pselected->vis[j]=-2;
             }
         }
 
@@ -1245,7 +1385,7 @@ state* qodev:: apply_condition(state *input, bool ignore){
 //----------------------------------------
 //
 // Apply the post-selection condition defined
-// by the detectors (to ideal devices nm=1 and nd=1).
+// by the detectors (to ideal devices ns=1).
 //
 //----------------------------------------
 state* qodev:: apply_condition(state *input){
@@ -1258,7 +1398,8 @@ state* qodev:: apply_condition(state *input){
 
 //----------------------------------------
 //
-// Initalize the device with qubit values
+// Initialize the device with qubit values
+// ( Path encoding version)
 //
 //----------------------------------------
 void qodev::qubits(veci qinit, mati qmap){
@@ -1276,6 +1417,25 @@ void qodev::qubits(veci qinit, mati qmap){
             add_photons(1, qmap(0,i));
             add_photons(0, qmap(1,i));
         }
+    }
+}
+
+
+//----------------------------------------
+//
+// Initialize the device with qubit values
+// ( Polarization encoding version)
+//
+//----------------------------------------
+void qodev::pol_qubits(veci qinit, veci qmap){
+//  veci qinit;    // Qubit values
+//  veci qmap;     // Correspondence between qubits and channels (Polarization encoding)
+//  Variables
+    int i;
+
+
+    for (i=0; i<qinit.size(); i++){
+        add_photons(1,qmap(0,i), qinit(i), 0.0, 0.0, 0.0);
     }
 }
 

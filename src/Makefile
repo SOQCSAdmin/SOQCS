@@ -2,7 +2,7 @@ include ../conf.inc
 
 libsocs.a:   mthread.o sim.o dmat.o pbin.o qodev.o state.o qocircuit.o util.o
 	     $(AR) $(ARFLAGS) libsoqcs.a mthread.o sim.o dmat.o pbin.o qodev.o state.o qocircuit.o util.o
-
+	     
 mthread.o:   mthread.cpp
 	     $(GPP)  $(FLAGS) -c mthread.cpp
 

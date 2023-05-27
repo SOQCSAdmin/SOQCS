@@ -166,7 +166,7 @@ double dmatrix::trace(){
 //  Variables
     cmplx tr;      // Trace
 //  Auxilaty index
-    int    i;       // Aux index
+    int    i;      // Aux index
 
 
     tr=0.0;
@@ -473,7 +473,6 @@ void dmatrix:: add_state(state* input, qocircuit *qoc){
     chlist.resize(nchtotal);
     for(i=0;i<nchloss;i++) chlist(i)=fchloss+i;
     for(i=0;i<nignore;i++) chlist(i+nchloss)=qoc->ch_ignored(i);
-
     // Obtain reduced state
     this->add_reduced_state(qoc->ncond,qoc->det_def,chlist,input,qoc);
     N++;
@@ -512,7 +511,6 @@ void dmatrix::add_reduced_state(int ndec,mati def,veci chlist,state* input, qoci
     int         k;                  // Aux index
 
 
-
 //  Init variables
     nchtotal=chlist.size();
     if(nchtotal>0) nph=maxnph;
@@ -548,16 +546,18 @@ void dmatrix::add_reduced_state(int ndec,mati def,veci chlist,state* input, qoci
                 // We updated the entry in the corresponding hash table
                 selhash[selvalue]=nsel;
                 nsel=nsel+1;
-                selectfull.resize(2,select.cols()+ndec);
+                selectfull.resize(3,select.cols()+ndec);
                 k=0;
                 for(i=0;i<ndec;i++){
                     selectfull(0,k)=def(0,i);
                     selectfull(1,k)=def(1,i);
+                    selectfull(2,k)=def(2,i);
                     k=k+1;
                 }
                 for(i=0;i<select.cols();i++){
                     selectfull(0,k)=select(0,i);
                     selectfull(1,k)=select(1,i);
+                    selectfull(2,k)=-1;
                     k=k+1;
                 }
 
@@ -594,6 +594,7 @@ void dmatrix:: add_state_cond(int ndec, mati def,state *in_state,qocircuit *qoc)
 //  qocircuit *qoc;                  // Circuit where the detector is placed
 //  Variables
     int    nph;                      // Number of photons
+    int    eph;                      // Expected number of photons
     int    maxch;                    // Larger channel number
     int    selbase;                  // Base of the projector definition hash table
     int    nempty;                   // Number of channels with zero fotons
@@ -603,9 +604,12 @@ void dmatrix:: add_state_cond(int ndec, mati def,state *in_state,qocircuit *qoc)
     int    ich;                      // Channel index
     int    im;                       // Mode index
     int    is;                       // "Time" index
+    int    nwi;                      // First period that can be measured
+    int    nwf;                      // Last period (+1) that can be measured
     int   *tim;                      // "Time" configuration vector
     int   *pol;                      // Polarization configuration vector
     veci   ch;                       // List of channels by photons
+    veci   pch;                      // List of channels by photons
     hterm  select;                   // Post-selection condition
     state *newstate;                 // New post-selected state
     projector *prj;                  // Projector
@@ -644,20 +648,22 @@ void dmatrix:: add_state_cond(int ndec, mati def,state *in_state,qocircuit *qoc)
         // Create a list for every photon in which channel they are.
         // Empty channels that are post-selected to zero are appended at the endl.
         ch.resize(nph+nempty);
+        pch.resize(nph+nempty);
         k=0;
         l=0;
         for(ich=0;ich<ndec;ich++){
             for(iph=0;iph<def(1,ich);iph++){
-                ch[k]=def(0,ich);
+                ch(k)=def(0,ich);
+                pch(k)=def(2,ich);
                 k++;
             }
 
             if(def(1,ich)==0){
                 ch(nph+l)=def(0,ich);
+                pch(nph+l)=-1;
                 l++;
             }
         }
-
 
         // Initialize projector aux variables.
         nprj=0;
@@ -675,6 +681,7 @@ void dmatrix:: add_state_cond(int ndec, mati def,state *in_state,qocircuit *qoc)
             tim=new int[nph+1]();
             while(tim[nph]==0){
                 // Create Projector definition
+                eph=0;
                 nentry=0;
                 selhash.clear();
                 select.setZero(4,ndec*qoc->nm*qoc->ns);
@@ -702,36 +709,53 @@ void dmatrix:: add_state_cond(int ndec, mati def,state *in_state,qocircuit *qoc)
                     select(1,k)=im;
                     select(2,k)=is;
 
-                    if((iph<nph)&&(im==pol[iph])&&(is==tim[iph])) select(3,k)=select(3,k)+1;
+                    if((iph<nph)&&(im==pol[iph])&&(is==tim[iph])&&((im==pch(iph))||(pch(iph)==-1))){
+                        if(ch(iph)<qoc->ndetc){
+                            nwi=qoc->det_win(0,ch(iph));
+                            nwf=qoc->det_win(1,ch(iph))+1;
+                            if(qoc->det_win(0,ch(iph))<0) nwi=0;
+                            if(qoc->det_win(1,ch(iph))<0) nwf=qoc->np+1;
+                        }else{ // This is needed to handle the ignored.
+                            nwi=0;
+                            nwf=qoc->np+1;
+                        }
+
+                        if((is>=nwi*qoc->nsp)&&(is<nwf*qoc->nsp)){
+                            select(3,k)=select(3,k)+1;
+                            eph=eph+1;
+                        }
+                    }
                 }}}
 
                 // Create projector.
-                // Check that we have not generated that projector before.
-                // Photons are indistinguishable therefore in the way this loop
-                // is built repetitions may appear. If it has not been generated
-                // before the projector is created
-                for(i=0;i<(ndec*qoc->nm*qoc->ns);i++){
-                    keyprj[i]=select(3,i);
-                }
-                prjvalue=hashval(keyprj,ndec*qoc->nm*qoc->ns);
-                vprjhash=prjhash.find(prjvalue);
-                // If the projector has not been created before
-                if(vprjhash==prjhash.end()){
-                    // We updated the entry in the corresponding hash table
-                    prjhash[prjvalue]=nprj;
-                    nprj=nprj+1;
+                // Note that polarization requirement may discard photons. In this case we do not
+                // create the projector.
+                if(eph==nph){
+                    // Check that we have not generated that projector before.
+                    // Photons are indistinguishable therefore in the way this loop
+                    // is built repetitions may appear. If it has not been generated
+                    // before the projector is created
+                    for(i=0;i<(ndec*qoc->nm*qoc->ns);i++) keyprj[i]=select(3,i);
+                    prjvalue=hashval(keyprj,ndec*qoc->nm*qoc->ns);
+                    vprjhash=prjhash.find(prjvalue);
+                    // If the projector has not been created before
+                    if(vprjhash==prjhash.end()){
+                        // We updated the entry in the corresponding hash table
+                        prjhash[prjvalue]=nprj;
+                        nprj=nprj+1;
 
-                    // We create the projector
-                    prj=new projector(qoc->num_levels(),1,in_state->vis); //<<<<Check this
-                    prj->add_term(1.0,select,qoc);
+                        // We create the projector
+                        prj=new projector(qoc->num_levels(),1,in_state->vis);
+                        prj->add_term(1.0,select,qoc);
 
-                    // Apply the projector to the input state and store the result
-                    newstate=in_state->post_selection(prj);
-                    this->sum_state(newstate);
+                        // Apply the projector to the input state and store the result
+                        newstate=in_state->post_selection(prj,qoc);
+                        this->sum_state(newstate);
 
-                    // Free memory
-                    delete newstate;
-                    delete prj;
+                        // Free memory
+                        delete newstate;
+                        delete prj;
+                    }
                 }
 
                 // ADVANCE "Time" in LOOP
@@ -768,7 +792,6 @@ void dmatrix:: add_state_cond(int ndec, mati def,state *in_state,qocircuit *qoc)
     // the the input state is just added to the matrix
         sum_state(in_state);
     }
-
 }
 
 
@@ -856,8 +879,8 @@ dmatrix *dmatrix::calc_measure(qocircuit *qoc){
 // Relabels the dictionary entries of the density matrix.
 //
 //-----------------------------------------------------------
-dmatrix *dmatrix::relabel(veci label_idx, qocircuit *qoc){
-//  veci label_idx          // Label transformation vector
+dmatrix *dmatrix::relabel(mati label_idx, qocircuit *qoc){
+//  mati label_idx          // Label transformation matrix
 //  qocircuit *qoc          // Circuit to which the density matrix is referred.
 //  Variables.
     int     *rowocc;        // New dictionary ket occupation of the new relabeled density matrix (referred to rows).
@@ -882,16 +905,10 @@ dmatrix *dmatrix::relabel(veci label_idx, qocircuit *qoc){
     vecd     prob;          // Probabilities by common labels
     // Note that the division between rows and columns is conceptual. There is only one hash table for both.
     // Auxiliary index
-    int  i;             // Aux index
-    int  j;             // Aux index
-    int  k;             // Aux index
+    int      i;             // Aux index
+    int      j;             // Aux index
+    int      k;             // Aux index
 
-
-    // Set up measurement period.
-    nwi=qoc->mpi;
-    nwf=qoc->mpf+1;
-    if(qoc->mpi<0) nwi=0;
-    if(qoc->mpf<0) nwf=qoc->np+1;
 
     // Reserve memory for new partial matrix
     newdmat=new dmatrix(mem);
@@ -904,7 +921,7 @@ dmatrix *dmatrix::relabel(veci label_idx, qocircuit *qoc){
     prob.setZero(dicc->nket);
     for(i=0;i<dicc->nket;i++){
     for(j=i;j<dicc->nket;j++){
-    if(ketcompatible(i,j,qoc)==1){
+    if(ketcompatible(i,j,label_idx,qoc)==1){
         // Reserve memory
         rowocc=new int[dicc->nlevel]();
         colocc=new int[dicc->nlevel]();
@@ -920,19 +937,25 @@ dmatrix *dmatrix::relabel(veci label_idx, qocircuit *qoc){
             ip=qoc->idx[newk].s/qoc->nsp;
 
             // Update packet number
-            ns=label_idx(is);
-
-            // Reinterpretation
-            auxstore=qoc->i_idx[ch][pol][ns];
-            istore=0;
-            while(auxstore!=newdmat->dicc->vis[istore]) istore++; // Don't like it very much. But those list are not very large.
+            ns=label_idx(0,is);
+            if(ns>=0){ // Safety measure
+                // Reinterpretation
+                auxstore=qoc->i_idx[ch][pol][ns];
+                istore=0;
+                while(auxstore!=newdmat->dicc->vis[istore]) istore++; // Don't like it very much. But those list are not very large.
 
             // Store level
             // Only stored if is a visible period.
-            if((ip>=nwi)&&(ip<nwf)){
-                rowocc[istore]=rowocc[istore]+dicc->ket[i][k];
-                colocc[istore]=colocc[istore]+dicc->ket[j][k];
-                if((dicc->ket[i][k]>0)||(dicc->ket[j][k]>0)) isempty=false;
+                nwi=qoc->det_win(0,ch);
+                nwf=qoc->det_win(1,ch)+1;
+                if(qoc->det_win(0,ch)<0) nwi=0; // No ignored here.
+                if(qoc->det_win(1,ch)<0) nwf=qoc->np+1;
+
+                if((ip>=nwi)&&(ip<nwf)){
+                    rowocc[istore]=rowocc[istore]+dicc->ket[i][k];
+                    colocc[istore]=colocc[istore]+dicc->ket[j][k];
+                    if((dicc->ket[i][k]>0)||(dicc->ket[j][k]>0)) isempty=false;
+                }
             }
 
         }
@@ -958,11 +981,10 @@ dmatrix *dmatrix::relabel(veci label_idx, qocircuit *qoc){
         delete[] colocc;
     }}}
 
-
     // OFF DIAGONAL ELEMENTS
     for(i=0;i<dicc->nket;i++){
     for(j=0;j<dicc->nket;j++){
-    if(ketcompatible(i,j,qoc)==1){
+    if(ketcompatible(i,j,label_idx,qoc)==1){
         // Reserve memory
         rowocc=new int[dicc->nlevel]();
         colocc=new int[dicc->nlevel]();
@@ -978,21 +1000,26 @@ dmatrix *dmatrix::relabel(veci label_idx, qocircuit *qoc){
             ip=qoc->idx[newk].s/qoc->nsp;
 
             // Update packet number
-            ns=label_idx(is);
+            ns=label_idx(0,is);
+            if(ns>=0){
+                // Reinterpretation
+                auxstore=qoc->i_idx[ch][pol][ns];
+                istore=0;
+                while(auxstore!=newdmat->dicc->vis[istore]) istore++; // Don't like it very much. But those list are not very large.
 
-            // Reinterpretation
-            auxstore=qoc->i_idx[ch][pol][ns];
-            istore=0;
-            while(auxstore!=newdmat->dicc->vis[istore]) istore++; // Don't like it very much. But those list are not very large.
+                // Store level
+                // Only stored if is a visible period.
+                nwi=qoc->det_win(0,ch);
+                nwf=qoc->det_win(1,ch)+1;
+                if(qoc->det_win(0,ch)<0) nwi=0; // No ignored here.
+                if(qoc->det_win(1,ch)<0) nwf=qoc->np+1;
 
-            // Store level
-            // Only stored if is a visible period.
-            if((ip>=nwi)&&(ip<nwf)){
-                rowocc[istore]=rowocc[istore]+dicc->ket[i][k];
-                colocc[istore]=colocc[istore]+dicc->ket[j][k];
-                if((dicc->ket[i][k]>0)||(dicc->ket[j][k]>0)) isempty=false;
+                if((ip>=nwi)&&(ip<nwf)){
+                    rowocc[istore]=rowocc[istore]+dicc->ket[i][k];
+                    colocc[istore]=colocc[istore]+dicc->ket[j][k];
+                    if((dicc->ket[i][k]>0)||(dicc->ket[j][k]>0)) isempty=false;
+                }
             }
-
         }
 
         //Store entry
@@ -1029,14 +1056,17 @@ dmatrix *dmatrix::get_counts(qocircuit *qoc){
 //  Variables
     dmatrix   *aux;            // Auxiliary density matrix
     ket_list  *newdicc;        // New dictionary definition
-    veci       label_idx;       // New label definitions
+    mati       label_idx;       // New label definitions
 //  Auxiliary index
     int        i;              // Aux index
 
 
     // Create the label definition
-    label_idx.resize(qoc->ns);
-    for(i=0;i<qoc->ns;i++) label_idx(i)=0;
+    label_idx.resize(2,qoc->ns);
+    for(i=0;i<qoc->ns;i++){
+        label_idx(0,i)=0;
+        label_idx(1,i)=i;
+    }
 
     // Perform the relabeling
     aux=relabel(label_idx,qoc);
@@ -1060,14 +1090,17 @@ dmatrix *dmatrix::get_period(qocircuit *qoc){
 //  qocircuit *qoc;            // Circuit to which the density matrix is referred.
 //  Variables
     dmatrix   *aux;            // Auxiliary density matrix
-    veci       label_idx;      // New label definitions
+    mati       label_idx;      // New label definitions
 //  Auxiliary index
     int        i;              // Aux index
 
 
     // Create the label definition
-    label_idx.resize(qoc->ns);
-    for(i=0;i<qoc->ns;i++) label_idx(i)=i/qoc->nsp;
+    label_idx.resize(2,qoc->ns);
+    for(i=0;i<qoc->ns;i++){
+        label_idx(0,i)=i/qoc->nsp;
+        label_idx(1,i)=i;
+    }
 
     // Perform the relabeling
     aux=relabel(label_idx,qoc);
@@ -1085,10 +1118,10 @@ dmatrix *dmatrix::get_period(qocircuit *qoc){
 dmatrix *dmatrix::get_times(qocircuit *qoc){
 //  qocircuit *qoc;            // Circuit to which the density matrix is referred.
 //  Variables
-    int npack;                 // Number of packet
-    int nt;                    // Number of times
+    int        npack;          // Number of packet
+    int        nt;             // Number of times
     dmatrix   *aux;            // Auxiliary density matrix
-    veci       label_idx;      // New label definitions
+    mati       label_idx;      // New label definitions
 //  Auxiliary index
     int        i;              // Aux index
 
@@ -1098,9 +1131,15 @@ dmatrix *dmatrix::get_times(qocircuit *qoc){
     nt=qoc->emitted->times.size();
 
     // Create the label definition
-    label_idx.resize(qoc->ns);
+    label_idx.resize(2,qoc->ns);
     for(i=0;i<qoc->ns;i++){
-        if(i%qoc->nsp<npack) label_idx(i)=qoc->emitted->pack_def(0,i%qoc->nsp)+(i/qoc->nsp)*nt;
+        if(i%qoc->nsp<npack){
+            label_idx(0,i)=qoc->emitted->pack_def(0,i%qoc->nsp)+(i/qoc->nsp)*nt;
+            label_idx(1,i)=qoc->emitted->pack_def(1,i%qoc->nsp);
+        }else{
+            label_idx(0,i)=-1;
+            label_idx(1,i)=-1;
+        }
     }
 
     // Perform the relabeling
@@ -1111,14 +1150,13 @@ dmatrix *dmatrix::get_times(qocircuit *qoc){
 }
 
 
-
 //-------------------------------------------------------------------------------------------------
 //
 // Ket "compatibility". Both kets have the same photons packets?
 // Auxiliary private function. Not intended for external use.
 //
 //-------------------------------------------------------------------------------------------------
-int dmatrix::ketcompatible(int A, int B, qocircuit *qoc){
+int dmatrix::ketcompatible(int A, int B, mati label_idx, qocircuit *qoc){
 //  state *A           // State A
 //  state *B           // State B
 //  qocircuit *qoc     // Circuit to which the density matrix is referred.
@@ -1128,25 +1166,14 @@ int dmatrix::ketcompatible(int A, int B, qocircuit *qoc){
     int    compatible; // Are A an B compatible 0=No/1=Yes
     int    lev;        // Level of state A
     int    is;         // Level 2 wave packet
-    int    ip;         // Period number
-    int    nwi;        // Initial detection window.
-    int    nwf;        // Final detection window.
     // Auxiliary index
     int    i;          // Aux index
-
-
-//    cout << pack_idx << endl;
-   // Set up measurement period.
-    nwi=qoc->mpi;
-    nwf=qoc->mpf+1;
-    if(qoc->mpi<0) nwi=0;
-    if(qoc->mpf<0) nwf=qoc->np+1;
+    int    w;          // Aux index
 
 
     // Reserve memory
     flistA.resize(qoc->ns);
     flistB.resize(qoc->ns);
-
 
     // Initialize lists an variables
     flistA.setZero(qoc->ns);
@@ -1155,14 +1182,13 @@ int dmatrix::ketcompatible(int A, int B, qocircuit *qoc){
     // Create list of indexes to compatibility comparison
     for(i=0;i<dicc->nlevel;i++){
         lev=dicc->vis[i];
-
         is=qoc->idx[lev].s;
-        ip=qoc->idx[lev].s%qoc->nsp;
+        w=label_idx(1,is);
 
         // We compute the new dictionary element
-        if((ip>=nwi)&&(ip<nwf)){
-            flistA[is]=flistA[is]+dicc->ket[A][i];
-            flistB[is]=flistB[is]+dicc->ket[B][i];
+        if(w>=0){
+            flistA[w]=flistA[w]+dicc->ket[A][i];
+            flistB[w]=flistB[w]+dicc->ket[B][i];
         }
     }
 
@@ -1206,3 +1232,114 @@ dmatrix *dmatrix::calc_measure(qodev *dev){
 
     return this->calc_measure(dev->circ);
 }
+
+
+//---------------------------------------------------------------------------
+//
+//  Encode a dmatrix into a qubit representation using path encoding
+//  Circuit version.
+//
+//----------------------------------------------------------------------------
+dmatrix *dmatrix::translate(mati qdef,qocircuit *qoc){
+//  mati       qdef;   // Integer matrix with the qubit to channel definitions
+//  qocircuit *qoc;    // Quatum optical circuit to which this dmatrix is referred
+//  Variables
+    state   *raw;      // Raw state (not encoded)
+    state   *encoded;  // Encoded state
+    dmatrix *newmat;   // New (encoded) density matrix
+//  Auxiliary index
+    int      i;        // Auxiliary index
+
+
+    // Create new matrix
+    newmat=this->clone();
+
+    // Encode
+    raw=new state(newmat->dicc->nlevel,newmat->dicc->nket);
+    for(i=0;i<newmat->dicc->nket;i++) raw->add_term(1.0,newmat->dicc->ket[i]);
+    encoded=raw->encode(qdef,qoc);
+
+    // Update
+    delete newmat->dicc;
+    newmat->dicc=new ket_list(encoded->nlevel,dicc->maxket);
+    for(i=0;i<encoded->nket;i++) newmat->dicc->add_ket(encoded->ket[i]);
+
+    // Free memory
+    delete raw;
+    delete encoded;
+
+    // Density matrix
+    return newmat;
+}
+
+
+//---------------------------------------------------------------------------
+//
+//  Encode a dmatrix into a qubit representation using path encoding
+//  Device version.
+//
+//----------------------------------------------------------------------------
+dmatrix *dmatrix::translate(mati qdef,qodev *dev){
+//  mati       qdef; // Integer matrix with the qubit to channel definitions
+//  qodev     *dev;  // Quatum optical device to which this dmatrix is referred
+
+
+    return this->translate(qdef,dev->circ);
+}
+
+
+//---------------------------------------------------------------------------
+//
+//  Encode a dmatrix into a qubit representation using polarization encoding
+//  Circuit version.
+//
+//----------------------------------------------------------------------------
+dmatrix *dmatrix::pol_translate(veci qdef,qocircuit *qoc){
+//  veci       qdef;   // Integer vector with the qubit to channel definitions
+//  qocircuit *qoc;    // Quatum optical circuit to which this dmatrix is referred
+//  Variables
+    state   *raw;      // Raw state (not encoded)
+    state   *encoded;  // Encoded state
+    dmatrix *newmat;   // New (encoded) density matrix
+//  Auxiliary index
+    int      i;        // Auxiliary index
+
+
+    // Create new matrix
+    newmat=this->clone();
+
+    // Encode
+    raw=new state(newmat->dicc->nlevel,newmat->dicc->nket);
+    for(i=0;i<newmat->dicc->nket;i++) raw->add_term(1.0,newmat->dicc->ket[i]);
+    encoded=raw->pol_encode(qdef,qoc);
+
+    // Update
+    delete newmat->dicc;
+    newmat->dicc=new ket_list(encoded->nlevel,dicc->maxket);
+    for(i=0;i<encoded->nket;i++) newmat->dicc->add_ket(encoded->ket[i]);
+
+    // Free memory
+    delete raw;
+    delete encoded;
+
+    // Density matrix
+    return newmat;
+
+}
+
+
+//---------------------------------------------------------------------------
+//
+//  Encode a dmatrix into a qubit representation using polarization encoding
+//  Device version.
+//
+//----------------------------------------------------------------------------
+dmatrix *dmatrix::pol_translate(veci qdef,qodev *dev){
+//  veci       qdef; // Integer vector with the qubit to channel definitions
+//  qodev     *dev;  // Quatum optical device to which this dmatrix is referred
+
+
+    return this->pol_translate(qdef,dev->circ);
+}
+
+

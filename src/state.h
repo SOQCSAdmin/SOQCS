@@ -64,6 +64,7 @@ public:
     void normalize();                                                    // Normalizes the state
     int rephase(hterm def,qocircuit *qoc);                               // Changes the global phase of the state.
     state *post_selection(state *prj);                                   // Post select a state using a "projector"
+    state *post_selection(state *prj, qocircuit *qoc);                   // Post select a state using a "projector" (Ignores photons out of detection window. For internal use only)
     state *remove_empty_channels(veci ch, int t,qocircuit *qoc);         // Remove all the levels corresponding to the specified channels provided that they are zero.
     state *convert(veci cnv, qocircuit *qoc);                            // Re-arranges the packet numeration
 
@@ -79,14 +80,17 @@ public:
     int BellP(mati ch,char kind, double phi, qocircuit *qoc);                                                          // Non-ideal bell emitter with a phase e^(-i phi) in the second term. (Polarization encoding)
     int QDPair(int i_ch0,int i_ch1, veci i_t, double dt, double k, double S, double tss, double thv, qocircuit *qoc);  // Single pair photon emission in a QD.
     int Bell_Path(int i_ch0,int i_ch1, veci i_t, char kind, double phi, qocircuit *qoc);                               // Auxiliary method for non-ideal bell emission. (Path encoding)
-    int  Bell_Pol(int i_ch0,int i_ch1, veci i_t, char kind, double phi,qocircuit *qoc);                                // Auxiliary method for non-ideal bell emission. (Polarization encoding)
+    int Bell_Pol(int i_ch0,int i_ch1, veci i_t, char kind, double phi,qocircuit *qoc);                                 // Auxiliary method for non-ideal bell emission. (Polarization encoding)
     int Corr_Pol(int i_ch0,int i_ch1, veci i_t, qocircuit *qoc);                                                       // Auxiliary method for QD emission. Correlated emitter
     int Rand_Pol(int i_ch0,int i_ch1, veci i_t, qocircuit *qoc);                                                       // Auxiliary method for QD emission. Random emitter
 
     // Qubit codification methods (path encoding)
-    state *encode(mati qbits,qocircuit *qoc);                             // Encode from photonic to QuBit representation
-    state *decode(mati qdef,state *anzilla,qocircuit *qoc);               // Decode from QuBit to photonic representation ( state version )
-    state *decode(mati qdef,veci anzilla,qocircuit *qoc);                 // Decode from QuBit to photonic representation ( vector version)
+    state *encode(mati qbits,qocircuit *qoc);                             // Encode from photonic to qubit representation ( Path encoding)
+    state *decode(mati qdef,state *ancilla,qocircuit *qoc);               // Decode from qubit to photonic representation ( Path encoding, state version )
+    state *decode(mati qdef,veci ancilla,qocircuit *qoc);                 // Decode from qubit to photonic representation ( Path encoding, vector version)
+    state *pol_encode(veci qbits,qocircuit *qoc);                         // Encode from photonic to qubit representation ( Polarization encoding)
+    state *pol_decode(veci qdef,state *ancilla,qocircuit *qoc);           // Decode from qubit to photonic representation ( Polarization encoding, state version )
+    state *pol_decode(veci qdef,mati ancilla,qocircuit *qoc);             // Decode from qubit to photonic representation ( Polarization encoding, vector version)
 
 protected:
     // Auxiliary methods
@@ -526,6 +530,16 @@ public:
     */
     state *post_selection(state *prj);
     /**
+    *  Post-selection over states by the condition defined in the the "projector". It ignores photons out of the detection window. <br>
+    *  <b> Intended for internal use of dmatrix. </b>
+    *
+    *  @param state *prj   Projector with the description of the levels (and their occupations) to be post-selected.
+    *  @param qocircuit *qoc  Circuit to which the projector is related.
+    *  @return Returns the post-selected state.
+    *  @ingroup State_operations
+    */
+    state *post_selection(state *prj, qocircuit *qoc);
+    /**
     *  Remove all the levels corresponding to the specified channels provided that they are zero.
     *  Additionally it also removes from the rest of the channels the levels corresponding with
     * a non zero wave-packet index if different packets are not allowed.
@@ -806,24 +820,55 @@ public:
     *  <b> Only for ideal circuits. nm=1 and ns=1 </b>
     *
     *  @param mati qbits Qubit definition. Matrix with a column entry for each qubit where they are defined the two photonic channels needed to encode the qubit. A 01 occupation means Q=0 and a 10 occupation Q=1.
-    *  @param anzilla. State defining the occupations of the auxiliary channels that are not-part of a qubit but need to be initialized with some specific values to the circuit to work.
+    *  @param state * ancilla. State defining the occupations of the auxiliary channels that are not-part of a qubit but need to be initialized with some specific values to the circuit to work.
     *  @param qocircuit *qoc Circuit to which the state is related.
     *  @return Decoded state.
     *  @ingroup State_qubit
     */
-    state *decode(mati qdef,state *anzilla,qocircuit *qoc);
+    state *decode(mati qdef,state *ancilla,qocircuit *qoc);
     /**
     *  It decodes qubit state into a photonic state using path encoding. (Vector definition version) <br>
     *  <b> Only for ideal circuits. nm=1 and ns=1 </b>
     *
     *  @param mati qbits Qubit definition. Matrix with a column entry for each qubit where they are defined the two photonic channels needed to encode the qubit. A 01 occupation means Q=0 and a 10 occupation Q=1.
-    *  @param anzilla. Vector defining the values of the anzilla channels in order ( from smaller to larger channel number ).
+    *  @param veci ancilla. Vector defining the values of the ancilla channels in order ( from smaller to larger channel number ).
     *  @param qocircuit *qoc Circuit to which the state is related.
     *  @return Decoded state.
     *  @ingroup State_qubit
     */
-    state *decode(mati qdef,veci anzilla,qocircuit *qoc);
-
+    state *decode(mati qdef,veci ancilla,qocircuit *qoc);
+    /**
+    *  It encodes a photonic state into a qubit state (polarization encoding). <br>
+    *  <b> Only for ideal circuits ns=1 </b>
+    *
+    *  @param veci qbits Qubit definition. Vector that specifies which channel corresponds to each qubit. A horizontal polarization H means Q=0 and a vertical one V means Q=1.
+    *  @param qocircuit *qoc Circuit to which the state is related.
+    *  @return Encoded state.
+    *  @ingroup State_qubit
+    */
+    state *pol_encode(veci qbits,qocircuit *qoc);
+    /**
+    *  It decodes qubit state into a photonic state using polarization encoding. (State definition version) <br>
+    *  <b> Only for ideal circuits ns=1 </b>
+    *
+    *  @param veci qbits Qubit definition. Vector that specifies which channel corresponds to each qubit. A horizontal polarization H means Q=0 and a vertical one V means Q=1.
+    *  @param state *ancilla. State defining the occupations of the auxiliary channels that are not-part of a qubit but need to be initialized with some specific values to the circuit to work.
+    *  @param qocircuit *qoc Circuit to which the state is related.
+    *  @return Decoded state.
+    *  @ingroup State_qubit
+    */
+    state *pol_decode(veci qdef,state *ancilla,qocircuit *qoc);
+    /**
+    *  It decodes qubit state into a photonic state using polarization encoding. (Vector definition version) <br>
+    *  <b> Only for ideal circuits  ns=1 </b>
+    *
+    *  @param veci qbits Qubit definition. Vector that specifies which channel corresponds to each qubit. A horizontal polarization H means Q=0 and a vertical one V means Q=1.
+    *  @param veci ancilla. Vector defining the values of the ancilla channels in order ( from smaller to larger channel number ).
+    *  @param qocircuit *qoc Circuit to which the state is related.
+    *  @return Decoded state.
+    *  @ingroup State_qubit
+    */
+    state *pol_decode(veci qdef,mati ancilla,qocircuit *qoc);
 protected:
     // Auxiliary methods
     /** @defgroup Aux_operations State auxiliary methods

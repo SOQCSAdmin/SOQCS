@@ -35,9 +35,6 @@ public:
     p_bin *sample( state *istate,qocircuit *qoc, int N );             // Calculate output sample as function of the input state
     p_bin *sample( ph_bunch *input, qocircuit *qoc, int N );          // Calculate output sample as obtained from physical detector from an input photon bunch
 
-    // SHOES. Assembler methods
-    matc assemble(mati in_qdef, mati out_qdef,state* anzilla,qocircuit *qoc);          // Assemble circuit matrix in q-bit encoding
-    matc init_mtx(mati qdef, state* input,qocircuit *qoc);            // Assemble initialization matrix in q-bit encoding
 protected:
     state *DirectF(state *istate,qocircuit *qoc );                    // Direct  full distribution
     state *DirectR( state *istate,qocircuit *qoc );                   // DirectR restricted distribution
@@ -193,6 +190,7 @@ public:
     *  @ingroup Simulation_execution
     */
     p_bin *sample( state *istate,qocircuit *qoc, int N );
+
 
 protected:
     /** @defgroup Simulation_auxiliary Simulator auxiliary methods

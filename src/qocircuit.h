@@ -23,47 +23,50 @@ class qocircuit{
 public:
     // Public functions
     // Management functionss
-    qocircuit(int i_nch);                                                   // Create circuit
-    qocircuit(int i_nch, int i_nm, int i_ns);                               // Create circuit
-    qocircuit(int i_nch, int i_nm, int i_ns, int clock, char i_ckind);      // Create circuit
+    qocircuit(int i_nch);                                                    // Create circuit
+    qocircuit(int i_nch, int i_nm, int i_ns);                                // Create circuit
+    qocircuit(int i_nch, int i_nm, int i_ns, int clock, char i_ckind);       // Create circuit
     qocircuit(int i_nch, int i_nm, int i_ns, int i_np,  double i_dtp, int clock, int i_R, bool loss, char i_ckind);   // Create circuit
-    ~qocircuit();                                                           // Destroy circuit
-    qocircuit *clone();                                                     // Copy a circuit
-    void reset();                                                           // Reset circuit
-    int concatenate(qocircuit *qoc);                                        // Concatenates two circuits
-    int num_levels();                                                       // Returns the number of levels of this circuit
+    ~qocircuit();                                                            // Destroy circuit
+    qocircuit *clone();                                                      // Copy a circuit
+    void reset();                                                            // Reset circuit
+    int concatenate(qocircuit *qoc);                                         // Concatenates two circuits
+    int num_levels();                                                        // Returns the number of levels of this circuit
 
 
     // Circuit elements
     //      Basic elements
-    void random_circuit();                                                  // Adds a random circuit
-    int NSX(int i_ch1, int i_ch2, int i_ch3);                               // Adds a built-in NSX circuit
-    int beamsplitter(int i_ch1, int i_ch2, double theta, double phi);       // Adds a ideal beamsplitter to the circuit
-    int dielectric(int i_ch1, int i_ch2, cmplx t, cmplx r);                 // Adds a physical dieletric beamsplitter
-    int MMI2(int i_ch1, int ch2);                                           // Adds a 2x2 ideal MMI
-    int rewire(int i_ch1,int i_ch2);                                        // Adds a swap gate between two channels
-    int phase_shifter(int i_ch, double phi);                                // Adds a phase shifter to the circuit
-    int dispersion(int i_ch, double dt);                                    // Adds a phase shift that depends on the optical path (in time units)
-    int dispersion(int i_ch, int P, double dt);                             // Adds a phase shift that depends on the optical path provided polarization P is fulfilled.
-    int phase_shifter(int i_ch, cmplx t);                                   // Adds a General phase shifter with losses
-    int loss(int i_ch, double l);                                           // Adds a lossy medium
-    int custom_gate(mati iodef, matc mtx);                                  // Adds a custom gate
+    void random_circuit();                                                   // Adds a random circuit
+    int NSX(int i_ch1, int i_ch2, int i_ch3);                                // Adds a built-in NSX circuit
+    int beamsplitter(int i_ch1, int i_ch2, double theta, double phi);        // Adds a ideal beamsplitter to the circuit
+    int dielectric(int i_ch1, int i_ch2, cmplx t, cmplx r);                  // Adds a physical dieletric beamsplitter
+    int MMI2(int i_ch1, int ch2);                                            // Adds a 2x2 ideal MMI
+    int rewire(int i_ch1,int i_ch2);                                         // Adds a swap gate between two channels
+    int phase_shifter(int i_ch, double phi);                                 // Adds a phase shifter to the circuit
+    int dispersion(int i_ch, double dt);                                     // Adds a phase shift that depends on the optical path (in time units)
+    int dispersion(int i_ch, int P, double dt);                              // Adds a phase shift that depends on the optical path provided polarization P is fulfilled.
+    int phase_shifter(int i_ch, cmplx t);                                    // Adds a General phase shifter with losses
+    int loss(int i_ch, double l);                                            // Adds a lossy medium
+    int add_gate(veci chlist, qocircuit *qoc);                               // Adds a new gate defined by a circuit
+    int custom_gate(mati iodef, matc mtx);                                   // Adds a custom gate
+
 
     //      Polarization elements
-    int rotator(int i_ch, double d_theta, double d_phi);                    // Adds a rotator to the circuit.
-    int pol_beamsplitter(int i_ch1, int i_ch2, int P);                      // Adds a polarizing beamsplitter
-    int pol_phase_shifter(int i_ch, int P, double phi);                     // Adds a polarizing phase shifter to the circuit
-    int pol_phase_shifter(int i_ch, int P, cmplx t);                        // Adds a general polarizing phase shifter with losses
-    int waveplate(int i_ch, double d_alpha, double d_gamma;                 // Adds a waveplate
-    int half(int i_ch, double alpha);                                       // Adds a half-waveplate
-    int quarter(int i_ch, double alpha);                                    // Adds a quarter-waveplate
+    int rotator(int i_ch, double d_theta, double d_phi);                     // Adds a rotator to the circuit.
+    int pol_beamsplitter(int i_ch1, int i_ch2, int P);                       // Adds a polarizing beamsplitter
+    int pol_phase_shifter(int i_ch, int P, double phi);                      // Adds a polarizing phase shifter to the circuit
+    int pol_phase_shifter(int i_ch, int P, cmplx t);                         // Adds a general polarizing phase shifter with losses
+    int waveplate(int i_ch, double d_alpha, double d_gamma;                  // Adds a waveplate
+    int half(int i_ch, double alpha);                                        // Adds a half-waveplate
+    int quarter(int i_ch, double alpha);                                     // Adds a quarter-waveplate
 
 
     //      Detection elements
-    int ignore(int i_ch);                                                   // Flags a channel to be ignored
-    int detector(int i_ch);                                                 // Adds a detector
-    int detector(int i_ch, int cond);                                       // Adds a conditional detection
+    int ignore(int i_ch);                                                    // Flags a channel to be ignored
+    int detector(int i_ch);                                                  // Adds a detector
+    int detector(int i_ch, int cond);                                        // Adds a conditional detection
     int detector(int i_ch, int cond, double eff, double blnk, double gamma); // Adds a general physical detector
+    int detector(int i_ch, int cond, int pol, int mpi, int mpo, double eff, double blnk, double gamma); // Adds a general physical detector with a window of detection (and conditional detection by polarization)
     int remdec();                                                            // Returns the remaining number of not defined detectors
     void noise(double stdev2);                                               // Adds noise to the output
 
@@ -81,7 +84,7 @@ public:
 
     // Print functions
     void prnt(int format);                                                   // Print circuit matrix
-
+    void prntGS();                                                           // Print Gram-Schmidt coefficients
 
     // Auxiliary functions
     void create_circuit(int i_nch, int i_nm, int i_ns, int i_np, double i_dtp, int clock, int i_R, bool loss, char ckind);          // Auxiliary function to create circuits
@@ -314,8 +317,6 @@ public:
     double dtp;             ///< Period length
     int    np;              ///< Number of periods
     int    nsp;             ///< Number of wavepackets by period ns=N*nsp
-    int    mpi;             ///< Initial measurement time (Provisional)
-    int    mpf;             ///< Final measurement time (Provisional)
 
     // Dictionary
     level *idx;             ///< Level index: index->level.
@@ -339,6 +340,7 @@ public:
     int    nignored;        ///< Number of channels ignored (which turn off detectors).
     int    timed;           ///< There is a clock related with the detectors 0=No/1=Yes
     mati   det_def;         ///< Post-selection condition definition
+    mati   det_win;
     matd   det_par;         ///< Detector physical parameters
     veci   ch_ignored;      ///< Channels with no detectors or ignored channels.
     int    R;               ///< Number of iterations to calculate detector dead time and dark-counts
@@ -567,6 +569,15 @@ public:
     */
     int loss(int i_ch, double l);
     /**
+    *   Adds a gate using other circuit as the gate definition
+    *
+    *  @param veci chlist  List of channels to which the new gate is attached
+    *  @param qocircuit *qoc Circuit defining the gate
+    *  @return 0 if success -1 if an error happened.
+    *  @ingroup Circuit_basic
+    */
+    int add_gate(veci chlist, qocircuit *qoc);
+    /**
     *  Adds a custom gate to the circuit.
     *
     *  @param mati iodef  List of channels and polarizations that define (by column) the input to the gate.
@@ -575,6 +586,7 @@ public:
     *  @ingroup Circuit_basic
     */
     int custom_gate(mati iodef, matc U);
+
 
     //     Polarization elements elements
     /** @defgroup Circuit_polar Circuit polarization elements
@@ -612,6 +624,15 @@ public:
     */
     int pol_phase_shifter(int i_ch, int P, double phi);
     /**
+    *  Adds a filter that removes light with polarization P.
+    *
+    *  @param int i_ch      Polarization filter input channel.
+    *  @param int P         Polarization removed by the filter.
+    *  @return 0 if success -1 if an error happened.
+    *  @ingroup Circuit_polar
+    */
+    int pol_filter(int i_ch, int P);
+    /**
     *  Adds a general polarized phase shifter with losses to the circuit in channel i_ch.
     *
     *  @param int i_ch      Phase shifter input channel.
@@ -632,6 +653,7 @@ public:
     *  @ingroup Circuit_polar
     */
     int waveplate(int i_ch, double d_alpha, double d_gamma);
+
     /**
     *  Adds a half waveplate attached to channels i_ch1 and i_ch2.
     *
@@ -793,6 +815,24 @@ public:
     *  @ingroup Circuit_detector
     */
     int detector(int i_ch, int cond, double eff, double blnk, double gamma);
+    /**
+    *  Adds a general physical detector with a window of detection (and conditional detection by polarization).
+    *
+    *  @param int i_ch      Detector channel.
+    *  @param int cond      Detection condition.<br>
+    *       cond>=0:  Readings in the remaining channels are considered only by calculations in probability bins and density matrices if the number of photons in this channel is equal to cond.<br>
+    *       cond=-1:  There is no condition and works as a normal detector.<br>
+    *       cond=-2:  The channel is ignored by outcome calculations in probability bins and density matrices.<br>
+    *  @param int pol       Polarization condition. If cond>=0, pol determines the polarization of the photons to fulfill the condition. Note that if pol=-1 no assumption about the polarization of those photons is made.<br>
+    *  @param int mpi       Initial period of the detection window (if -1 takes the first one as default).
+    *  @param int mpo       Final period of the detection window (if -1 takes the last one as default).
+    *  @param double eff    Efficiency of the detector.
+    *  @param duble  blnk   Ratio of time in which the detector is inactive due other detections.
+    *  @param double gamma  Average rate of dark counts in this channel.
+    *  @return 0 if success -1 if an error happened.
+    *  @ingroup Circuit_detector
+    */
+    int detector(int i_ch, int cond, int pol, int mpi, int mpo, double eff, double blnk, double gamma);
     /**
     *  Number of channels that remain without a detector.
     *

@@ -494,7 +494,6 @@ p_bin *p_bin::post_selection(state *prj){
                 k=0;
                 for(l=0;l<nlevel;l++){
                     if(islincl[l]==1){
-                        //nstate->ket[nstate->nket][k]=ket[j][l];
                         occ[k]=ket[j][l];
                         k++;
                     }
@@ -541,12 +540,9 @@ p_bin *p_bin::calc_measure(qocircuit *qoc){
     S=qoc->R;
     stdev=sqrt(qoc->dev);
 
-    if(qoc->np>1) inperiod=this->meas_window(qoc);
-    else inperiod=this->clone();
-
     // Compute Dark counts
-    if(qoc->timed==0) dark=inperiod->dark_counts(S,qoc);
-    else dark=inperiod->clone();
+    if(qoc->timed==0) dark=this->dark_counts(S,qoc);
+    else dark=this->clone();
 
     // Compute Blinking
     blinked=dark->blink(S,qoc);
@@ -555,9 +551,13 @@ p_bin *p_bin::calc_measure(qocircuit *qoc){
     if(qoc->losses==1) lossed=blinked->compute_loss(qoc);
     else lossed=blinked->clone();
 
+    // Measurement window
+    if(qoc->np>1) inperiod=lossed->meas_window(qoc);
+    else inperiod=lossed->clone();
+
     // ignore channels
-    if(qoc->nignored>0) ignored=lossed->compute_ignored(qoc);
-    else ignored=lossed->clone();
+    if(qoc->nignored>0) ignored=inperiod->compute_ignored(qoc);
+    else ignored=inperiod->clone();
 
     // Post-selection
     if(qoc->ncond>0) measured=ignored->compute_cond(qoc);
@@ -593,15 +593,15 @@ p_bin *p_bin::calc_measure(qocircuit *qoc){
         counted=measured->clone();
     }
 
-    // Add noyse
+    // Add noise
     if (stdev>xcut) noisy=counted->white_noise(stdev);
     else noisy=counted->clone();
 
     // Free memory
-    delete inperiod;
     delete dark;
     delete blinked;
     delete lossed;
+    delete inperiod;
     delete ignored;
     delete measured;
     delete counted;
@@ -619,11 +619,12 @@ p_bin *p_bin::calc_measure(qocircuit *qoc){
 p_bin *p_bin::meas_window(qocircuit* qoc){
 //  qocircuit *qoc;     // Circuit where the detectors are defined
 //  Variables
+    bool   filter;
     int    ch;          // Channel number
     int    m;           // Mode number
     int    s;           // Wavepacket number
     int    nwi;         // First period that can be measured
-    int    nwf;         // Last period that can be measured
+    int    nwf;         // Last period (+1) that can be measured
     int    index;       // Index of a ket in this set of bins
     int   *occ;         // Level occupation
     p_bin *newpbin;     // New output probability bin
@@ -632,37 +633,47 @@ p_bin *p_bin::meas_window(qocircuit* qoc){
     int    k;           // Aux index
     int    l;           // Aux index
 
+
     // Set up measurement period.
-    nwi=qoc->mpi;
-    nwf=qoc->mpf+1;
+    i=0;
+    filter=false;
+    while((filter==false)&&(i<qoc->nch)){
+        if(qoc->det_win(0,i)>=0) filter=true;
+        if(qoc->det_win(1,i)>=0) filter=true;
+        i=i+1;
+    }
 
-    if((qoc->mpi<0)&&(qoc->mpf<0)) return this->clone();
-    if(qoc->mpi<0) nwi=0;
-    if(qoc->mpf<0) nwf=qoc->np+1;
+    // Return bins if there is no filtering
+    if(filter==false) return this->clone();
 
-    // Calculate blinking
+    // Calculate filtering
     newpbin=new p_bin(nlevel,maxket,vis);
+    for(i=0;i<nket;i++){
+        occ=new int[nlevel]();
+        for(ch=0;ch<qoc->ndetc;ch++){
+            // Set filtering window for the current detector
+            nwi=qoc->det_win(0,ch);
+            nwf=qoc->det_win(1,ch)+1;
+            if(qoc->det_win(0,ch)<0) nwi=0;
+            if(qoc->det_win(1,ch)<0) nwf=qoc->np+1;
 
-        for(i=0;i<nket;i++){
-            occ=new int[nlevel]();
-            for(ch=0;ch<qoc->nch;ch++){
+            // Store the occupation level if is inside the detection window
             for(m=0;m<qoc->nm;m++){
             for(s=0;s<qoc->ns;s++){
-                // Store the level occupation depending if the channel is blinking at that moment
                 l=qoc->i_idx[ch][m][s];
-
                 // Store
                 k=0;
                 while(vis[k]!=l) k=k+1;
                 if((s>=nwi*qoc->nsp)&&(s<nwf*qoc->nsp)) occ[k]=occ[k]+ket[i][k];
 
-            }}}
-
-            // Store level occupation
-            index=newpbin->add_ket(occ);
-            newpbin->p[index]=newpbin->p[index]+p[i];
-            delete occ;
+            }}
         }
+
+        // Store occupation
+        index=newpbin->add_ket(occ);
+        newpbin->p[index]=newpbin->p[index]+p[i];
+        delete occ;
+    }
 
     newpbin->N=N;
 
@@ -847,9 +858,10 @@ p_bin *p_bin:: post_select_cond(int ndec, mati def,qocircuit *qoc){
 //  Variables
     int        first;               // Is this the first post-selection 1='Yes'/0='No'
     int        nph;                 // Number of photons
+    int        eph;                 // Expected number of photons
     int        maxch;               // Larger channel number
     int        selbase;             // Base of the projector definition hash table
-    int        nempty;              // Number of channels with zero fotons
+    int        nempty;              // Number of channels with zero photons
     int        nentry;              // Number of entries in the projector definition
     int        nprj;                // Number of projectors
     int        iph;                 // Index of photons
@@ -859,6 +871,7 @@ p_bin *p_bin:: post_select_cond(int ndec, mati def,qocircuit *qoc){
     int       *tim;                 // "Time" configuration vector
     int       *pol;                 // Polarization configuration vector
     veci       ch;                  // List of channels by photons
+    veci       pch;                 // List of polarization by photons
     hterm      select;              // Post-selection condition
     p_bin     *post_selected;       // New post-selected state for a single projector
     p_bin     *conditioned;         // New post-selected bin
@@ -898,18 +911,21 @@ p_bin *p_bin:: post_select_cond(int ndec, mati def,qocircuit *qoc){
     selbase=max(maxch,max(qoc->nm,qoc->ns));
 
     // Create a list for every photon in which channel they are.
-    // Empty channels that are post-selected to zero are appended at the endl.
+    // Empty channels that are post-selected to zero are appended at the end.
     ch.resize(nph+nempty);
+    pch.resize(nph+nempty);
     k=0;
     l=0;
     for(ich=0;ich<ndec;ich++){
         for(iph=0;iph<def(1,ich);iph++){
-            ch[k]=def(0,ich);
+            ch(k)=def(0,ich);
+            pch(k)=def(2,ich);
             k++;
         }
 
         if(def(1,ich)==0){
             ch(nph+l)=def(0,ich);
+            pch(nph+l)=-1;
             l++;
         }
     }
@@ -930,6 +946,7 @@ p_bin *p_bin:: post_select_cond(int ndec, mati def,qocircuit *qoc){
         tim=new int[nph+1]();
         while(tim[nph]==0){
             // Create Projector definition
+            eph=0;
             nentry=0;
             selhash.clear();
             select.setZero(4,ndec*qoc->nm*qoc->ns);
@@ -957,45 +974,51 @@ p_bin *p_bin:: post_select_cond(int ndec, mati def,qocircuit *qoc){
                 select(0,k)=ch(iph);
                 select(1,k)=im;
                 select(2,k)=is;
-
-
-                if((iph<nph)&&(im==pol[iph])&&(is==tim[iph])) select(3,k)=select(3,k)+1;
+                if((iph<nph)&&(im==pol[iph])&&(is==tim[iph])&&((im==pch(iph))||(pch(iph)==-1))){
+                    select(3,k)=select(3,k)+1;
+                    eph=eph+1;
+                }
             }}}
 
+
             // Create projector.
-            // Check that we have not generated that projector before.
-            // Photons are indistinguishable therefore in the way this loop
-            // is built repetitions may appear. If it has not been generated
-            // before the projector is created
-            for(i=0;i<(ndec*qoc->nm*qoc->ns);i++){
-                keyprj[i]=select(3,i);
-            }
-            prjvalue=hashval(keyprj,ndec*qoc->nm*qoc->ns);
-            vprjhash=prjhash.find(prjvalue);
-            // If the projector has not been created before
-            if(vprjhash==prjhash.end()){
-                // We updated the entry in the corresponding hash table
-                prjhash[prjvalue]=nprj;
-                nprj=nprj+1;
-
-                // We create the projector
-                prj=new projector(this->nlevel,2,vis);
-                prj->add_term(1.0,select,qoc);
-
-                // Apply the projector to the input state and store the result
-                post_selected=this->post_selection(prj);
-
-                if(first==1){
-                    delete conditioned;
-                    conditioned=new p_bin(post_selected->nlevel,maxket,post_selected->vis);
-                    first=0;
+            // Note that polarization requirement may discard photons. In this case we do not
+            // create the projector.
+            if(eph==nph){
+                // Check that we have not generated that projector before.
+                // Photons are indistinguishable therefore in the way this loop
+                // is built repetitions may appear. If it has not been generated
+                // before the projector is created
+                for(i=0;i<(ndec*qoc->nm*qoc->ns);i++){
+                    keyprj[i]=select(3,i);
                 }
+                prjvalue=hashval(keyprj,ndec*qoc->nm*qoc->ns);
+                vprjhash=prjhash.find(prjvalue);
+                // If the projector has not been created before
+                if(vprjhash==prjhash.end()){
+                    // We updated the entry in the corresponding hash table
+                    prjhash[prjvalue]=nprj;
+                    nprj=nprj+1;
 
-                conditioned->add_bin(post_selected);
+                    // We create the projector
+                    prj=new projector(this->nlevel,2,vis);
+                    prj->add_term(1.0,select,qoc);
 
-                // Free memory
-                delete post_selected;
-                delete prj;
+                    // Apply the projector to the input state and store the result
+                    post_selected=this->post_selection(prj);
+
+                    if(first==1){
+                        delete conditioned;
+                        conditioned=new p_bin(post_selected->nlevel,maxket,post_selected->vis);
+                        first=0;
+                    }
+
+                    conditioned->add_bin(post_selected);
+
+                    // Free memory
+                    delete post_selected;
+                    delete prj;
+                }
             }
 
             // ADVANCE "Time" in LOOP
@@ -1060,7 +1083,7 @@ p_bin *p_bin:: remove_channels(veci ch, qocircuit *qoc){
 //  veci       ch;                  // List of channels to be traced out
 //  qocircuit *qoc;                 // Circuit where the detector is placed
 //  Variables
-    int ich;
+    int        ich;                 // Index of the list ch
     int        nph;                 // Occupation of each level
     mati       select;              // Post-selection condition  for each level
     p_bin     *aux;                 // Auxiliary post_selected bin
@@ -1069,7 +1092,7 @@ p_bin *p_bin:: remove_channels(veci ch, qocircuit *qoc){
 
 
     // Init variables
-    select.resize(2,1);
+    select.resize(3,1);
     removed=this->clone();
     next=new p_bin(removed->nlevel,maxket,removed->vis); // To avoid warning. Not really needed
 
@@ -1079,6 +1102,7 @@ p_bin *p_bin:: remove_channels(veci ch, qocircuit *qoc){
         for(nph=0;nph<=maxnph;nph++){
             select(0,0)=ch(ich);
             select(1,0)=nph;
+            select(2,0)=-1;
             aux=removed->post_select_cond(select.cols(),select,qoc);
 
             if(nph==0) {
@@ -1421,18 +1445,18 @@ double p_bin::prob(mati def,qodev *dev){
 //
 //----------------------------------------------------------------------------
 p_bin *p_bin::translate(mati qdef,qocircuit *qoc){
-// mati       qdef; // Integer matrix with the q-bit to channel definitions
+// mati       qdef; // Integer matrix with the qubit to channel definitions
 // qocircuit *qoc;  // Quatum optical circuit to which this p_bin is referred
 // Variables
     bool   valid;   // Is the ket valid for codification true=Yes/false=No
     bool   print;   // A warning has been printed. True=Yes/False=No
     int    val0;    // value of channel 0
     int    val1;    // value of channel 1
-    int    qval;    // Q-bit equivalent value of channels 0 and 1.
+    int    qval;    // qubit equivalent value of channels 0 and 1.
     int    pos;     // Position of the new stored value
     int    nvalid;  // Number of encoded bins
-    int   *values;  // Vector of the values of each q-bit
-    p_bin *qbin;    // Q-bit encoded probability bin
+    int   *values;  // Vector of the values of each qubit
+    p_bin *qbin;    // qubit encoded probability bin
 //  Auxiliary index
     int    i;       // Aux index
     int    j;       // Aux index
@@ -1479,6 +1503,7 @@ p_bin *p_bin::translate(mati qdef,qocircuit *qoc){
             if(qval<0) valid=false;
             values[j]=qval;
         }
+
         if(valid==true){
             pos=qbin->add_count(values);
             qbin->p[pos]=p[i];
@@ -1506,9 +1531,110 @@ p_bin *p_bin::translate(mati qdef,qocircuit *qoc){
 //
 //----------------------------------------------------------------------------
 p_bin *p_bin::translate(mati qdef,qodev *dev){
-//  mati       qdef; // Integer matrix with the q-bit to channel definitions
+//  mati       qdef; // Integer matrix with the qubit to channel definitions
 //  qodev     *dev;  // Quatum optical device to which this p_bin is referred
 
 
     return translate(qdef,dev->circ);
+}
+
+
+//---------------------------------------------------------------------------
+//
+//  Encode a p_bin into a qubit representation using polarization encoding.
+//  Circuit version.
+//
+//----------------------------------------------------------------------------
+p_bin *p_bin::pol_translate(veci qdef,qocircuit *qoc){
+// veci       qdef; // Integer vector with the qubit to channel definitions
+// qocircuit *qoc;  // Quatum optical circuit to which this p_bin is referred
+// Variables
+    bool   valid;   // Is the ket valid for codification true=Yes/false=No
+    bool   print;   // A warning has been printed. True=Yes/False=No
+    int    valH;    // value of channel 0
+    int    valV;    // value of channel 1
+    int    qval;    // qubit equivalent value of channels 0 and 1.
+    int    pos;     // Position of the new stored value
+    int    nvalid;  // Number of encoded bins
+    int   *values;  // Vector of the values of each qubit
+    p_bin *qbin;    // qubit encoded probability bin
+//  Auxiliary index
+    int    i;       // Aux index
+    int    j;       // Aux index
+    int    k;       // Aux index
+    int    l;       // Aux index
+    int    m;       // Aux index
+    int    n;       // Aux index
+
+
+    // Reserve and initialize memory
+    qbin=new p_bin(qdef.size(),maxket);
+
+    // Check translation conditions
+    if((qoc->nm!=2)||(qoc->ns>1)){
+        cout << "Pol_translate error: The circuit number of modes nm and packets ns should be nm=2 and ns=1 for encoding." << endl;
+        return qbin;
+    }
+
+    // Encode each bin
+    nvalid=0;
+    print=false;
+    for(i=0;i<nket;i++){
+        values=new int[qdef.size()]();
+        valid=true;
+        for(j=0;j<qdef.size();j++){
+            // Find the channels
+            m=qoc->i_idx[qdef(j)][H][0];
+            n=qoc->i_idx[qdef(j)][V][0];
+
+            // Read the values
+            // qdef is given over circuit definition.
+            // Levels number may change after post-selection
+            k=0;
+            l=0;
+            while((vis[k]!=m)&&(k<nlevel)) k=k+1; // Not efficient but small search
+            while((vis[l]!=n)&&(l<nlevel)) l=l+1; // Not efficient but small search
+            valH=ket[i][k];
+            valV=ket[i][l];
+
+            // Encode the values
+            qval=-1;
+            if((valH==1)&&(valV==0)) qval=0;
+            if((valH==0)&&(valV==1)) qval=1;
+            if(qval<0) valid=false;
+            values[j]=qval;
+        }
+
+        if(valid==true){
+            pos=qbin->add_count(values);
+            qbin->p[pos]=p[i];
+            if((pos!=nvalid)&&(print==false)){
+                cout << "Pol_translate: Warning! encoding leads to collision. Invalid result" << endl;
+                print=true;
+            }
+            nvalid=nvalid+1;
+        }
+        delete values;
+    }
+
+    // Normalize bins
+    qbin->N=N;
+
+    // Return encoded bins
+    return qbin;
+}
+
+
+//---------------------------------------------------------------------------
+//
+//  Encode a p_bin into a qubit representation using polarization encoding.
+//  Device version.
+//
+//----------------------------------------------------------------------------
+p_bin *p_bin::pol_translate(veci qdef,qodev *dev){
+//  veci       qdef; // Integer vector with the qubit to channel definitions
+//  qodev     *dev;  // Quatum optical device to which this p_bin is referred
+
+
+    return pol_translate(qdef,dev->circ);
 }
