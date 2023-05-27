@@ -46,10 +46,10 @@ int main()
     qmap << 0 , 2,
             1 , 3;
 
-    // Define the anzilla values
-    veci anzilla;
-    anzilla.resize(4);
-    anzilla << 1, 0, 1, 0;
+    // Define the ancilla values
+    veci ancilla;
+    ancilla.resize(4);
+    ancilla << 1, 0, 1, 0;
 
 
     // Create circuit and photon bunches
@@ -71,7 +71,7 @@ int main()
     // Create a simulator
     simulator *sim= new simulator();
 
-    auto decoded=qubit->decode(qmap,anzilla,csign->circ);
+    auto decoded=qubit->decode(qmap,ancilla,csign->circ);
     auto raw_state=sim->run(decoded,csign->circ);
     auto output=csign->apply_condition(raw_state);
     auto encoded=output->encode(qmap,csign->circ);

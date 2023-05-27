@@ -1,6 +1,6 @@
 include ../conf.inc
 
-all:	     live1 live2 live3 live4 live5 live6 live7 live8
+all:	     live1 live2 live3 live4 live5 live6 live7 live8 live9
 
 live1:  
 	     $(GPP) live1.cpp $(CFLAGS) $(LDFLAGS) $(FLAGS) -o live1.x
@@ -25,6 +25,9 @@ live7:
 
 live8:  
 	     $(GPP) live8.cpp $(CFLAGS) $(LDFLAGS) $(FLAGS) -o live8.x
-   	     
+
+live9:  
+	     $(GPP) live9.cpp $(CFLAGS) $(LDFLAGS) $(FLAGS) -o live9.x	     
+	     
 clean:
 	     rm *.x
