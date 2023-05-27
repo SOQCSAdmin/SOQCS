@@ -76,6 +76,26 @@ def to_int_ptr(mtx):
 
     return send,n,m
 
+#------------------------------------------------------------------------------#      
+# Converter VEC->int*                                                          #
+#------------------------------------------------------------------------------#      
+def to_int_vec(vec):
+    """
+
+    Converts a list into a integer pointer.
+    
+    :vec(list[]): List
+    
+    """  
+
+    n=len(vec)
+
+    send=(c_int*n)()
+    for i in range(0,n):
+        send[i]=vec[i]
+
+    return send,n
+
 #------------------------------------------------------------------------------#
 # Wrapper for C++ SOQCS configuration method                                   #
 # Configuration of the maximum number of photons of the simulation             #
@@ -319,13 +339,27 @@ class qocircuit(object):
             
         Adds a polarized phase shifter attached to channel ch.
         
-        :ch  (int): Beamsplitter input channel.
+        :ch  (int): Phase shifter input channel.
         :P   (int): Polarization to which the phase shifter is sensitive.
         :phi (double):  Phase in degrees.
         
         """
         soqcs.qoc_pol_phase_shifter(c_long(self.obj),ch, P,c_double(phi))
 
+    #---------------------------------------------------------------------------      
+    # Adds to the circuit a polarization filter
+    #---------------------------------------------------------------------------  
+    def pol_filter(self, ch, P):
+        """
+            
+        Adds a polarization filter attached to channel ch.
+        
+        :ch  (int): Polarization filter input channel.
+        :P   (int): Polarization to be filtered.
+        
+        """
+        soqcs.qoc_pol_filter(c_long(self.obj),ch, P)
+        
     #---------------------------------------------------------------------------      
     # Adds to the circuit a waveplate
     #---------------------------------------------------------------------------      
@@ -372,7 +406,7 @@ class qocircuit(object):
     #---------------------------------------------------------------------------      
     # Adds to the circuit a detector
     #---------------------------------------------------------------------------      
-    def detector(self, ch, cond=-1, eff=1.0, blnk=0.0, gamma=0.0):
+    def detector(self, ch, cond=-1, pol=-1, mpi=-1, mpo=-1, eff=1.0, blnk=0.0, gamma=0.0):
         """
             
         Adds a detector to a channel of the circuit.
@@ -382,12 +416,15 @@ class qocircuit(object):
          cond>=0:  Readings in the remaining channels are considered only by calculations in probability bins and density matrices if the number of photons in this channel are equal to cond. |br|
          cond=-1:  There is no condition and works as a normal detector. |br|
          cond=-2:  The channel is ignored by outcome calculations in probability bins and density matrices. |br|
+        :pol (optional[int]): Polarization condition. If cond>=0, pol determines the polarization of the photons to fulfill the condition. Note that if pol=-1 no assumption about the polarization of those photons is made.
+        :mpi (optional[int]): Initial period of the detection window (if -1 takes the first one as default).
+        :mpo (optional[int]): Final period of the detection window (if -1 takes the first one as default).
         :eff   (optional[float]): Efficiency of the detector.
         :blnk  (optional[float]): Ratio of time in which the detector is inactive due other detections.
         :gamma (optional[float]): Average rate of dark counts in this channel.
         
         """
-        soqcs.qoc_detector(c_long(self.obj),ch,cond,c_double(eff),c_double(blnk),c_double(gamma))
+        soqcs.qoc_detector(c_long(self.obj),c_int(ch),c_int(cond),c_int(pol),c_int(mpi),c_int(mpo),c_double(eff),c_double(blnk),c_double(gamma))
 
     #---------------------------------------------------------------------------      
     # Ignore detections on a channel
@@ -400,7 +437,7 @@ class qocircuit(object):
         :ch (int): Ignored channel.
         
         """
-        soqcs.qoc_detector(c_long(self.obj),ch,-2,c_double(1.0),c_double(0.0),c_double(0.0))
+        soqcs.qoc_detector(c_long(self.obj),c_int(ch),c_int(-2),c_int(-1),c_int(-1),c_int(-1),c_double(1.0),c_double(0.0),c_double(0.0))
 
     #---------------------------------------------------------------------------              
     # Adds to the output a random Gaussian whote noise of stdev^2 dispersion
@@ -645,15 +682,15 @@ class state(object):
         return newstate
 
     #---------------------------------------------------------------------------      
-    # Encode a state into qubit encoding.
+    # Encode a state into qubit encoding. (Path encodig version)
     # Those kets that can not be encoded are ignored and the result is normalized
     # WARNING: It is responsability of the library user to make sure that not 
     # repetitions arise after encoding.
     #---------------------------------------------------------------------------      
     def encode(self, qmap,  qoc):
         """
-        Encode a state into a qubit encoding. Those kets that can not be encoded are dismissed and the result is normalized. |br|
-        **Only for ideal circuits (nm=1 and nd=1)**. |br|        
+        Encode a state into a qubit encoding (Path encoding version). Those kets that can not be encoded are dismissed and the result is normalized. |br|
+        **Only for ideal circuits (nm=1 and ns=1)**. |br|        
         **Warning!** post-selection over ignored channels may not result in a pure state. 
         Encoding is not possible under those circunstances and  a warning will be printed.
 
@@ -672,31 +709,31 @@ class state(object):
         aux.obj=obj
         return aux 
 
-   #---------------------------------------------------------------------------      
-   # Decode a state from a qubit encoding into photon modes.
-   #--------------------------------------------------------------------------- 
-    def decode(self, qmap, anzilla, qoc):
+   #----------------------------------------------------------------------------      
+   # Decode a state from a qubit encoding into photon modes. (Path encoding version)
+   #----------------------------------------------------------------------------
+    def decode(self, qmap, ancilla, qoc):
         """
-        Decode a state from a qubit encoding into photon encoding. |br|
-        **Only for ideal circuits (nm=1 and nd=1)**. |br|        
-        Note that we need to define the values of the extra anzilla channels that are not included into the qubit encoding
+        Decode a state from a qubit encoding into photon encoding. (Path encoding version). |br|
+        **Only for ideal circuits (nm=1 and ns=1)**. |br|        
+        Note that we need to define the values of the extra ancilla channels that are not included into the qubit encoding
         but they are needed to the circuit to work in the intended way
 
 
         :qmap(list[][]): 2xn matrix with the qubit definitions. Each column has two entries
                          specifying the channels that define the qubit.
-        :anzilla(list[]): List with the values of the anzilla channels (from smaller to large channel number).
+        :ancilla(list[]): List with the values of the ancilla channels (from smaller to large channel number).
         :qoc(qocircuit): Circuit which the state is related.
         :return output(state): A decoded state.
         
         """  
         
         nq=len(qmap[0])
-        nanz=len(anzilla)
+        nanz=len(ancilla)
         nch=2*nq+nanz   
 
       
-        # Compute anzillas
+        # Compute ancillas
         aux=[1]*nch
         for i in range(0,nq):
             aux[qmap[0][i]]=0
@@ -708,7 +745,7 @@ class state(object):
             if aux[i]==0:
                 occ.append(0)
             if aux[i]==1:
-                occ.append(anzilla[k])
+                occ.append(ancilla[k])
                 k=k+1
                 
         anzstate= state(nch,maxket=1)
@@ -723,11 +760,96 @@ class state(object):
         aux=state(1,True)
         aux.obj=obj
         return aux 
+
+    #---------------------------------------------------------------------------      
+    # Encode a state into qubit encoding. (Polarization encodig version)
+    # Those kets that can not be encoded are ignored and the result is normalized
+    # WARNING: It is responsability of the library user to make sure that not 
+    # repetitions arise after encoding.
+    #---------------------------------------------------------------------------      
+    def pol_encode(self, qvec,  qoc):
+        """
+        Encode a state into a qubit encoding (Polarization encoding version). Those kets that can not be encoded are dismissed and the result is normalized. |br|
+        **Only for ideal circuits (ns=1)**. |br|        
+        **Warning!** post-selection over ignored channels may not result in a pure state. 
+        Encoding is not possible under those circunstances and  a warning will be printed.
+
+
+        :qvec(list[]): List with the qubit definitions. 
+        :qoc(qocircuit): Circuit which the state is related.
+        :return output(state): An encoded state.
+        
+        """  
+        param=to_int_vec(qvec)
+        func=soqcs.st_pol_encode
+        func.restype=c_long   
+        obj=func(c_long(self.obj),param[0],param[1],c_long(qoc.obj))  
+        aux=state(1,True)
+        aux.obj=obj
+        return aux 
+
+   #----------------------------------------------------------------------------      
+   # Decode a state from a qubit encoding into photon modes. (Polarization encoding version)
+   #----------------------------------------------------------------------------
+    def pol_decode(self, qvec, ancilla, qoc):
+        """
+        Decode a state from a qubit encoding into photon encoding. (Polarization encoding version).|br|
+        **Only for ideal circuits (ns=1)**. |br|        
+        Note that we need to define the values of the extra ancilla channels that are not included into the qubit encoding
+        but they are needed to the circuit to work in the intended way
+
+
+        :qvec(list[]): List with the qubit definitions. 
+        :ancilla(list[]): List with the values of the ancilla channels (from smaller to large channel number). 0="Horizontal"/1="Vertical". 
+        :qoc(qocircuit): Circuit which the state is related.
+        :return output(state): A decoded state.
+        
+        """  
+        
+        nq=len(qvec)
+        nanz=len(ancilla)
+        nch=2*nq+nanz   
+
+      
+        # Compute ancillas
+        aux=[1]*nch
+        for i in range(0,nq):
+            aux[qvec[i]]=0
+
+            
+        k=0
+        l=0
+        occ=np.zeros((3,nch*2))
+        for i in range(0,nch):
+            for j in range(0,2):            
+                if aux[i]==0:
+                    occ[0][l]=i
+                    occ[1][l]=j
+                    occ[1][l]=0
+                    
+                if aux[i]==1:
+                    occ[0][l]=i
+                    occ[1][l]=j
+                    occ[1][l]=ancilla[j][k]
+                    k=k+1
+            l=l+1
+            
+        anzstate= state(nch,maxket=1)
+        anzstate.add_term(1.0, occ,qoc)
+        
+        
+        param=to_int_vec(qvec)
+        func=soqcs.st_pol_decode
+        func.restype=c_long   
+        obj=func(c_long(self.obj),param[0],param[1],c_long(anzstate.obj),c_long(qoc.obj))  
+        aux=state(1,True)
+        aux.obj=obj
+        return aux 
     
     #---------------------------------------------------------------------------      
     # Print state
     #---------------------------------------------------------------------------      
-    def prnt_state(self,format=3,column=0,loss=False,qoc=None):
+    def prnt_state(self,format=0,column=0,loss=False,qoc=None):
         """
             Prints a state in one of the specified the formats. If loss=True loss channels are printed in blue.
             
@@ -876,7 +998,7 @@ class p_bin(object):
         """
         
         Calculates the effect of the detectors defined in a circuit over the outcome contained in this set of probability bins.
-        This effect are post-selection-conditions, dark counts, detector dead time, loss computations and circuit noise.
+        These effect are post-selection-conditions, detection window ,dark counts, detector dead time, losses and circuit noise.
     
         :qoc (qocircuit):  Circuit where the detectors are defined.
         :return (p_bin): Outcomes after detector effects calculations.
@@ -998,12 +1120,12 @@ class p_bin(object):
         return func(c_long(self.obj), param[0],param[1],param[2],c_long(dev.circ.obj))   
 
     #---------------------------------------------------------------------------      
-    # Translate the labels of a probability bins into qubit encoding.
+    # Translate the labels of a probability bins into qubit encoding. (Path encoding version).
     # Those that can not be encoded are ignored and the result is normalized.
     #---------------------------------------------------------------------------
     def translate(self, qmap,   dev):
         """
-        Translates the labels of a set of probability bins into a qubit encoding. 
+        Translates the labels of a set of probability bins into a qubit encoding. (Path encoding version).
         Those that can not be encoded are ignored and the result is normalized. |br|
         **Only for ideal circuits (nm=1 and nd=1)**. |br|        
         **Warning!** post-selection over ignored channels may not result in a pure state. 
@@ -1019,6 +1141,31 @@ class p_bin(object):
         func=soqcs.pb_translate
         func.restype=c_long   
         obj=func(c_long(self.obj),param[0],param[2],c_long(dev.circ.obj))  
+        aux=p_bin(1,True)
+        aux.obj=obj
+        return aux
+
+    #---------------------------------------------------------------------------      
+    # Translate the labels of a probability bins into qubit encoding.  (Polarization encoding version).
+    # Those that can not be encoded are ignored and the result is normalized.
+    #---------------------------------------------------------------------------    
+    def pol_translate(self, qvec,   dev):
+        """
+        Translates the labels of a set of probability bins into a qubit encoding. (Polarization encoding version).
+        Those that can not be encoded are ignored and the result is normalized. |br|
+        **Only for ideal circuits (nm=1 and nd=1)**. |br|        
+        **Warning!** post-selection over ignored channels may not result in a pure state. 
+        Encoding is not possible under those circunstances and  a warning will be printed.
+
+        :qvec(list[]): List with the qubit definitions. 
+        :dev(qodev): Device to which the set of probability bins is related.
+        :return out(p_bin): A translated set of probability bins.
+        
+        """          
+        param=to_int_vec(qvec)
+        func=soqcs.pb_pol_translate
+        func.restype=c_long   
+        obj=func(c_long(self.obj),param[0],param[1],c_long(dev.circ.obj))  
         aux=p_bin(1,True)
         aux.obj=obj
         return aux
@@ -1296,6 +1443,58 @@ class dmatrix(object):
                                     
         soqcs.dm_prnt_mtx(c_long(self.obj), format, c_double(thresh), c_long(aux))
         sys.stdout.flush()
+
+    #---------------------------------------------------------------------------      
+    # Translate the labels of a probability bins into qubit encoding. (Path encoding version).
+    # Those that can not be encoded are ignored and the result is normalized.
+    #---------------------------------------------------------------------------
+    def translate(self, qmap, dev):
+        """
+        Translates the labels of a set of probability bins into a qubit encoding. (Path encoding version).
+        Those that can not be encoded are ignored and the result is normalized. |br|
+        **Only for ideal circuits (nm=1 and nd=1)**. |br|        
+        **Warning!** post-selection over ignored channels may not result in a pure state. 
+        Encoding is not possible under those circunstances and  a warning will be printed.
+
+        :qmap(list[][]): 2xn matrix with the qubit definitions. Each column has two entries
+                         specifying the channels that define the qubit.
+        :dev(qodev): Device to which the set of probability bins is related.
+        :return out(p_bin): A translated set of probability bins.
+        
+        """          
+        param=to_int_ptr(qmap)
+        func=soqcs.dm_translate
+        func.restype=c_long   
+        obj=func(c_long(self.obj),param[0],param[2],c_long(dev.circ.obj))  
+        aux=dmatrix(1,True)
+        aux.obj=obj
+        return aux
+
+    #---------------------------------------------------------------------------      
+    # Translate the labels of a probability bins into qubit encoding. (Polarization encoding version).
+    # Those that can not be encoded are ignored and the result is normalized.
+    #---------------------------------------------------------------------------    
+    def pol_translate(self, qvec, dev):
+        """
+        Translates the labels of a set of probability bins into a qubit encoding. (Polarization encoding version).
+        Those that can not be encoded are ignored and the result is normalized. |br|
+        **Only for ideal circuits (nm=1 and nd=1)**. |br|        
+        **Warning!** post-selection over ignored channels may not result in a pure state. 
+        Encoding is not possible under those circunstances and  a warning will be printed.
+
+        :qvec(list[]): List with the qubit definitions. 
+        :dev(qodev): Device to which the set of probability bins is related.
+        :return out(p_bin): A translated set of probability bins.
+        
+        """          
+        param=to_int_vec(qvec)
+        func=soqcs.dm_pol_translate
+        func.restype=c_long   
+        obj=func(c_long(self.obj),param[0],param[1],c_long(dev.circ.obj))  
+        aux=dmatrix(1,True)
+        aux.obj=obj
+        return aux
+    
             
 
 #------------------------------------------------------------------------------#                      
@@ -1335,7 +1534,7 @@ class auxqodev(object):
         """
 
         Appends the contect of a quantum device with some limitations. All input 
-        photons have to be defined in the first circuit while all thdetector have
+        photons have to be defined in the first circuit while all detectors have
         to be defined in the last. Devices with delays may also habe restrictions
         to be concatenated.
    
@@ -1343,6 +1542,23 @@ class auxqodev(object):
     
         """
         soqcs.dev_concatenate(c_long(self.obj),c_long(dev.obj))
+
+    #---------------------------------------------------------------------------      
+    # Adds a gate using other device as the gate definition
+    #---------------------------------------------------------------------------    
+    def add_gate(self, chlist, dev):
+        """
+
+        Adds a gate using other device as the gate definition.
+   
+        :chlist (list[]): List of channels to which the new gate is attached
+        :dev (qodev): Device defining the gate
+    
+        """
+
+        param=to_int_vec(chlist)
+        soqcs.dev_add_gate(c_long(self.obj),param[0],param[1],c_long(dev.obj))
+        
 
     #---------------------------------------------------------------------------      
     # Add photons to the device
@@ -1513,7 +1729,7 @@ class auxqodev(object):
         :vec (list):  Vector with the preferred packet order.
         
         """
-        param=to_int_ptr(vec)
+        param=to_int_vec(vec)
         soqcs.st_add_term(c_long(self.obj),param[0],param[1]) 
 
     #---------------------------------------------------------------------------      
@@ -1717,6 +1933,20 @@ class auxqodev(object):
         soqcs.dev_pol_phase_shifter(c_long(self.obj),c_int(ch), c_int(P), c_double(phi))
 
     #---------------------------------------------------------------------------      
+    # Adds to the metacircuit a polarization filter
+    #--------------------------------------------------------------------------- 
+    def pol_filter(self, ch, P):
+        """
+            
+        Adds a polarization filter attached to channel ch.
+        
+        :ch  (int): Polarization filter input channel.
+        :P   (int): Polarization to be filtered.
+        
+        """
+        soqcs.dev_pol_filter(c_long(self.obj),c_int(ch), c_int(P))
+        
+    #---------------------------------------------------------------------------      
     # Adds to the metacircuit a half waveplate
     #---------------------------------------------------------------------------      
     def half(self, ch, alpha):
@@ -1747,7 +1977,7 @@ class auxqodev(object):
     #---------------------------------------------------------------------------              
     # Adds to the metacircuit a detector
     #---------------------------------------------------------------------------      
-    def detector(self, ch, cond=-1, eff=1.0, blnk=0.0, gamma=0.0):
+    def detector(self, ch, cond=-1, pol=-1, mpi=-1, mpo=-1, eff=1.0, blnk=0.0, gamma=0.0):
         """
             
         Adds a detector to a channel of the circuit.
@@ -1756,12 +1986,15 @@ class auxqodev(object):
         cond>=0: The readings in the rest of the channels are accepted only in the number of photons in this channel is equal to cond. |br|
         cond=-1:  There is no condition and works as a normal detector. |br|
         cond=-2:  The channel is ignored. |br|
+        :pol (optional[int]): Polarization condition. If cond>=0, pol determines the polarization of the photons to fulfill the condition. Note that if pol=-1 no assumption about the polarization of those photons is made.
+        :mpi (optional[int]): Initial period of the detection window (if -1 takes the first one as default).
+        :mpo (optional[int]): Final period of the detection window (if -1 takes the first one as default).
         :eff   (float):  Efficiency of the detector.
         :blnk  (float):  Ratio of time in which the detector is inactive due other detections.
         :gamma (float):  Average rate of dark counts in this channel.
         
         """
-        soqcs.dev_detector(c_long(self.obj),c_int(ch),c_int(cond),c_double(eff),c_double(blnk),c_double(gamma))
+        soqcs.dev_detector(c_long(self.obj),c_int(ch),c_int(cond),c_int(pol),c_int(mpi),c_int(mpo),c_double(eff),c_double(blnk),c_double(gamma))
 
     #---------------------------------------------------------------------------      
     # Ignores a channel
@@ -1774,7 +2007,7 @@ class auxqodev(object):
         :ch (int): Ignored channel.
         
         """
-        soqcs.dev_detector(c_long(self.obj),c_int(ch),-2,c_double(1.0),c_double(0.0),c_double(0.0))
+        soqcs.dev_detector(c_long(self.obj),c_int(ch),c_int(-2),c_int(-1),c_int(-1),c_int(-1),c_double(1.0),c_double(0.0),c_double(0.0))
 
     #---------------------------------------------------------------------------              
     # Adds to the output a random Gaussian whote noise of stdev^2 dispersion
@@ -1797,7 +2030,7 @@ class auxqodev(object):
         """
             
         Apply the post-selection condition defined by the detectors (to ideal circuits). |br|
-        **Warning!**. This can be only applied to ideal circuits nm=1 and nd=1 where detector naturally 
+        **Warning!**. This can be only applied to ideal circuits ns=1 where detector naturally 
         define a single ket projector. Otherwise the conditions lead to a density matrix output and
         there are other tools available in SOQCS for that purpose. Note that ignored channels are 
         not transcribed therefore post-selection may lead to collision between otherwise different kets.
@@ -1962,10 +2195,60 @@ class gcircuit(object):
         :dev (qodev): Plot to be concatenated.   
     
         """
-        auxlist =  self.list + dev.list
-        auxnl= self.nl+ dev.nl
+        filtered=list(filter(lambda element: element[0] != 'empty', dev.list))
+        # print(dev.list)
+        # print(filtered)
+        auxlist =  self.list + filtered
+        #auxnl= self.nl+ dev.nl 
+        auxnl= self.nl+ len(filtered)
         self.list=auxlist
         self.nl=auxnl
+       
+    #---------------------------------------------------------------------------      
+    # Adds a gate to the plot specifying input channels and detectors already included 
+    # in the gate definition. The gate is plotted with a custom text.
+    #---------------------------------------------------------------------------            
+    def add_gate(self, chlist, inlist, outlist, text):
+        """
+
+        Adds a gate to the plot pecifying input channels and detectors already included in the gate definition. 
+        The gate is plotted with a custom text.
+   
+        :chlist (list[]): List of channels.
+        :inlist (list[]): List of channels to be initialized by the gate
+        :outlist (list[]): List of channels with a detector included in the gate
+        :text (string): Text to be plotted inside the gate.
+    
+        """
+        nch=len(chlist)
+        nin=len(inlist)
+        nout=len(outlist)
+
+        # Drawn inputs
+        for i in range(0,nin):
+            self.empty(inlist[i],1)
+        
+        # Rewire
+        ch1=chlist[0]
+        for i in range(0,nch):
+            ch2=chlist[i]
+            if(ch2!=ch1+i):
+                self.rewire(ch2,ch1+i)    
+            
+        # Plot gate
+        self.element(ch1,nch,text, False)
+        
+        # Rewire
+        for i in range(0,nch):
+            ch2=chlist[i]
+            if(ch2!=ch1+i):
+                self.rewire(ch1+i,ch2)  
+                
+        # Plot detectors
+        for i in range(0,nout):
+             self.final_dec(outlist[i],-3)
+        
+
         
     #---------------------------------------------------------------------------      
     # Defines a wire to a channel with length depth.
@@ -1990,11 +2273,31 @@ class gcircuit(object):
 
         Defines input number of photons indicator in a channel
    
-        :ch (int): Channel where the wire is plotted.
-        :n (int):  Length in cells of the wire.
+        :ch (int): Channel where the indicator is plotted.
+        :n (int):  Number of photons
     
         """          
         self.list.append(['init_ph',ch,n])
+        self.nl=self.nl+1
+
+    #---------------------------------------------------------------------------      
+    # Empty channel indicator
+    #---------------------------------------------------------------------------            
+    def empty(self,ch,n):    
+        """
+
+        Defines a graphical representaton of an input channel indicator of an empty channel. 
+        There are three possible indicators. |br|
+        - Open channel: A chanel that has been left open for concatenation. |br|
+        - Emtpy channel: A zero photon channel. |br|
+        - Gate defined chanel: A channel that has been defined as part of the gate.|br|
+        
+   
+        :ch (int): Channel where the indicator is plotted.
+        :n (int):  -1: "Open channel" | 0="Empty channel" | >0='Gate defined channel' 
+    
+        """          
+        self.list.append(['empty',ch,n])
         self.nl=self.nl+1
 
     #---------------------------------------------------------------------------      
@@ -2011,13 +2314,16 @@ class gcircuit(object):
         :kind (char):  Kind of Bell stte
     
         """  
-        if(ch2!=ch1+1):
-            self.rewire(ch2,ch1+1)
+        ich1=min(ch1,ch2)
+        ich2=max(ch1,ch2)
         
-        self.bell_element(ch1,ch2,kind)
+        if(ich2!=ich1+1):
+            self.rewire(ich2,ich1+1,initial=True)
+        
+        self.bell_element(ich1,ich2,kind)
     
-        if(ch2!=ch1+1):
-            self.rewire(ch1+1,ch2)
+        if(ich2!=ich1+1):
+            self.rewire(ich1+1,ich2)
 
     #---------------------------------------------------------------------------                  
     # Bell state element. (Two consecutive channels, no rewires)
@@ -2038,7 +2344,7 @@ class gcircuit(object):
     #---------------------------------------------------------------------------                  
     # Defines a final detector
     #---------------------------------------------------------------------------      s
-    def final_dec(self,ch,post):
+    def final_dec(self,ch,post,pol=-1):
         """
 
         Defines a graphical representation of a detector in a channel.
@@ -2047,9 +2353,9 @@ class gcircuit(object):
         :post (int): Post-selection condition.
     
         """  
-        self.list.append(['final_dec',ch,post])
+        self.list.append(['final_dec',ch,post,pol])
         self.nl=self.nl+1
-
+        
     #---------------------------------------------------------------------------      
     # Defines a circuit element
     #---------------------------------------------------------------------------      
@@ -2070,7 +2376,7 @@ class gcircuit(object):
     #---------------------------------------------------------------------------      
     # Defines a rewire between two channels
     #---------------------------------------------------------------------------      
-    def rewire(self,ch1,ch2): 
+    def rewire(self,ch1,ch2,initial=False): 
         """
 
         Defines a graphical representation of a swap operation between two channels.
@@ -2080,7 +2386,7 @@ class gcircuit(object):
         :ch1 (int): Channel 1.
         :ch2 (int): Channel 2.
         """  
-        self.list.append(['rewire',ch1,ch2])
+        self.list.append(['rewire',ch1,ch2,initial])
         self.nl=self.nl+1
 
     #---------------------------------------------------------------------------      
@@ -2183,7 +2489,6 @@ class gcircuit(object):
         self.list.append(['separator'])
         self.nl=self.nl+1
 
-
     #---------------------------------------------------------------------------      
     # Defines a newline
     #---------------------------------------------------------------------------      
@@ -2209,54 +2514,128 @@ class gcircuit(object):
         :depth (int): Length in cells of the wire.
     
         """
-        init=self.display[ch];
-        end=depth
+        if(self.ended[ch]==0):
+            init=self.display[ch];
+            end=depth
         
-        if(depth>init):
-            height=0.5+(1+self.pad)*ch+self.line*self.width_line            
-            if init>0:                               
-                plt.plot([2*init, 2*end],[height, height], color='black', linewidth=4)
-            else:
-                plt.plot([0.25,2*end],[height, height], color='black', linewidth=4)
-                text_kwargs = dict(ha='center', va='center', fontsize=self.size_font, color='black')
-                plt.text(0.0,height,str(ch),**text_kwargs)
+            if(depth>init):
+                height=0.5+(1+self.pad)*ch+self.line*self.width_line            
+                if init>0:                               
+                    plt.plot([2*init, 2*end],[height, height], color='black', linewidth=4)
+                else:
+                    plt.plot([0.25,2*end],[height, height], color='black', linewidth=4)
+                    text_kwargs = dict(ha='center', va='center', fontsize=self.size_font, color='black')
+                    plt.text(0.0,height,str(ch),**text_kwargs)
                 
-            self.display[ch]=depth
+                self.display[ch]=depth
 
     #---------------------------------------------------------------------------      
     # Draws a representation of the initial photon configuration of a channel
-    #---------------------------------------------------------------------------      
+    #---------------------------------------------------------------------------  
     def g_init_ph(self,ch,n):
         """
 
         Drsws an input number of photons indicator in a channel
    
         :ch (int): Channel where the wire is plotted.
-        :n (int):  Length in cells of the wire.
+        :n (int):  Number of photons
     
         """     
+        self.ended[ch]=0
         self.nph[ch]=self.nph[ch]+n
-        height=0.5+(1+self.pad)*ch            
+        height=0.5+(1+self.pad)*ch   
+        
+        init=self.display[ch]
+        end=init+1;
+        if end>(self.depth-2):
+            self.g_newline()
+            init=self.display[ch]
+            end=init+1
+        
+        self.display[ch]=end 
+        posx=2*init
+         
                 
         # Triangle
-        coord = np.array([[0.5,height+0.5], [0.5,height-0.5], [1.5 , height]])
+        coord = np.array([[posx+0.5,height+0.5], [posx+0.5,height-0.5], [posx+1.5 , height]])
         poly=plt.Polygon(coord,color='orchid')
         self.ax.add_patch(poly)
-        plt.plot([0.5,0.5],[height+0.5, height-0.5], color='black', linewidth=4)
-        plt.plot([0.5,1.5],[height-0.5, height    ], color='black', linewidth=4)
-        plt.plot([1.5,0.5],[height    , height+0.5], color='black', linewidth=4)
+        plt.plot([posx+0.5,posx+0.5],[height+0.5, height-0.5], color='black', linewidth=4)
+        plt.plot([posx+0.5,posx+1.5],[height-0.5, height    ], color='black', linewidth=4)
+        plt.plot([posx+1.5,posx+0.5],[height    , height+0.5], color='black', linewidth=4)
         
-        plt.plot([0.25,0.5],[height, height], color='black', linewidth=4)
-        plt.plot([1.5,2],[height, height], color='black', linewidth=4)
+        plt.plot([posx+0.25,posx+0.5],[height, height], color='black', linewidth=4)
+        plt.plot([posx+1.5,posx+2],[height, height], color='black', linewidth=4)
         text_kwargs = dict(ha='center', va='center', fontsize=self.size_font, color='black')
-        t=plt.text(0.75,height,str(int(self.nph[ch])),backgroundcolor='orchid',**text_kwargs)   
+        t=plt.text(posx+0.75,height,str(int(self.nph[ch])),backgroundcolor='orchid',**text_kwargs)   
         t.set_bbox(dict(alpha=0.0))
-        plt.text(0.0,height,str(ch),**text_kwargs)   
+        plt.text(posx+0.0,height,str(ch),**text_kwargs)   
         
         if(self.display[ch]<=0):
             self.display[ch]=1
+            
+    #---------------------------------------------------------------------------      
+    # Draws an empty channel indicator
+    #---------------------------------------------------------------------------              
+    def g_empty(self,ch,n):
+        """
 
+        Draws and empty channel indicator. There are three possible indicators. |br|
+        - Open channel: A chanel that has been left open for concatenation. |br|
+        - Emtpy channel: A zero photon channel. |br|
+        - Gate defined chanel: A channel that has been defined as part of the gate.|br|
+        
+   
+        :ch (int): Channel where the indicator is drawn.
+        :n (int):  -1: "Open channel" | 0="Empty channel" | >0='Gate defined channel' 
+    
+        """    
+        
+        self.ended[ch]=0
+        self.nph[ch]=self.nph[ch]+n
+        height=0.5+(1+self.pad)*ch   
+        
+        init=self.display[ch]
+        end=init+1;
+        if end>(self.depth-2):
+            self.g_newline()
+            init=self.display[ch]
+            end=init+1
+        
+        self.display[ch]=end 
+        posx=2*init
+         
+                
+        # Triangle
+        coord = np.array([[posx+0.5,height+0.5], [posx+0.5,height-0.5], [posx+1.5 , height]])
+        if(n<0):
+            poly=plt.Polygon(coord,color='darkorchid')
+        if(n==0):
+            poly=plt.Polygon(coord,color='lightblue')
+        if(n>0):
+            poly=plt.Polygon(coord,color='darkcyan')
 
+        self.ax.add_patch(poly)
+        plt.plot([posx+0.5,posx+0.5],[height+0.5, height-0.5], color='black', linewidth=4)
+        plt.plot([posx+0.5,posx+1.5],[height-0.5, height    ], color='black', linewidth=4)
+        plt.plot([posx+1.5,posx+0.5],[height    , height+0.5], color='black', linewidth=4)
+        
+        plt.plot([posx+0.25,posx+0.5],[height, height], color='black', linewidth=4)
+        plt.plot([posx+1.5,posx+2],[height, height], color='black', linewidth=4)
+        text_kwargs = dict(ha='center', va='center', fontsize=self.size_font, color='black')
+        if(n<0):
+            t=plt.text(posx+0.75,height,'x',backgroundcolor='orchid',**text_kwargs)   
+        if(n==0):            
+            t=plt.text(posx+0.75,height,'0',backgroundcolor='white',**text_kwargs)               
+        if(n>0):            
+            t=plt.text(posx+0.75,height,'G',backgroundcolor='white',**text_kwargs)               
+
+        t.set_bbox(dict(alpha=0.0))
+        plt.text(posx+0.0,height,str(ch),**text_kwargs)   
+        
+        if(self.display[ch]<=0):
+            self.display[ch]=1
+            
     #---------------------------------------------------------------------------      
     # Draws a Bell state element. 
     #---------------------------------------------------------------------------      
@@ -2266,10 +2645,12 @@ class gcircuit(object):
         Draws a Bell state input configuration indicator to a couple of consecutive channels.
    
         :ch (int): Bell state channel 1.
-        :auxch (int): Label of Bell state channel 2. (In case we habe rewire two non-consecutive ones)
+        :auxch (int): Label of Bell state channel 2. (In case we have rewired two non-consecutive ones)
         :kind (char):  Kind of Bell stte
     
         """  
+        self.ended[ch]=0
+        self.ended[ch+1]=0
         nch=2
         maxdepth=0
         for i in range(ch,ch+nch):
@@ -2281,10 +2662,10 @@ class gcircuit(object):
         for i in range(ch,ch+nch):
             self.g_add_wire(i,init)
             self.display[i]=end                                
-          
+      
+        posx=2*init
         height=0.5+(1+self.pad)*ch            
         height2=0.5+(1+self.pad)*(ch+1) 
-        heightaux=0.5+(1+self.pad)*auxch   
         add=(nch-1)      
               
         rect = patches.Rectangle(((2*init+0.2), (height-0.5+0.0)),
@@ -2327,7 +2708,7 @@ class gcircuit(object):
             text_kwargs = dict(ha='center', va='center', fontsize=self.size_font, color='black')
             t=plt.text(2*init+0.9,height2,"0/1",backgroundcolor='orchid',**text_kwargs)   
             t.set_bbox(dict(alpha=0.0))
-            plt.text(0.0,heightaux,str(auxch),**text_kwargs)   
+            plt.text(posx+0.0,height2,str(auxch),**text_kwargs)   
 
         if(kind=='P'):
             text_kwargs = dict(ha='center', va='center', fontsize=self.size_font, color='black')
@@ -2338,21 +2719,12 @@ class gcircuit(object):
             text_kwargs = dict(ha='center', va='center', fontsize=self.size_font, color='black')
             t=plt.text(2*init+0.9,height2,"H/V",backgroundcolor='orchid',**text_kwargs)   
             t.set_bbox(dict(alpha=0.0))
-            plt.text(0.0,heightaux,str(auxch),**text_kwargs) 
-      
-        for i in range(0,nch):
-            heightch=0.5+(1+self.pad)*(ch+i)
-          
-
-        if(maxdepth>0):
-            plt.plot([2*init,(2*init+0.2)],[heightch, heightch], color='black', linewidth=4)
-            plt.plot([(2*end-0.2),2*end],[heightch, heightch], color='black', linewidth=4)
-                      
-        
+            plt.text(posx+0.0,height2,str(auxch),**text_kwargs) 
+                                 
     #---------------------------------------------------------------------------              
     # Draws a representation of the detector configuration in a channel
     #---------------------------------------------------------------------------      
-    def g_final_dec(self,ch,post):
+    def g_final_dec(self,ch,post,pol):
         """
 
         Draws a graphical representation of a detector in a channel.
@@ -2361,20 +2733,26 @@ class gcircuit(object):
         :post (int): Post-selection condition.
     
         """ 
-        init=self.display[ch];
+        self.ended[ch]=1
+        init=self.display[ch]
         end=init+1;
         if end>(self.depth-2):
             self.g_newline()
-            init=self.display[ch];
-            end=init+1;
+            init=self.display[ch]
+            end=init+1
 
         self.display[ch]=end
         height=0.5+(1+self.pad)*ch+self.line*self.width_line                        
         
         if(post>=-1): 
             color="steelblue"
-        else:
-            color="red"            
+        
+        if(post==-2): 
+            color="red"     
+        
+        if(post==-3): 
+            color="darkcyan"
+            
             
         circle = plt.Circle((2*init+0.5,height),0.5, fc=color,ec="black",linewidth=4)
         self.ax.add_patch(circle)
@@ -2393,10 +2771,22 @@ class gcircuit(object):
         self.ax.add_patch(rect)
         text_kwargs = dict(ha='center', va='center', fontsize=self.size_font, color='black')
         plt.text(2*init+1.5,height,str(ch),**text_kwargs)   
-
-        
-        if(post>=0):
+           
+        if(pol==0): 
+            strpol='H'
+        if(pol==1): 
+            strpol='V'
+        if(pol>1): 
+            strpol='P'+str(pol)
+            
+        if(post>=0) and (pol<0):
             plt.text(2*init+0.4,height,str(post),backgroundcolor=color,**text_kwargs)   
+            
+        if(post>=0) and (pol>=0):
+            plt.text(2*init+0.4,height,str(post)+strpol,backgroundcolor=color,**text_kwargs)   
+            
+        if(post==-3):
+            plt.text(2*init+0.4,height,'G',backgroundcolor=color,**text_kwargs)   
 
     #---------------------------------------------------------------------------      
     # Draws a representation of a general circuit element
@@ -2417,6 +2807,7 @@ class gcircuit(object):
         maxdepth=0
         for i in range(ch,ch+nch):
             maxdepth=max(maxdepth,self.display[i])
+            self.ended[i]=0
             
         init=maxdepth
         end=init+1;    
@@ -2455,7 +2846,7 @@ class gcircuit(object):
     #---------------------------------------------------------------------------      
     # Draws a rewire between two channels
     #---------------------------------------------------------------------------      
-    def g_rewire(self,ch1,ch2): 
+    def g_rewire(self,ch1,ch2,initial): 
         """
 
         Draws a graphical representation of a swap operation between two channels.
@@ -2468,27 +2859,35 @@ class gcircuit(object):
         cho=max(ch1,ch2)
         for chaux in range(chi,cho+1):
             maxdepth=max(maxdepth,self.display[chaux])
-        init=maxdepth
-        end=init+1;
-        if end>(self.depth-2):
-            self.g_newline()
-            init=self.display[ch1];
+            
+        if maxdepth>0:
+            init=maxdepth
             end=init+1;
+            if end>(self.depth-2):
+                self.g_newline()
+                init=self.display[ch1];
+                end=init+1;
 
-        self.g_add_wire(chi,init)   
-        self.display[chi]=end        
-        self.g_add_wire(cho,init)   
-        self.display[cho]=end        
-        for chaux in range(chi+1,cho):
-            self.g_add_wire(chaux,end)   
-            self.display[chaux]=end
+            self.g_add_wire(chi,init)   
+            self.display[chi]=end        
+            self.g_add_wire(cho,init)   
+            self.display[cho]=end        
+            for chaux in range(chi+1,cho):
+                self.g_add_wire(chaux,end)   
+                self.display[chaux]=end
                                 
-        height1=0.5+(1+self.pad)*ch1+self.line*self.width_line                       
-        height2=0.5+(1+self.pad)*ch2+self.line*self.width_line                       
-                    
-        plt.plot([2*init,2*end],[height1, height2], color='black', linewidth=4)
-        plt.plot([2*init,2*end],[height2, height1], color='black', linewidth=4)   
-
+            height1=0.5+(1+self.pad)*chi+self.line*self.width_line                       
+            height2=0.5+(1+self.pad)*cho+self.line*self.width_line                       
+        
+            if self.ended[chi]==0:
+                plt.plot([2*init,2*end],[height1, height2], color='black', linewidth=4)
+            if self.ended[cho]==0:
+                plt.plot([2*init,2*end],[height2, height1], color='black', linewidth=4)   
+        
+        aux=self.ended[chi]
+        self.ended[chi]=self.ended[cho]
+        self.ended[cho]=aux
+        
     #---------------------------------------------------------------------------                  
     # Draws a delay circuit element. (It has an specific special symbol)
     #---------------------------------------------------------------------------      
@@ -2594,7 +2993,7 @@ class gcircuit(object):
     #---------------------------------------------------------------------------          
     # Plots and launches the widget with the canvas of the whole circuit
     #---------------------------------------------------------------------------      
-    def show(self, nch, depth, sizexy, font, rows=1):
+    def show(self, nch, depth, sizexy, font, slin=0, rows=1):
         """
         Shows the quantum device circuit. |br|
         It reads the list of definition and draws the graphical elements. Each channels 
@@ -2606,7 +3005,8 @@ class gcircuit(object):
         :depth (int): Depth (in cells) of the circuit to be drawn.
         :sizexy (int): Number of pixels by cell.
         :font(int): Font size of the labels.
-        :rows(int): Numbers of printing lines to be used by the plotter. |br| 
+        :slin(optional(int)): Starting lines 0='No'/1='Yes'. If starting lines is 0 no lines are shown until the channel is initialized.
+        :rows(optional(int)): Numbers of printing lines to be used by the plotter. |br| 
                    If rows=1, the plot is printed in one line unless hard separators are used to manually 
                    point out the change of printing line. |br| 
                    If rows>1, the plot is drawn in a fixed quantity of lines. In this case the change of line is done automatically. |br|
@@ -2625,6 +3025,11 @@ class gcircuit(object):
         self.depth=depth
         if rows>1:
             self.newrow=rows-1
+        self.ended=[1]*nch
+        if slin==0 :
+            self.ended=[1]*nch
+        else:
+            self.ended=[0]*nch
         
         self.fig, self.ax= plt.subplots()        
         self.fig.set_dpi(dpi)
@@ -2644,18 +3049,21 @@ class gcircuit(object):
             if(gate[0]=='init_ph'): 
                 self.g_init_ph(gate[1],gate[2])
                 
+            if(gate[0]=='empty'): 
+                self.g_empty(gate[1],gate[2])
+                
             if(gate[0]=='bell_element'): 
                 self.g_bell_element(gate[1],gate[2],gate[3])
 
             if(gate[0]=='final_dec'): 
-                self.g_final_dec(gate[1],gate[2])
+                self.g_final_dec(gate[1],gate[2],gate[3])
 
             if(gate[0]=='element'): 
                 self.g_element(gate[1],gate[2],gate[3], gate[4])
 
             if(gate[0]=='rewire'): 
-                self.g_rewire(gate[1],gate[2])
-
+                self.g_rewire(gate[1],gate[2],gate[3])
+          
             if(gate[0]=='delay'): 
                 self.g_delay(gate[1])
 
@@ -2701,7 +3109,7 @@ class qodev(object):
     
     """
     #---------------------------------------------------------------------------          
-    # Create a metacircuit
+    # Create a device
     #---------------------------------------------------------------------------      
     def __init__(self, nph, nch, nm=1, ns=1, np=1, dtp=-1.0, clock=0, R=0,   loss=False, ckind='G', mem=4):
         self.circ=auxqodev(nph,nch,nm,ns,np,dtp,clock,R,loss,ckind,mem)
@@ -2709,6 +3117,9 @@ class qodev(object):
         self.first=1
         self.nph=nph
         self.nch=nch
+        self.nm=nm     # Needed for the compiler.
+        self.inlist=[]
+        self.outlist=[]
         
 
     #---------------------------------------------------------------------------      
@@ -2732,7 +3143,34 @@ class qodev(object):
     def __lshift__(self, dev):
         self.concatenate(dev)
     
+    #---------------------------------------------------------------------------      
+    # Adds a gate using other device as the gate definition
+    #---------------------------------------------------------------------------   
+    def add_gate(self, chlist, dev,text=''):
+        """
 
+        Adds a gate using other device as the gate definition.
+   
+        :chlist (list[]): List of channels to which the new gate is attached
+        :dev (qodev): Device defining the gate
+        :text (string): Text with the name given to the gate ( to be plotted )
+    
+        """
+        
+        inlist=[]
+        for i in range(0,len(dev.inlist)):
+            self.inlist.append(chlist[dev.inlist[i]])
+            inlist.append(chlist[dev.inlist[i]])
+
+        outlist=[]
+        for i in range(0,len(dev.inlist)):
+            self.outlist.append(chlist[dev.outlist[i]])    
+            outlist.append(chlist[dev.outlist[i]])
+
+
+        self.disp.add_gate(chlist,inlist,outlist,text)
+        self.circ.add_gate(chlist,dev.circ)
+            
     #---------------------------------------------------------------------------              
     # Adds photons to the device
     #---------------------------------------------------------------------------      
@@ -2752,22 +3190,57 @@ class qodev(object):
         """
         aux=self.circ.add_photons(N, ch, P ,t, f, w)
         self.disp.init_ph(ch,N)
+        self.inlist.append(ch)
         return aux
+    
+    #---------------------------------------------------------------------------              
+    # Adds an open channel to the device
+    #---------------------------------------------------------------------------    
+    def open_channel(self,  ch):
+        """
+        
+        Adds 0 photons to the device, no packet is defined and the indicator of channel
+        to be concatenated is drawn if the circuit is plotted.
+   
+        :ch (int): Channel that is left open.
+ 
+        """
+        self.disp.empty(ch,-1)
 
     #---------------------------------------------------------------------------              
-    # Initialize qubits
+    # Adds an empty channel to the device
     #---------------------------------------------------------------------------            
-    def qubits(self, qlist, qmap):
+    def empty_channel(self,  ch):
+        """
+        
+        Adds 0 photons to the device, no packet is defined and the indicator 
+        of empty channel is drawn if the circuit is plotted. Note that this is different
+        than adding 0 photons with add_photons because in this case no packet is defined.
+   
+        :ch (int): Channel that is left empty.
+ 
+        """
+        self.disp.empty(ch,0)
+ 
+    #---------------------------------------------------------------------------              
+    # Initialize qubits (Path encoding)
+    #---------------------------------------------------------------------------            
+    def qubits(self, qlist, ancilla, qmap):
         """
         
         Initialize the device with photons that represent a list of path encoded qubits.
    
-        :qlist list[int]: Qubit values
-        :qmap(list[][]): 2xn matrix with the qubit definitions. Each column has two entries
-                         specifying the channels that define the qubit.
+        :qlist (list[int]): Qubit values
+        :ancilla (list[int]): List with the values to initalize the ancillas. Values are assigned in order from small to large channel number.
+        :qmap (list[][]): 2xn matrix with the qubit definitions. Each column has two entries
+                          specifying the channels that define the qubit.
                           
         """
+        
+        channels=[0]*self.nch
         for i in range(0,len(qlist)):
+            channels[qmap[0][i]]=1
+            channels[qmap[1][i]]=1
             if qlist[i]==0:
                 self.circ.add_photons(0, qmap[0][i])
                 self.circ.add_photons(1, qmap[1][i])                
@@ -2779,7 +3252,41 @@ class qodev(object):
                 self.disp.init_ph(qmap[0][i],1)
                 self.disp.init_ph(qmap[1][i],0)
                            
-
+        j=0
+        for i in range(0,self.nch):
+            if channels[i]==0:
+                self.circ.add_photons(ancilla[j], i)
+                self.disp.init_ph(i,ancilla[j])
+                j=j+1
+        
+    #---------------------------------------------------------------------------              
+    # Initialize qubits (Polarization encoding)
+    #---------------------------------------------------------------------------            
+    def pol_qubits(self, qlist, ancilla, qmap): ## Not tested
+        """
+        
+        Initialize the device with photons that represent a list of polarization encoded qubits.
+   
+        :qlist (list[int]): Qubit values
+        :ancilla (list[int]): List with the values to initalize the ancillas. Values are assigned in order from small to large channel number.
+        :qmap(list[]): List with the qubit definitions. 
+                          
+        """
+        
+        channels=[0]*self.nch
+        for i in range(0,len(qlist)):
+            channels[qmap[i]]=1
+            self.circ.add_photons(1, qmap[i],qlist[i])                
+            self.disp.init_ph(qmap[i],1)
+   
+                           
+        j=0
+        for i in range(0,self.nch):
+            if channels[i]==0:
+                self.circ.add_photons(1,i,ancilla[j])
+                self.disp.init_ph(i,1)
+                j=j+1
+                
     #---------------------------------------------------------------------------               
     # Adds Quantum Dot emitter to the device
     #---------------------------------------------------------------------------      
@@ -2805,6 +3312,8 @@ class qodev(object):
         """
         self.circ.add_QD(ch1, ch2 ,t1, f1, w1, t2, f2, w2, S, k, tss, thv, cascade)
         self.disp.bell(ch1,ch2,'P')
+        self.inlist.append(ch1)
+        self.inlist.append(ch2)
 
     #---------------------------------------------------------------------------      
     # Initializes the device with a path encoded Bell state
@@ -2834,6 +3343,8 @@ class qodev(object):
         """
         self.circ.add_Bell(ch1, ch2, ckind, phi ,t1,f1, w1, t2, f2, w2)
         self.disp.bell(ch1,ch2,'O')
+        self.inlist.append(ch1)
+        self.inlist.append(ch2)
 
     #---------------------------------------------------------------------------      
     # Initializes the device with a polarization encoded Bell state
@@ -2863,9 +3374,11 @@ class qodev(object):
         """
         self.circ.add_BellP(ch1, ch2, ckind, phi ,t1,f1, w1, t2, f2, w2)
         self.disp.bell(ch1,ch2,'P')
+        self.inlist.append(ch1)
+        self.inlist.append(ch2)
 
     #---------------------------------------------------------------------------              
-    # Returns the input state of the metacircuit
+    # Returns the input state of the device
     #---------------------------------------------------------------------------      
     def input(self):  
         """
@@ -2954,7 +3467,7 @@ class qodev(object):
         self.circ.prnt_packets()
 
     #---------------------------------------------------------------------------      
-    # Adds to the metacircuit a random circuit
+    # Adds to the device a random circuit
     #---------------------------------------------------------------------------      
     def random_circuit(self, ):
         """
@@ -2968,7 +3481,7 @@ class qodev(object):
         self.disp.element(0, self.nch, strf)
 
     #---------------------------------------------------------------------------                      
-    # Adds to the metacircuit a NSX subcircuit    
+    # Adds to the device a NSX subcircuit    
     #---------------------------------------------------------------------------      
     def NSX(self, ch1, ch2, ch3):
         """
@@ -2986,7 +3499,7 @@ class qodev(object):
         self.disp.three_gate(ch1, ch2, ch3,strf)
 
     #---------------------------------------------------------------------------      
-    # Adds to the metacircuit an ideal beamsplitter
+    # Adds to the device an ideal beamsplitter
     #---------------------------------------------------------------------------      
     def beamsplitter(self, ch1, ch2, theta, phi, colored= False ):
         """
@@ -3010,7 +3523,7 @@ class qodev(object):
         self.disp.two_gate(ch1, ch2,strf, colored)
 
     #---------------------------------------------------------------------------      
-    # Adds to the metacircuit a dielectric beamsplitter
+    # Adds to the device a dielectric beamsplitter
     #---------------------------------------------------------------------------      
     def dielectric(self, ch1, ch2, t, r):
         """
@@ -3031,7 +3544,7 @@ class qodev(object):
         self.disp.two_gate(ch1, ch2,strf)
 
     #---------------------------------------------------------------------------      
-    # Adds to the metacircuit a MMI 2x2 beamsplitter
+    # Adds to the device a MMI 2x2 beamsplitter
     #---------------------------------------------------------------------------      
     def MMI2(self, ch1, ch2):
         """
@@ -3047,7 +3560,7 @@ class qodev(object):
         self.disp.two_gate(ch1, ch2,strf)
 
     #---------------------------------------------------------------------------      
-    # Adds to the metacircuit a rewire gate
+    # Adds to the device a rewire gate
     #---------------------------------------------------------------------------      
     def rewire(self, ch1, ch2):
         """
@@ -3062,7 +3575,7 @@ class qodev(object):
         self.disp.rewire(ch1, ch2)       
 
     #---------------------------------------------------------------------------                 
-    # Adds to the metacircuit a phase shifter
+    # Adds to the device a phase shifter
     #---------------------------------------------------------------------------      
     def phase_shifter(self, ch, phi, colored=False):
         """
@@ -3082,7 +3595,7 @@ class qodev(object):
         self.disp.one_gate(ch,strf,colored)
 
     #---------------------------------------------------------------------------          
-    # Adds to the metacircuit an homogeneous lossy medium
+    # Adds to the device an homogeneous lossy medium
     #---------------------------------------------------------------------------      
     def loss(self, ch, l):
         """
@@ -3100,7 +3613,7 @@ class qodev(object):
         self.disp.one_gate(ch,strf)
 
     #---------------------------------------------------------------------------      
-    #  Adds to the metacircuit a delay
+    #  Adds to the device a delay
     #---------------------------------------------------------------------------      
     def delay(self, ch):
         """
@@ -3114,7 +3627,7 @@ class qodev(object):
         self.disp.delay(ch)
 
     #---------------------------------------------------------------------------      
-    # Adds to the metacircuit a rotator
+    # Adds to the device a rotator
     #---------------------------------------------------------------------------      
     def rotator(self, ch, theta, phi):
         """
@@ -3136,7 +3649,7 @@ class qodev(object):
         self.disp.one_gate(ch,strf)
 
     #---------------------------------------------------------------------------      
-    # Adds to the metacircuit a polarized beamsplitter
+    # Adds to the device a polarized beamsplitter
     #---------------------------------------------------------------------------      
     def pol_beamsplitter(self, ch1, ch2, P):
         """
@@ -3159,7 +3672,7 @@ class qodev(object):
         self.disp.two_gate(ch1, ch2,strf)
 
     #---------------------------------------------------------------------------                 
-    # Adds to the metacircuit a polarized phase shifter
+    # Adds to the device a polarized phase shifter
     #---------------------------------------------------------------------------      
     def pol_phase_shifter(self, ch, P, phi, colored=False):
         """
@@ -3186,7 +3699,29 @@ class qodev(object):
         self.disp.one_gate(ch,strf,colored)
 
     #---------------------------------------------------------------------------      
-    # Adds to the metacircuit a half waveplate
+    # Adds to the device a polarization filter
+    #---------------------------------------------------------------------------
+    def pol_filter(self, ch, P):
+        """
+            
+        Adds a polarization filter attached to channel ch.
+        
+        :ch  (int): Polarization filter input channel.
+        :P   (int): Polarization to be filtered.
+        
+        """
+                  
+        str1="FILT"
+        if P==0:
+            str2='(H)'
+        else:
+            str2='(V)'
+        strf=str1+str2
+        self.circ.pol_filter(ch,P)
+        self.disp.one_gate(ch,strf,False)
+        
+    #---------------------------------------------------------------------------      
+    # Adds to the device a half waveplate
     #---------------------------------------------------------------------------      
     def half(self, ch, alpha):
         """
@@ -3205,7 +3740,7 @@ class qodev(object):
         self.disp.one_gate(ch,strf)
 
     #---------------------------------------------------------------------------      
-    # Adds to the metacircuit a quarter waveplate
+    # Adds to the device a quarter waveplate
     #---------------------------------------------------------------------------      
     def quarter(self, ch, alpha):
         """
@@ -3224,9 +3759,9 @@ class qodev(object):
         self.disp.one_gate(ch,strf)        
 
     #---------------------------------------------------------------------------              
-    # Adds to the metacircuit a detector
+    # Adds to the device a detector
     #---------------------------------------------------------------------------      
-    def detector(self, ch, cond=-1, eff=1.0, blnk=0.0, gamma=0.0):
+    def detector(self, ch, cond=-1, pol=-1, mpi=-1, mpo=-1, eff=1.0, blnk=0.0, gamma=0.0):
         """
             
         Adds a detector to a channel of the device.
@@ -3236,13 +3771,18 @@ class qodev(object):
          cond>=0:  Readings in the remaining channels are considered only by calculations in probability bins and density matrices if the number of photons in this channel is equal to cond. |br|
          cond=-1:  There is no condition and works as a normal detector. |br|
          cond=-2:  The channel is ignored by outcome calculations in probability bins and density matrices. |br|
+        :pol (optional[int]): Polarization condition. If cond>=0, pol determines the polarization of the photons to fulfill the condition. Note that if pol=-1 no assumption about the polarization of those photons is made.
+        :mpi (optional[int]): Initial period of the detection window (if -1 takes the first one as default).
+        :mpo (optional[int]): Final period of the detection window (if -1 takes the first one as default).
         :eff   (optional[float]): Efficiency of the detector.
         :blnk  (optional[float]): Ratio of time in which the detector is inactive due other detections.
         :gamma (optional[float]): Average rate of dark counts in this channel.
         
         """
-        self.circ.detector(ch,cond,eff,blnk,gamma)
-        self.disp.final_dec(ch,cond)
+        self.circ.detector(ch,cond,pol,mpi,mpo,eff,blnk,gamma)
+        self.disp.final_dec(ch,cond,pol)
+        self.outlist.append(ch)
+        
 
     #---------------------------------------------------------------------------      
     # Ignore a channel
@@ -3255,8 +3795,9 @@ class qodev(object):
         :ch (int): Ignored channel.
         
         """
-        self.circ.detector(ch,-2,1.0,0.0,0.0)
-        self.disp.final_dec(ch,-2)
+        self.circ.detector(ch,-2,-1,-1,-1,1.0,0.0,0.0)
+        self.disp.final_dec(ch,-2,-1)
+        self.outlist.append(ch)
 
     #---------------------------------------------------------------------------              
     # Adds to the output a random Gaussian whote noise of stdev^2 dispersion
@@ -3279,7 +3820,7 @@ class qodev(object):
         """
         
         Apply the post-selection condition defined by the detectors in an ideal circuit to a state. |br|
-        **Warning!** This can be only applied to ideal devices nm=1 and nd=1 where detector naturally define 
+        **Warning!** This can be only applied to ideal devices ns=1 where detector naturally define 
         a single ket projector. Otherwise the conditions lead to a density matrix output and there are 
         other tools available in SOQCS for that purpose. Note that ignored channels are not transcribed 
         but that may lead to collisions between otherwise different terms.           
@@ -3294,7 +3835,7 @@ class qodev(object):
     #---------------------------------------------------------------------------              
     # Plots the device
     #---------------------------------------------------------------------------      
-    def show(self,depth=10,sizexy=100,font=18, rows=1):
+    def show(self,depth=10,sizexy=100,font=18, slin=0, rows=1):
         """
         
         Plots the quantum device.
@@ -3302,19 +3843,18 @@ class qodev(object):
         :depth (optional[int]): Number of plot layers. The longer the circuit the more needed.
         :sizexy(optional[int]): How many pixels by layer. Controls the size of the plot.
         :font (optional[int]):  Font size of the labels.
+        :slin(optional(int)): Starting lines 0='No'/1='Yes'. If starting lines is 0 no lines are shown until the channel is initialized.
         :rows(int): Numbers of printing lines to be used by the plotter. |br| 
                    If rows=1, the plot is printed in one line unless hard separators are used to manually 
                    point out the change of printing line. |br| 
                    If rows>1, the plot is drawn in a fixed quantity of lines. In this case the change of line is done automatically. |br|
 
         
-        """
-    
-    
-        self.disp.show(self.nch,depth,sizexy,font, rows)
+        """    
+        self.disp.show(self.nch,depth,sizexy,font, slin, rows)
         
 #------------------------------------------------------------------------------#                    
-# Plots Prbability vs dt                                                       #
+# Plots a probability function vs dt                                           #
 #------------------------------------------------------------------------------#      
 def plot(pfunc,cnvx,cnvy,textx,x0,x1,nxt,texty,y0,y1,nyt,N,argsv=[{0:0}],colorv=['b'],padb=0.0,padt=0.0):
     """
@@ -3372,11 +3912,10 @@ def plot(pfunc,cnvx,cnvy,textx,x0,x1,nxt,texty,y0,y1,nyt,N,argsv=[{0:0}],colorv=
         plt.plot(dt, probs[i],color=colorv[i], linewidth=3.0)
     plt.show()
     
-
 #------------------------------------------------------------------------------#                    
-# Scatter plot of (X,Y) pairts                                                 #
+# Scatter plot of (X,Y) pairs                                                 #
 #------------------------------------------------------------------------------#      
-def plot_data(Y,X,cnvx,cnvy,textx,x0,x1,nxt,texty,y0,y1,nyt,N,color='b',padb=0.0,padt=0.0):
+def plot_data(probs,X,cnvx,cnvy,textx,x0,x1,nxt,texty,y0,y1,nyt,N,colorv=['b'],padb=0.0,padt=0.0):
     """
         
     Scatter plot of (X,Y) pairts  
@@ -3399,7 +3938,13 @@ def plot_data(Y,X,cnvx,cnvy,textx,x0,x1,nxt,texty,y0,y1,nyt,N,color='b',padb=0.0
     :padt (float): Pad top. Some extra space at the top to better visualization.
         
     """
-      
+
+         
+    Nv=len(probs)
+    Nc=len(colorv)
+    if(Nv!=Nc):
+        print("Plot data warning!: Number of data arguments different of number of colors to print")
+        
     f=plt.figure(figsize=(cnvx,cnvy))
     ax1=f.add_subplot(111)
     ax1.xaxis.set_ticks_position('bottom')
@@ -3418,5 +3963,6 @@ def plot_data(Y,X,cnvx,cnvy,textx,x0,x1,nxt,texty,y0,y1,nyt,N,color='b',padb=0.0
     plt.tick_params(which='both', width=1)
     plt.tick_params(which='major', length=-7, pad=15)
     plt.tick_params(which='minor', length=-4, pad=15)
-    plt.plot(X, Y,color=color, linewidth=3.0)
-    plt.show()
+    for i in range(0,Nv):
+        plt.plot(X, probs[i],color=colorv[i], linewidth=3.0)
+    plt.show()    

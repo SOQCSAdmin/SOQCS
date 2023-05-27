@@ -145,10 +145,11 @@ extern "C" {
     void qoc_rotator(long int qoc, int i_ch, double theta, double phi){ qocircuit* aux=(qocircuit*)qoc; aux->rotator(i_ch,theta,phi);}
     void qoc_pol_beamsplitter(long int qoc, int i_ch1, int i_ch2, int P){qocircuit* aux=(qocircuit*)qoc; aux->pol_beamsplitter(i_ch1,i_ch2, P);}
     void qoc_pol_phase_shifter(long int qoc, int i_ch, int P, double phi){qocircuit* aux=(qocircuit*)qoc; aux->pol_phase_shifter(i_ch,P, phi);}
+    void qoc_pol_filter(long int qoc, int i_ch, int P){qocircuit* aux=(qocircuit*)qoc; aux->pol_filter(i_ch,P);}
     void qoc_waveplate(long int qoc, int i_ch, double alpha, double gamma){qocircuit* aux=(qocircuit*)qoc; aux->waveplate(i_ch, alpha, gamma);}
 
     //      Detection elements
-    void qoc_detector(long int  qoc, int i_ch, int cond, double eff, double blnk, double gamma){ qocircuit* aux=(qocircuit*)qoc; aux->detector(i_ch,cond,eff,blnk,gamma);}
+    void qoc_detector(long int  qoc, int i_ch, int cond, int pol, int mpi, int mpo, double eff, double blnk, double gamma){ qocircuit* aux=(qocircuit*)qoc; aux->detector(i_ch,cond,pol,mpi,mpo,eff,blnk,gamma);}
     void qoc_noise(long int qoc, double stdev2){ qocircuit* aux=(qocircuit*)qoc; aux->noise(stdev2);}
 
     //      Emitter and distinguishability model.
@@ -208,12 +209,25 @@ extern "C" {
                                                                               state*auxencoded=auxst->encode(imat,auxqoc);
                                                                               return (long int) auxencoded;}
 
-    long int st_decode(long int st, int *qdef, int nqbits, long int anzilla, long int qoc)     {state *auxst=(state *)st;
-                                                                                                state *auxan=(state *)anzilla;
+    long int st_decode(long int st, int *qdef, int nqbits, long int ancilla, long int qoc)     {state *auxst=(state *)st;
+                                                                                                state *auxan=(state *)ancilla;
                                                                                                 qocircuit *auxqoc=(qocircuit*)qoc;
                                                                                                 mati imat=to_mati(qdef,2,nqbits);
                                                                                                 state*auxdecoded=auxst->decode(imat,auxan,auxqoc);
                                                                                                 return (long int) auxdecoded;}
+
+    long int st_pol_encode(long int st, int *qdef, int nqbits, long int qoc)     {state *auxst=(state *)st;
+                                                                                  qocircuit *auxqoc=(qocircuit*)qoc;
+                                                                                  veci ivec=to_veci(qdef,nqbits);
+                                                                                  state*auxencoded=auxst->pol_encode(ivec,auxqoc);
+                                                                                  return (long int) auxencoded;}
+
+    long int st_pol_decode(long int st, int *qdef, int nqbits, long int ancilla, long int qoc)     {state *auxst=(state *)st;
+                                                                                                    state *auxan=(state *)ancilla;
+                                                                                                    qocircuit *auxqoc=(qocircuit*)qoc;
+                                                                                                    veci ivec=to_veci(qdef,nqbits);
+                                                                                                    state*auxdecoded=auxst->pol_decode(ivec,auxan,auxqoc);
+                                                                                                    return (long int) auxdecoded;}
 
     // PROJECTOR
     long int prj_new_projector(int i_level, int i_maxket){ return (long int)new projector(i_level,i_maxket);}
@@ -271,6 +285,11 @@ extern "C" {
                                                                               qodev *auxdev=(qodev *)dev;
                                                                               mati imat=to_mati(qdef,2,nqbits);
                                                                               return (long int)auxpb->translate(imat, auxdev->circ);}
+
+    long int pb_pol_translate(long int pbin, int *qdef, int nqbits, long int dev){p_bin *auxpb=(p_bin *)pbin;
+                                                                              qodev *auxdev=(qodev *)dev;
+                                                                              veci ivec=to_veci(qdef,nqbits);
+                                                                              return (long int)auxpb->pol_translate(ivec, auxdev->circ);}
     //--------------------------------------------------------------------------------------------------------------------------
 
 
@@ -296,6 +315,18 @@ extern "C" {
     void  dm_prnt_mtx_qoc(long int dmat, int format, double thresh, long int qoc){dmatrix *auxdm=(dmatrix*)dmat; qocircuit *auxqoc=(qocircuit*)qoc; auxdm->prnt_mtx(format,thresh,auxqoc); cout << flush;}
     void  dm_prnt_mtx(long int dmat, int format, double thresh, long int dev){dmatrix *auxdm=(dmatrix*)dmat; qodev *auxdev=(qodev *)dev; auxdm->prnt_mtx(format,thresh,auxdev); cout << flush;}
 
+
+    // Qubit codification methods
+    long int dm_translate(long int dmat, int *qdef, int nqbits, long int dev){dmatrix *auxdm=(dmatrix *)dmat;
+                                                                              qodev *auxdev=(qodev *)dev;
+                                                                              mati imat=to_mati(qdef,2,nqbits);
+                                                                              return (long int)auxdm->translate(imat, auxdev->circ);}
+
+    long int dm_pol_translate(long int dmat, int *qdef, int nqbits, long int dev){dmatrix *auxdm=(dmatrix *)dmat;
+                                                                              qodev *auxdev=(qodev *)dev;
+                                                                              veci ivec=to_veci(qdef,nqbits);
+                                                                              return (long int)auxdm->pol_translate(ivec, auxdev->circ);}
+
     //--------------------------------------------------------------------------------------------------------------------------
     // QODEV
     // Management functions
@@ -303,6 +334,11 @@ extern "C" {
                                                                                   return (long int)new qodev(i_nph,i_nch,i_nm,i_ns,i_np,i_dtp,clock,i_R, loss, ckind, i_maxket);}
     void dev_destroy_qodev(long int dev){qodev *aux=(qodev *)dev; delete aux; }
     void dev_concatenate(long int dev1, long int dev2){qodev *auxdev1=(qodev *)dev1; qodev *auxdev2=(qodev *)dev2; auxdev1->concatenate(auxdev2);}
+    void dev_add_gate(long int dev1, int *chlist, int n, long int dev2){qodev *auxdev1=(qodev *)dev1;
+                                                                        qodev *auxdev2=(qodev *)dev2;
+                                                                        veci ivec=to_veci(chlist,n);
+                                                                        auxdev1->add_gate(ivec,auxdev2);
+                                                                        }
 
 
     // Initial state definition
@@ -357,12 +393,13 @@ extern "C" {
     void dev_rotator(long int dev, int i_ch, double theta, double phi){ qodev* aux=(qodev*)dev; aux->rotator(i_ch,theta,phi);}
     void dev_pol_beamsplitter(long int dev, int i_ch1, int i_ch2, int P){qodev* aux=(qodev*)dev; aux->pol_beamsplitter(i_ch1,i_ch2, P);}
     void dev_pol_phase_shifter(long int dev, int i_ch, int P, double phi){qodev* aux=(qodev*)dev; aux->pol_phase_shifter(i_ch,P,phi);}
-    void dev_half(long int dev, int i_ch, double alpha, double gamma){qodev* aux=(qodev*)dev; aux->half(i_ch, alpha);}
+    void dev_pol_filter(long int dev, int i_ch, int P){qodev* aux=(qodev*)dev; aux->pol_filter(i_ch,P);}
+    void dev_half(long int dev, int i_ch, double alpha){qodev* aux=(qodev*)dev; aux->half(i_ch, alpha);}
     void dev_quarter(long int dev, int i_ch, double alpha, double gamma){qodev* aux=(qodev*)dev; aux->quarter(i_ch, alpha);}
 
     //      Detection elements
     //      Detection elements
-    void dev_detector(long int  dev, int i_ch, int cond, double eff, double blnk, double gamma){ qodev* aux=(qodev*)dev; aux->detector(i_ch,cond,eff,blnk,gamma);}
+    void dev_detector(long int  dev, int i_ch, int cond, int pol, int mpi, int mpo, double eff, double blnk, double gamma){ qodev* aux=(qodev*)dev; aux->detector(i_ch,cond,pol,mpi,mpo,eff,blnk,gamma);}
     void dev_noise(long int dev, double stdev2){ qodev* aux=(qodev*)dev; aux->noise(stdev2);}
     long int dev_apply_condition(long int dev,long int st, bool ignore){ qodev *auxdev=(qodev *) dev; state  *auxst=(state *) st; return (long int) auxdev->apply_condition(auxst,ignore);}
     //--------------------------------------------------------------------------------------------------------------------------
