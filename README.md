@@ -17,12 +17,22 @@
 # Related Publications #
 Please cite the most appropriate of these works if you make use of this library:
 
-*  Javier Osca and Jiri Vala.  <span style="color:blue"> <i>Implementation of photon partial distinguishability in a quantum optical circuit simulation</i></span>. **arXiv:2208.03250 (2022)**
+*  Javier Osca and Jiri Vala.  <span style="color:blue"> <i>Implementation of photon partial distinguishability in a quantum optical circuit simulation</i></span>. 
+   **Computer Physics Communications, Volume 289, 2023, 108773, ISSN 0010-4655**, https://doi.org/10.1016/j.cpc.2023.108773 . 
 *  Javier Osca and Jiri Vala.  <span style="color:blue"> <i>Implementation of a Stochastic Optical Quantum Circuit Simulator ( SOQCS ) </i></span>. **In preparation.**
 
 
 # Version release history #
- 
+
+
+* Version RV1.3:
+
+    * Post-selection by polarization
+    * Qubit polarization encoding
+    * Use of circuits as custom gates
+    * QOL improvements
+    * Various bugs solved
+    
 * Version RV1.2:
 
     * Qubit codification.
@@ -83,7 +93,7 @@ Inside the library main SOQCS folder type <i>make</i>. This will build the libra
 
 
 # 2.2 How to use it? #
-<p align="justify"> Eight examples in C++ can be found in the <i>examples</i> subfolder. They can be compiled with the whole library following the instructions above or typing <i>make</i> within the examples folder after compiling the library.
+<p align="justify"> Nine examples in C++ can be found in the <i>examples</i> subfolder. They can be compiled with the whole library following the instructions above or typing <i>make</i> within the examples folder after compiling the library.
 Additionally, there are also versions of those same examples in Python that can be found in the same folder as Jupyter notebooks. 
 </p>
 
@@ -95,6 +105,7 @@ Additionally, there are also versions of those same examples in Python that can 
 * **Example 6  [C++] [Python]**: An example of the delay gate.
 * **Example 7  [C++] [Python]**: A boson sampling example.
 * **Example 8  [C++] [Python]**: A simulation of the entanglement swapping protocol. Example of use of density matrices in SOQCS.
+* **Example 9  [C++] [Python]**: An example of a dielectric film simulation in SOQCS including losses.
 
 For extended information about how to use SOQCS library in your own projects check the documentation.
 # 3. Documentation #
