@@ -17,49 +17,10 @@
 # Related Publications #
 Please cite the most appropriate of these works if you make use of this library:
 
-*  Javier Osca and Jiri Vala.  <span style="color:blue"> <i>Implementation of photon partial distinguishability in a quantum optical circuit simulation</i></span>. 
-   **Computer Physics Communications, Volume 289, 2023, 108773, ISSN 0010-4655**, https://doi.org/10.1016/j.cpc.2023.108773 . 
-*  Javier Osca and Jiri Vala.  <span style="color:blue"> <i>Implementation of a Stochastic Optical Quantum Circuit Simulator ( SOQCS ) </i></span>. **In preparation.**
-
-
-# Version release history #
-
-
-* Version RV1.3:
-
-    * Post-selection by polarization
-    * Qubit polarization encoding
-    * Use of circuits as custom gates
-    * QOL improvements
-    * Various bugs solved
-    
-* Version RV1.2:
-
-    * Qubit codification.
-    * More examples.
-    * QOL improvements.
-    * Various bugs solved.
-    * Automated configuration.
-    * Extended MacOsX support.
- 
-* Version RV1.1:
-
-    * Extended python support.
-    * QOL improvements
-    * Various bugs solved.
-    * Simplified configuration. 
-    * Basic MacOsX support.
-    
-* Version RV1.0:
-
-    * Framework for circuit simulation.
-    * Non-idealities in the emitter and detector statistics.
-    * Partial distinguishability of photons and photon shape model.
-    * Parallel execution support.
-    * Density matrix and fidelity measurements.
-    * Losses support.
-    * Basic Sampling.
-    * Basic python support.
+*  Javier Osca and Jiri Vala.  <span style="color:blue"> <i>Implementation of photon partial distinguishability in a quantum optical circuit simulation</i></span>.<br> 
+   **Comput. Phys. Commun. Volume 289, 108773 (2023).**
+*  Javier Osca and Jiri Vala.  <span style="color:blue"> <i>Implementation of a Stochastic Optical Quantum Circuit Simulator ( SOQCS ) </i></span>. <br>
+   **In preparation.**
 
  
 # 1. Requirements #
@@ -122,3 +83,48 @@ jiri.vala@mu.ie
 # 5. License and Copyright #
 Copyright (c) 2023 National University of Ireland Maynooth, Maynooth University. All rights reserved. This library and its related files are subject to the licence terms detailed in LICENCE.TXT .
 Use of SOQCS is only permitted under the terms of the licence in [LICENCE.TXT](./LICENCE.TXT). 
+
+# Version release history #
+
+
+* Version RV1.4:
+
+    * Added metropolis sampler
+    * Solved bug introduced in RV1.3
+    * Various bugs solved
+    
+* Version RV1.3:
+
+    * Post-selection by polarization
+    * Qubit polarization encoding
+    * Use of circuits as custom gates
+    * QOL improvements
+    * Various bugs solved
+    
+* Version RV1.2:
+
+    * Qubit codification.
+    * More examples.
+    * QOL improvements.
+    * Various bugs solved.
+    * Automated configuration.
+    * Extended MacOsX support.
+ 
+* Version RV1.1:
+
+    * Extended python support.
+    * QOL improvements
+    * Various bugs solved.
+    * Simplified configuration. 
+    * Basic MacOsX support.
+    
+* Version RV1.0:
+
+    * Framework for circuit simulation.
+    * Non-idealities in the emitter and detector statistics.
+    * Partial distinguishability of photons and photon shape model.
+    * Parallel execution support.
+    * Density matrix and fidelity measurements.
+    * Losses support.
+    * Basic Sampling.
+    * Basic python support.
