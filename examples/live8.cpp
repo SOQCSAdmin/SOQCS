@@ -76,7 +76,7 @@ int main()
         example->detector(2,1);
 
         //Run
-        auto output=sim->run(example->inpt,example->circ);
+        auto output=sim->run(example->inpt,example->circ,0);
 
         // Conditional detection
         apd->add_state(output,example);

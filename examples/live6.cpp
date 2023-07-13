@@ -83,7 +83,7 @@ int main(){
             example->detector(1);
 
             // Run
-            auto measured=sim->run(example);
+            auto measured=sim->run(example,0);
 
             // Store
             double dt=t1-t2;

@@ -72,7 +72,7 @@ int main()
     simulator *sim= new simulator();
 
     auto decoded=qubit->decode(qmap,ancilla,csign->circ);
-    auto raw_state=sim->run(decoded,csign->circ);
+    auto raw_state=sim->run(decoded,csign->circ,0);
     auto output=csign->apply_condition(raw_state);
     auto encoded=output->encode(qmap,csign->circ);
     encoded->normalize();

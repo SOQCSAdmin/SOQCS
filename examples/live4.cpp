@@ -63,7 +63,7 @@ int main(){
         example->noise(0.001);
 
         // Run
-        auto measured=sim->run(example);
+        auto measured=sim->run(example,0);
 
         // Print result
         in_term << 1, 1;

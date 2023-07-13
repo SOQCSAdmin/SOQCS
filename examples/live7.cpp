@@ -34,7 +34,7 @@ int main()
 
     // Run exact simulation and sample
     auto sim= new simulator();
-    auto apdexact=sim->run(example);
+    auto apdexact=sim->run(example,0);
     auto apdsample=sim->sample(example,1000000);
 
     // Print exact results

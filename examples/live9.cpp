@@ -4,10 +4,10 @@
 *   <br>
 *
 *   <b>Description</b>:<br>
-*    We consider a circuit made of single dielectric thin film as studied in [1]. We repoduce numerically the results presented in Figs 2 and 3 of the same ref. [1]
-*    obtained by means of analytical calculations to validate the loss model in SOQCS. Each of the figures corresponf to the cases where two photons are injected in
+*    We consider a circuit made of single dielectric thin film as studied in [1]. We reproduce numerically the results presented in Figs 2 and 3 of the same ref. [1]
+*    obtained by means of analytical calculations to validate the loss model in SOQCS. Each of the figures correspond to the cases where two photons are injected in
 *    the dielectric from the same direction or from opposite ones. Here, both situations are considered as two different input channels  therefore we plot the different
-*    outcome probabilities as function of the transmitance |t| for each of the  two cases | 2, 0 > and | 1, 1 >.<br>
+*    outcome probabilities as function of the transmission amplitude |t| for each of the  two cases | 2, 0 > and | 1, 1 >.<br>
 *   <br>
 *   <br>
 *   [1] Stephen M. Barnett, John Jeffers, Alessandra Gatti, and Rodney Loudon. Quantum optics of lossy beam splitters. Phys. Rev. A, 57:2134–2145, 1998.<br>
@@ -107,7 +107,7 @@ int main()
                 example->detector(1);
 
                 // Simulate
-                auto output=sim->run(input,example);
+                auto output=sim->run(input,example,0);
 
                 // Compute output and obtain probability
                 auto outcome=new p_bin(example->num_levels());

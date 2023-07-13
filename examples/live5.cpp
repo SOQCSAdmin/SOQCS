@@ -78,7 +78,7 @@ int main()
             example->detector(1);
 
             // Run
-            auto measured=sim->run(example);
+            auto measured=sim->run(example,0);
 
             // Print result
             auto prob=measured->prob(in_term,example);

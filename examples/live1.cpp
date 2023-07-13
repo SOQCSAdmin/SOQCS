@@ -42,7 +42,7 @@ int main()
     // Create a simulator
     simulator *sim= new simulator();
     // Simulate
-    auto measured=sim->run(example);
+    auto measured=sim->run(example,0);
 
     // Print measures
     cout << "Probability outcome: " << endl << endl;

@@ -65,7 +65,7 @@ int main()
     // Create a simulator
     simulator *sim= new simulator();
     // Simulate
-    auto outcome=sim->run(cnot);
+    auto outcome=sim->run(cnot,0);
     auto encoded=outcome->translate(qmap, cnot);
 
     // Print measures
