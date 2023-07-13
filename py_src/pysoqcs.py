@@ -1215,7 +1215,7 @@ class p_bin(object):
     #---------------------------------------------------------------------------      
     # Plots a set of probability bins graphically
     #---------------------------------------------------------------------------      
-    def show(self, sizex=8, sizey=5, dpi=100, angle=70, font=14):
+    def show(self, pmax=-1.0,sizex=8, sizey=5, dpi=100, angle=70, font=14):
         """
         
             Plots the outcomes in a bar diagram.
@@ -1243,6 +1243,8 @@ class p_bin(object):
         fig.set_size_inches(sizex,sizey)
         fig.set_dpi(dpi)
         plt.xticks(rotation = angle)
+        if pmax>0.0:
+            plt.ylim(0,pmax)
         
         y_pos = np.arange(len(staglist))
         pbar=ax.bar(y_pos, sproblist, align='center', alpha=0.5)
@@ -2056,22 +2058,16 @@ class simulator(object):
     Simulator that can be used to calculate the outcomes of a quantum device or
     the output state of a circuit given an input state.
 
-    :backend (optional[int]): Backend/Core selected |br|
-                            0 = Direct method: The calculation is performed similarly on how it is done analytically. |br|
-                            1 = Direct restricted: Same as the direct method but considering only output states of occupations by level zero or one. This restricts but speeds up the output. |br|
-                            2 = Glynn method:  The calculation is performed using permanents. We use the Balasubramanian/Bax/Franklin/Glynn formula implemented in gray code to calculate the permanents. |br|
-                            3 = Glynn restricted: Same as the Glynn method but considering only output states of occupations by level zero or one. This restricts but speeds up the output. |br|
-
     :mem(optional([int]): Reserved memory for the output expressed as a maximum number of terms. (Internal memory)
     
     """
     #---------------------------------------------------------------------------          
     # Create a simulator
     #---------------------------------------------------------------------------      
-    def __init__(self, backend=0,mem=1000):
+    def __init__(self, mem=1000):
         func=soqcs.sim_new_simulator
         func.restype=c_long    
-        self.obj = func(backend,mem)
+        self.obj = func(mem)
 
     #---------------------------------------------------------------------------      
     # Delete a simulator
@@ -2082,19 +2078,24 @@ class simulator(object):
     #---------------------------------------------------------------------------               
     # Run a simulator for a metacircuit
     #---------------------------------------------------------------------------      
-    def run(self, dev):
+    def run(self, dev, method=0):
         """
 
         Calculates an output outcome from a device using the selected backend/core and the physical detectors definitions established in that device description.
 
 
         :dev(qodev): Input quantum device.
+        :method (optional[int]): Core method selected |br|
+                            0 = Direct method: The calculation is performed similarly on how it is done analytically. |br|
+                            1 = Direct restricted: Same as the direct method but considering only output states of occupations by level zero or one. This restricts but speeds up the output. |br|
+                            2 = Glynn method:  The calculation is performed using permanents. We use the Balasubramanian/Bax/Franklin/Glynn formula implemented in gray code to calculate the permanents. |br|
+                            3 = Glynn restricted: Same as the Glynn method but considering only output states of occupations by level zero or one. This restricts but speeds up the output. |br|
         :return(p_bin): Device outcome.
     
         """
         func=soqcs.sim_run
         func.restype=c_long
-        obj=func(c_long(self.obj),c_long(dev.circ.obj)) 
+        obj=func(c_long(self.obj),c_long(dev.circ.obj),method) 
         newoutcome=p_bin(1,True)
         newoutcome.obj=obj
         return newoutcome
@@ -2102,30 +2103,37 @@ class simulator(object):
     #---------------------------------------------------------------------------      
     # Run a simulator for an input state and a circuit
     #---------------------------------------------------------------------------      
-    def run_st(self, istate,qoc):
+    def run_st(self, istate,qoc,method=0):
         """
 
         Calculates an output state as a function of an input initial state using the selected backend/core according to the rules established by a quantum circuit.
 
         :istate(state): Initial state.
         :qoc(qocircuit): Input quantum circuit.
+        :method (optional[int]): Core method selected |br|
+                            0 = Direct method: The calculation is performed similarly on how it is done analytically. |br|
+                            1 = Direct restricted: Same as the direct method but considering only output states of occupations by level zero or one. This restricts but speeds up the output. |br|
+                            2 = Glynn method:  The calculation is performed using permanents. We use the Balasubramanian/Bax/Franklin/Glynn formula implemented in gray code to calculate the permanents. |br|
+                            3 = Glynn restricted: Same as the Glynn method but considering only output states of occupations by level zero or one. This restricts but speeds up the output. |br|
+
         :return(state): Output state.
     
         """
         func=soqcs.sim_run_state
         func.restype=c_long
-        obj=func(c_long(self.obj),c_long(istate.obj),c_long(qoc.obj)) 
+        obj=func(c_long(self.obj),c_long(istate.obj),c_long(qoc.obj),method) 
         newstate=state(1,True)
         newstate.obj=obj
         return newstate
 
     #---------------------------------------------------------------------------      
-    # Run a Clifford A sampling for a metacircuit
+    # Run a Clifford A sampling for a device
     #---------------------------------------------------------------------------      
     def sample(self, dev, N):
         """
 
         Sampling of a device using Clifford A algorithm. |br|
+        Proceedings of the 2018 Annual ACM-SIAM Symposium on Discrete Algorithms (SODA). Page 146-155. SIAM Publications Library (2018). |br|
         **Warning!** Clifford A is defined to be used with a single input term. Therefor neither Bell or QD initializations are recommended.
 
         :dev(qodev): Input quantum device.
@@ -2147,6 +2155,7 @@ class simulator(object):
         """
 
         Sampling of a circuit using Clifford A algorithm. |br|
+        Proceedings of the 2018 Annual ACM-SIAM Symposium on Discrete Algorithms (SODA). Page 146-155. SIAM Publications Library (2018). |br|
         **Warning!** Clifford A is defined to be used with a single input term. Input states with multiple terms are not recommended.
 
         :istate(state): Initial state
@@ -2162,7 +2171,69 @@ class simulator(object):
         newoutcome.obj=obj
         return newoutcome
 
-    
+    #---------------------------------------------------------------------------      
+    # Run a Metropolis sampling for a device
+    #---------------------------------------------------------------------------      
+    def metropolis(self, dev, method, N, Nburn=1, Nthin=1):
+        """
+
+        Sampling of a device using a metropolis algorithm. |br|
+        Nature Physics 13, 1153-1157 (2017). |br|
+        **Warning!** Metropolis is defined to be used with a single input term. Therefor neither Bell or QD initializations are recommended.
+
+        :dev(qodev): Input quantum device.
+        :method(int): Sampling method. |br|
+                      0: f classical. |br|
+                      1: g Uniform. |br|
+                      2: g Classical. |br|
+                      3: f classical ( Restricted ). |br|
+                      4: g Uniform  ( Restricted ). |br|
+                      5: g Classical  ( Restricted ). |br|
+        :N(int): Number of samples.
+        :Nburn(int): Number of initial samples to be skipped.
+        :Nthin(int): Number of thinning samples.
+        :return(p_bin): Device outcome.
+
+        """
+        func=soqcs.sim_metropolis
+        func.restype=c_long
+        obj=func(c_long(self.obj),c_long(dev.circ.obj),method,N,Nburn,Nthin) 
+        newoutcome=p_bin(1,True)
+        newoutcome.obj=obj
+        return newoutcome
+
+    #---------------------------------------------------------------------------      
+    # Run a Clifford sampling for an input state and a circuit
+    #---------------------------------------------------------------------------      
+    def metropolis_st(self, istate,qoc,method,N,Nburn=1, Nthin=1):
+        """
+
+        Sampling of a circuit using a metropolis algorithm. |br|
+        Nature Physics 13, 1153-1157 (2017). |br|
+        **Warning!** Metropolis is defined to be used with a single input term. Input states with multiple terms are not recommended.
+
+        :istate(state): Initial state
+        :qoc(qocircuit): Input quantum circuit.
+        :method(int): Sampling method. |br|
+                      0: f classical. |br|
+                      1: g Uniform. |br|
+                      2: g Classical. |br|
+                      3: f classical ( Restricted ). |br|
+                      4: g Uniform  ( Restricted ). |br|
+                      5: g Classical  ( Restricted ). |br|
+        :N(int): Number of samples.
+        :Nburn(int): Number of initial samples to be skipped.
+        :Nthin(int): Number of thinning samples.
+        :return(p_bin): Circuit outcome.
+
+        """
+        func=soqcs.sim_metropolis_state
+        func.restype=c_long
+        obj=func(c_long(self.obj),c_long(istate.obj),c_long(qoc.obj),method,N,Nburn,Nthin) 
+        newoutcome=p_bin(1,True)
+        newoutcome.obj=obj
+        return newoutcome
+        
 #------------------------------------------------------------------------------#      
 # Class gcircuit: Graphical circuit                                            #
 # Graphical representation of a quantum optical circuit                        #

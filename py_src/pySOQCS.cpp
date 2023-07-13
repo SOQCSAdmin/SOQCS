@@ -92,8 +92,6 @@ double *to_dptr(matc mtx){
     double *cnv;
 
     cnv=new double[2*mtx.rows()*mtx.cols()];
-//    cout << "Rows:" << mtx.rows() << endl;
-//    cout << "Cols:" << mtx.cols() << endl;
 
     k=0;
     for(i=0;i<mtx.rows();i++){
@@ -101,7 +99,6 @@ double *to_dptr(matc mtx){
             cnv[k] = real(mtx(i,j));
             cnv[k+1]=imag(mtx(i,j));
             k=k+2;
-//            cout << "k:" << k << endl;
         }
     }
     return cnv;
@@ -174,11 +171,9 @@ extern "C" {
     double *st_braket(long int st1,long int st2){ state *auxst1=(state*)st1;
                                                   state *auxst2=(state*)st2;
                                                   cmplx value=auxst1->braket(auxst2);
-                                                  matc matvalue;
-                                                  matvalue.resize(1,2);
-                                                  matvalue(0,0)=real(value);
-                                                  matvalue(0,1)=imag(value);
-                                                  double *auxdouble=to_dptr(matvalue);
+                                                  double *auxdouble=new double[2];
+                                                  auxdouble[0]=real(value);
+                                                  auxdouble[1]=imag(value);
                                                   return auxdouble;}
 
     void st_normalize(long int st){ state *auxst=(state*)st; auxst->normalize(); }
@@ -408,15 +403,32 @@ extern "C" {
     //--------------------------------------------------------------------------------------------------------------------------
     // SIMULATOR
     // Management methods
-    long int sim_new_simulator(int method,int i_mem){ return (long int) new simulator(method,i_mem);}
+    long int sim_new_simulator(int i_mem){ return (long int) new simulator(i_mem);}
     void sim_destroy_simulator(long int sim){simulator *aux=(simulator *)sim; delete aux; }
 
     // Run methods
-    long int sim_run(long int sim,long int dev){ simulator *auxsim=(simulator *) sim; qodev  *auxdev=(qodev *) dev; return (long int) auxsim->run(auxdev);}
-    long int sim_run_state(long int sim,long int st,long int qoc ){ simulator *auxsim=(simulator *) sim; state  *auxst=(state *) st; qocircuit *auxqoc=(qocircuit*)qoc; return (long int) auxsim->run(auxst,auxqoc);}
-    // Sampling methods
+    long int sim_run(long int sim,long int dev, int method){ simulator *auxsim=(simulator *) sim; qodev  *auxdev=(qodev *) dev; return (long int) auxsim->run(auxdev,method);}
+    long int sim_run_state(long int sim,long int st,long int qoc, int method ){ simulator *auxsim=(simulator *) sim; state  *auxst=(state *) st; qocircuit *auxqoc=(qocircuit*)qoc; return (long int) auxsim->run(auxst,auxqoc,method);}
+    // Clifford sampling methods
     long int sim_sample(long int sim,long int dev, int N){ simulator *auxsim=(simulator *) sim; qodev  *auxdev=(qodev *) dev; return (long int) auxsim->sample(auxdev,N);}
     long int sim_sample_state(long int sim,long int st,long int qoc, int N ){ simulator *auxsim=(simulator *) sim; state  *auxst=(state *) st; qocircuit *auxqoc=(qocircuit*)qoc; return (long int) auxsim->sample(auxst,auxqoc,N);}
+    // Metropolis sampling methods
+    long int sim_metropolis(long int sim,long int dev, int method,int N, int Nburn, int Nthin){ simulator *auxsim=(simulator *) sim;
+                                                                                                qodev  *auxdev=(qodev *) dev;
+                                                                                                p_bin *auxpbin;
+                                                                                                double p;
+                                                                                                tie(auxpbin,p)=auxsim->metropolis(auxdev,method,N,Nburn,Nthin);
+                                                                                                cout << "Metropolis success ratio: " << p << endl;
+                                                                                                return (long int) auxpbin;}
+
+    long int sim_metropolis_state(long int sim,long int st,long int qoc, int method, int N, int Nburn, int Nthin){ simulator *auxsim=(simulator *) sim;
+                                                                                                                    state  *auxst=(state *) st;
+                                                                                                                    qocircuit *auxqoc=(qocircuit*)qoc;
+                                                                                                                    p_bin *auxpbin;
+                                                                                                                    double p;
+                                                                                                                    tie(auxpbin,p)=auxsim->metropolis(auxst,auxqoc,method,N,Nburn,Nthin);
+                                                                                                                    cout << "Metropolis success ratio: " << p << endl;
+                                                                                                                    return (long int) auxpbin;}
     //--------------------------------------------------------------------------------------------------------------------------
 
 }
