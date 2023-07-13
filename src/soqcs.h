@@ -1,7 +1,7 @@
 /**************************************************************************
 * @file soqcs.h
 
-* @version 1.3 (Beta)
+* @version 1.4 ( Beta )
 * @author Javier Osca
 * @author Jiri Vala
 *
@@ -27,7 +27,7 @@
  *      - Building of circuits from <b>non-ideal physical devices</b> that may contain losses.
  *      - Connecting the circuit elements through <b>lossy media</b>
  *      - Creating sets of <b>partially distinguishable photons</b> from their physical parameters (this is shape, frequency, width, etc)
- *      - <b>Simulate the output of the circuit</b> using different cores/backends.
+ *      - <b>Simulate the output of the circuit</b> using different core methods.
  *      - Perform detection using a model of <b>physical detectors</b> that considers effects of efficiency, dead time, dark counts and noise.
  *      - Establish <b>post-selection conditions</b> in the detector configuration.
  *      - Basic <b>boson sampling support</b>.
@@ -41,9 +41,10 @@
  *  Please cite the most appropriate of these works if you make use of this library:<br>
  * <br>
  *  Javier Osca and Jiri Vala. <i style="color:blue;">Implementation of photon partial distinguishability in a quantum optical circuit simulation</i>. <br>
- *  <b> Computer Physics Communications, Volume 289, 2023, 108773, ISSN 0010-4655</b>, https://doi.org/10.1016/j.cpc.2023.108773 . <br>
+ *  <b> Comput. Phys. Commun. Volume 289, 108773 (2023). </b> <br>
  *  <br>
- *  Javier Osca and Jiri Vala. <i style="color:blue;">Implementation of a Stochastic Optical Quantum Circuit Simulator ( SOQCS ) </i>. <b> In preparation </b>. <br>
+ *  Javier Osca and Jiri Vala. <i style="color:blue;">Implementation of a Stochastic Optical Quantum Circuit Simulator ( SOQCS ) </i>. <br>
+ *  <b> In preparation </b>. <br>
  * <br>
  *
  * \section StructureP Library structure
@@ -104,6 +105,11 @@
  *          - Use of circuits as custom gates. <br>
  *          - QOL improvements. <br>
  *          - Various bugs solved.<br>
+ *
+ *   Version <b>RV1.4</b>:
+ *          - Added metropolis sampler. <br>
+ *          - Solved bug introduced in V1.3. <br>
+ *          - Various bugs solved.<br>
  * <br>
  *
  * \section lic License and copyright
@@ -112,14 +118,13 @@
  *  Use of SOQCS is only permitted under the terms of the licence in <a href="../assets/LICENCE.TXT">LICENCE.TXT</a>.<br>
  * <br>
  *
- *
  * \page install Compilation and installation
  * \section requisites Requirements
  *
  *  - <b>Linux/Unix or MacOsX operating system</b>. <br>
  *  - <b>C++ compiler</b>.
  *  - <b>GNU Make</b>.
- *  - <a href="https://eigen.tuxfamily.org/index.php?title=Main_Page"> Eigen 3</a> library. (Follow the instruction installation below) <br>
+ *  - <a href="https://eigen.tuxfamily.org/index.php?title=Main_Page"> Eigen 3</a> library. (Follow instructions of installation below) <br>
  *  - <b>wget</b> or <b>curl</b> ( to automatically download Eigen with the provided scripts)
  * <br>
  *
@@ -232,7 +237,7 @@
     auto measured=sim->run(circuit);
  *  @endcode
  *  <br>
- *  Various cores/backends are available when creating the simulator. <br>
+ *  Various core methods are available when creating the simulator. <br>
  *  <br>
  * - <b>Print and analyze the output </b>.<br>
  *  The most straightforward thing to do is to print an look at the output outcomes
@@ -284,7 +289,6 @@
  *
  * <b> All the examples have their corresponding version in Python</b> that can be found in the same folder as Jupyter notebooks.
  *
- *
  * \section catalog Circuit elements catalog.
  * This section is a brief summary of the catalog of optical circuit elements available in SOQCS. We refer to the documentation of each one of them for details.
  * This list is not exhaustive therefore we also refer the user to the circuit or device classes documentation in the modules section for more information.<br>
@@ -315,8 +319,8 @@
  *     - <b style="color:blue;">detector</b>(int i_ch, int cond, double eff, double blnk, double gamma): Adds a general physical detector. <br>
  *     - <b style="color:blue;">noise</b>(double stdev2): Adds noise to the output. <br>
  *
- * \section cores Simulator cores/backends
- *   The simulator can be configured to use four different cores/backends:
+ * \section cores Simulator core methods
+ *   The simulator can be configured to use four different core methods:
  *     - <b style="color:blue;">Direct method</b>: The calculation is performed similarly on how it is done analytically. This method is recommended when the <b>number of photons <=4</b><br>
  *     - <b style="color:blue;">Direct restricted method</b>: Same as the direct method but considering only output kets whose occupations by level are zero or one. The calculation is faster because less
  *       possible outputs have to be considered but restricts the circuits that can be simulated.<br>
@@ -325,7 +329,8 @@
  *     - <b style="color:blue;">Glynn restricted method</b>: Same as the Glynn method but considering only the output states with occupations by level of zero or one. This restricts but speeds up the output. <br>
  * <br>
  *     It is also possible to call the simulator in a <b style="color:blue;">"manual mode"</b> where only the amplitudes of a pre-determined list of kets are calculated if this list is provided to the simulator.
- *     It is possible to know more about how to configure these backends in the simulator manual page. Additionally SOQCS provide basic support for boson sampling with an implementation of the Clifford A algorithm [1]. <br>
+ *     It is possible to know more about how to configure these methods in the simulator manual page. Additionally SOQCS provide basic support for boson sampling with an implementation of the Clifford A [1] and a metropolis algorithm [2]. <br>
  *   <br>
- *   [1] Peter Clifford and Raphael Clifford. <i>The Classical Complexity of Boson Sampling</i>, pages 146 to 155.
+ *   [1] Peter Clifford and Raphael Clifford. <i>The Classical Complexity of Boson Sampling</i>, Proceedings of the 2018 Annual ACM-SIAM Symposium on Discrete Algorithms (SODA). Page 146-155. SIAM Publications Library (2018). <br>
+ *   [2] Alex Neville et Al. <i>Classical boson sampling algorithms with superior performance to near-term experiments<i>, Nature Physics 13, 1153-1157 (2017)
  */

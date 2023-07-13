@@ -23,7 +23,6 @@
 simulator::simulator(){
 
 
-    backend=0;
     mem=DEFSIMMEM;
 }
 
@@ -31,50 +30,13 @@ simulator::simulator(){
 //----------------------------------------
 //
 // Create a circuit "simulator".
-// The cores are selected using an integer.
-// Less user friendly but simpler for the Python interface.
 //
 //----------------------------------------
-simulator::simulator(int i_backend,int i_mem){
-//  int i_backend        // Method selection
+simulator::simulator(int i_mem){
 //  int i_mem            // Number of memory positions reserved.
 
 
     mem=i_mem;
-    backend=i_backend;
-}
-
-
-//----------------------------------------
-//
-// Create a circuit "simulator".
-// The maximum quantity of memory for operation and output is set explicitly.
-//
-//----------------------------------------
-simulator::simulator(const char *i_back,int i_mem){
-//  const char *i_back   // Method selected (in compilation time. Not dynamic!)
-//  int i_mem            // Number of memory positions reserved
-
-
-    mem=i_mem;
-    switch (str2int(i_back)){
-        case str2int("Direct"):
-            backend=0;
-            break;
-        case str2int("DirectR"):
-            backend=1;
-            break;
-        case str2int("Glynn"):
-            backend=2;
-            break;
-        case str2int("GlynnR"):
-            backend=3;
-            break;
-        default:
-            cout << "Simulator error: No recognized backend" << endl;
-            exit(0);
-            break;
-    }
 }
 
 
@@ -92,7 +54,7 @@ simulator::~simulator(){
 // Simulation of a device
 //
 //----------------------------------------
-p_bin *simulator::run(qodev *circuit){
+p_bin *simulator::run(qodev *circuit, int method){
 //  qodev    circuit;      // Device to be simulated.
 //  Variables
     state *output;         // Output state
@@ -101,7 +63,7 @@ p_bin *simulator::run(qodev *circuit){
 
 
     // Run simulation
-    output=run(circuit->inpt,circuit->circ);
+    output=run(circuit->inpt,circuit->circ, method);
 
     // Store the raw statistic in a probability bin
     outcome= new p_bin(output->nlevel,mem);
@@ -125,14 +87,14 @@ p_bin *simulator::run(qodev *circuit){
 // Calculate output state as function of the input state
 //
 //---------------------------------------------------------------
-state *simulator::run( state *istate, qocircuit *qoc ){
+state *simulator::run( state *istate, qocircuit *qoc, int method ){
 //  state     *istate;           // Input state
 //  qocircuit *qoc               // Circuit to be simulated
 //  Variable
     state *empty_state;          // Empty state to return in case of bad init
 
 
-    switch (backend)
+    switch (method)
     {
         case 0: // DirectF
             return DirectF(istate,qoc);
@@ -161,7 +123,7 @@ state *simulator::run( state *istate, qocircuit *qoc ){
 // function of the input state
 //
 //---------------------------------------------------------------
-state *simulator::run( state *istate, ket_list* olist, qocircuit *qoc ){
+state *simulator::run( state *istate, ket_list* olist, qocircuit *qoc, int method ){
 //  state     *istate;      // Input state
 //  ket_list  *olist;       // Output ket list
 //  qocircuit *qoc          // Circuit to be simulated
@@ -169,7 +131,7 @@ state *simulator::run( state *istate, ket_list* olist, qocircuit *qoc ){
     state *empty_state;     // Empty state to return in case of bad init
 
 
-    switch (backend)
+    switch (method)
     {
         case 0: // Direct
             return DirectS(istate,olist,qoc);
@@ -1049,3 +1011,400 @@ p_bin *simulator::sample( state *istate, qocircuit *qoc ,int N){
     // Return output
     return obin;
 }
+
+
+//--------------------------------------------------------------
+//
+// Metropolis sampling method. Sampling from a circuit. ( Device version )
+//
+//---------------------------------------------------------------
+tuple<p_bin*, double> simulator::metropolis( qodev *circuit ,int method, int N, int Nburn, int Nthin){
+//  qodev *circuit;     // Device to be samples.
+//  int    method;      // Sampling method
+                            // 0: f classical
+                            // 1: g Uniform
+                            // 2: g Classical
+                            // 3: f classical ( Restricted )
+                            // 4: g Uniform  ( Restricted )
+                            // 5: g Classical  ( Restricted )
+//  int N;                  // Number of samples
+//  int Nburn;              // Number of initial samples before arriving to stationary distribution.
+//  int Nthin;              // Number of thining samples to avoid correlation.
+//  Variables
+    double p;           // Success probability
+    p_bin *outcome;     // Device outcomes and their probabilities
+    p_bin *measured;    // Measured outcomes after going through physical detectors
+
+
+    // Run simulation
+    tie(outcome,p)=metropolis(circuit->inpt,circuit->circ,method,N,Nburn,Nthin);
+
+    // Calculate the measured outcome including possible detector errors, etc
+    measured=outcome->calc_measure(circuit->circ);
+
+    // Free memory
+    delete outcome;
+
+    // Return result.
+    return {measured,p};
+}
+
+
+//--------------------------------------------------------------
+//
+// Metropolis sampling method. Sampling from a circuit. ( Circuit version )
+//
+//---------------------------------------------------------------
+tuple<p_bin*, double> simulator::metropolis( state *istate, qocircuit *qoc ,int method, int N, int Nburn, int Nthin){
+//  state     *istate;      // Input state
+//  qocircuit *qoc;         // Circuit to be samples.
+//  int        method;      // Sampling method
+                                // 0: f classical
+                                // 1: g Uniform
+                                // 2: g Classical
+                                // 3: f classical ( Restricted )
+                                // 4: g Uniform  ( Restricted )
+                                // 5: g Classical  ( Restricted )
+//  int N;                  // Number of samples
+//  int Nburn;              // Number of initial samples before arriving to stationary distribution.
+//  int Nthin;              // Number of thinning samples to avoid correlation.
+//  Variables
+    bool   gral;            // True='Unrestricted sampling'/'False=Restricted sampling'
+    bool   uniform;         // True='Uniform sampling'/'False=Circuit classical distribution sampling'
+    bool   classic;         // Classical output True='Yes'/False='No'
+    int    Neff;            // Effective number of samples calculated. ( Not every sample is stored by different reasons)
+    int    nph;             // Number of photons present in the input ket.
+    int    nlevel;          // Number of levels (qoc has this information, but it is put in this variable for easy access)
+    int    index;           // Bin position where a new output count is stored.
+    int    *ilist;          // Sequence of input photons
+    int    *occ;            // Occupation
+    int    *r;              // Sequence of output photons
+    double  T;              // Sample acceptance probability
+    double  s;              // n1!n2!...nl! of the input
+    double  t;              // n1!n2!...nl! of the proposed sample
+    double  p=1.0;          // Probability of the sample.
+    double  p_old=1.0;      // Probability of the previous sample.
+    double  pc;             // Classical probability of the sample.
+    double  pc_old;         // Classical probability of the previous sample.
+    matc    Ust;            // Matrix to calculate the permanent
+    p_bin  *obin;           // Output set of bins
+//  Index
+    int     isample;        // Index of accepted samples
+    int     istored;        // Index of stored samples
+    int     ilin;           // Index of input levels
+    int     ilout;          // Index of output levels
+    int     irow;           // Row index of Ust
+    int     icol;           // Col index of Ust
+//  Auxiliary index
+    int     i;              // Aux index
+    int     j;              // Aux index
+    int     k;              // Aux index
+
+
+    // If the input has more than one ket the metropolis method can not sample it.
+    if(istate->nket>1) cout << "metropolis warning!: Multiple ket input state. All kets are ignored except the first one" << endl;
+
+    // Set up dimensions of the probel,
+    s=1.0;
+    nph=0;
+    nlevel=qoc->nlevel;
+    for(i=0;i<nlevel;i++){
+        nph=nph+istate->ket[0][i];
+        s=s*(double)factorial(istate->ket[0][i]);
+    }
+
+    //Reserve memory
+    ilist=new int[nph]();
+    r=new int[nph]();
+    Ust.resize(nph,nph);
+    obin=new p_bin(nlevel,mem);
+
+    //Initialize input configuration.
+    k=0;
+    for(i=0;i<nlevel;i++){
+        for(j=0;j<istate->ket[0][i];j++){
+            ilist[k]=i;
+            k=k+1;
+        }
+    }
+
+    // Configure the flags of the chosen method.
+    switch (method){
+        case 0: // f Classical
+            classic=true;
+            gral=true;
+            uniform=false;
+            break;
+        case 1: // g Uniform
+            classic=false;
+            gral=true;
+            uniform=true;
+            break;
+        case 2: // g Classical
+            classic=false;
+            gral=true;
+            uniform=false;
+            break;
+        case 3: // f Classical (Restricted)
+            classic=true;
+            gral=false;
+            uniform=false;
+            break;
+        case 4: // g Uniform (Restricted)
+            classic=false;
+            gral=false;
+            uniform=true;
+            break;
+        case 5: // g Classical  (Restricted)
+            classic=false;
+            gral=false;
+            uniform=false;
+            break;
+        default:
+            cout << "Metropolis error: No recognized method." << endl;
+            return {obin,0.0};
+            break;
+    }
+
+
+    // Initialize loop variables and counters
+    isample=0;
+    istored=0;
+    Neff=0;
+    p_old=1.0;
+    pc_old=1.0;
+    while(istored<N){
+        // Generate classically distributed sample
+        tie(occ,pc)=classical_sample(ilist,nph,gral,uniform,qoc);
+
+
+        // Obtain acceptance probability
+        if(classic==false){
+            // Init variables
+            for(i=0;i<nph;i++) r[i]=0;
+            k=0;
+            t=1.0;
+            for(i=0;i<nlevel;i++){
+                t=t*(double)factorial(occ[i]);
+                for(j=0;j<occ[i];j++){
+                    r[k]=i;
+                    k=k+1;
+
+                }
+            }
+
+            // Generate Ust
+            icol=0;
+            for(ilin=0;ilin<nph;ilin++){
+                irow=0;
+                for(ilout=0;ilout<nph;ilout++){
+                    Ust(irow,icol)=qoc->circmtx(r[ilout],ilist[ilin]);
+                    irow=irow+1;
+                }
+                icol=icol+1;
+            }
+
+            // Calculate probability
+            p=pow(abs(glynn(Ust)),2)/(s*t);
+
+            // Calculate acceptance probability
+            if(uniform==false) T=min(1.0,(p*pc_old)/(pc*p_old));
+            else T=min(1.0,p/p_old);
+        }else{
+            T=1.0;
+        }
+
+
+        // Accept sample with probability T
+        if(urand()<T){
+            p_old=p;
+            pc_old=pc;
+            isample=isample+1;
+
+            // Store sample if it is not burn or thined
+            if((isample>=Nburn)&&(isample%Nthin==0)){
+
+                index=obin->add_count(occ);
+                istored=istored+1;
+
+                if(index<0){
+                    cout << "Sample: Warning! Sampling canceled because the memory limit has been exceeded.  Increase *mem* for more memory." << endl;
+
+                    // Free memory
+                    delete[] r;
+                    delete[] ilist;
+                    delete [] occ;
+
+                    // Return partial calculation.
+                    return {obin,(double) isample/(double)Neff};
+                }
+            }
+        }
+
+        Neff=Neff+1;
+        delete[] occ;
+    }
+
+    // Free memory
+    delete[] r;
+    delete[] ilist;
+
+    // Return output
+    return {obin,(double) isample/(double)Neff};
+}
+
+
+//-----------------------------------------------
+//
+//  Obtain a sample from a circuit assuming photons
+//  are classical particles.
+//
+//-----------------------------------------------
+tuple<int*, double> simulator::classical_sample(int *ilist, int nph, bool gral, bool uniform, qocircuit *qoc ){
+//  int *ilist;       // List of input photons.
+//  bool gral;        // Levels may have any number of photons true='Yes'/False='No'
+//  bool uniform;     // Uniform or classical distribution.   True='uniform'/False='Classical'
+//  qocircuit *qoc;   // Circuit being sampled.
+//  Variables
+    int    nlevel;    // Number of levels
+    double t;         // n1!n2!..nl!
+    double c;         // nph!
+    double pc;        // Classical probability
+    double auxpc;     // Auxiliary variable to calculate classical probability.
+    int   *occ;       // Occupation
+    string perm;      // Permutations of the output photon list.
+//  Auxiliary index
+    int    i;         // Aux index
+    int    j;         // Aux index
+    int    k;         // Aux index
+
+
+    // Initialize variables
+    pc=0.0;
+    c=(double)factorial(nph);
+    nlevel=qoc->nlevel;
+    perm.resize(nph);
+
+
+    // Generate state.
+    // Accept only with probability pc
+    while(urand()>=pc){
+        // Generate uniform distribution
+        if(gral==true) tie(occ,t)=uniform_general(nph,qoc);
+        else tie(occ,t)=uniform_restricted(nph,qoc);
+
+
+        // Generate classical distribution of the circuit if asked.
+        if(uniform==false){
+            k=0;
+            for(i=0;i<nlevel;i++){
+                for(j=0;j<occ[i];j++){
+                    perm[k]=i;
+                    k=k+1;
+                }
+            }
+
+            pc=0.0;
+            sort(perm.begin(),perm.end());
+            do{
+                auxpc=1.0;
+                for(i=0;i<nph;i++){
+                    auxpc=auxpc*pow(abs(qoc->circmtx(perm[i],ilist[i])),2);
+                }
+                pc=pc+auxpc;
+            }while (next_permutation(perm.begin(), perm.end()));
+            pc=pc*t/c;
+        }else{
+            pc=1.0;
+        }
+    }
+
+    // Return sample.
+    return {occ,pc};
+}
+
+
+//-----------------------------------------------
+//
+//  Generation of random nlevel states of nph photons.
+//  ( Uniform distribution)
+//
+//-----------------------------------------------
+tuple<int*, double> simulator::uniform_general(int nph, qocircuit *qoc){
+//  int nph;         // Number of photons
+//  int qocircuit;   // Circuit being sampled
+//  Variables
+    int nlevel;      // Number of levels
+    double t;        // n1!n2!..nl!
+    double p;        // Acceptance probability
+    int *occ;        // Occupation
+//  Auxiliary index
+    int i;           // Aux index
+    int l;           // Aux index
+
+
+    // Initialize variables and reserve memory
+    nlevel=qoc->nlevel;
+    occ=new int[nlevel]();
+
+    // Generate state.
+    // Accept only with probability p.
+    p=0.0;
+    while(urand()>=p){
+        // Init occupation
+        for(i=0;i<nlevel;i++) occ[i]=0;
+        // Generate state
+        for(i=0;i<nph;i++){
+            l=floor(nlevel*urand());
+            occ[l]=occ[l]+1;
+        }
+
+        // Calculate acceptance probability.
+        // c/t is the number of times this occupation will be generated
+        // in excess over the uniform distribution. Therefore we have to
+        // reject it with the inverse of this value.
+        t=1.0;
+        for(i=0;i<nlevel;i++) t=t*(double)factorial(occ[i]);
+        p=t/(double)factorial(nph);
+
+    }
+
+    // Return result
+    return {occ,t};
+}
+
+
+//-----------------------------------------------
+//
+//  Generation of random nlevel states of nph photons.
+//  Maximum of one photon by level
+//  ( Uniform distribution)
+//
+//-----------------------------------------------
+tuple<int*, double> simulator::uniform_restricted(int nph, qocircuit *qoc){
+//  int nph;         // Number of photons
+//  int qocircuit;   // Circuit being sampled
+//  Variables
+    int iph;         // Photons allocated
+    int *occ;        // Occupation
+//  Auxiliary index
+    int l;           // Aux index
+
+
+    // Reserve memory
+    occ=new int[qoc->nlevel]();
+
+    // Generate a random state. (Max one photon by level)
+    iph=0;
+    while(iph<nph){
+        l=floor(qoc->nlevel*urand());
+        if(occ[l]==0){
+            occ[l]=occ[l]+1;
+            iph=iph+1;
+        }
+    }
+
+    // Return result
+    return {occ,(double)factorial(nph)};
+}
+

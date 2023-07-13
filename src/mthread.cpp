@@ -17,7 +17,24 @@
 //
 //----------------------------------------
 mthread::mthread(){
+
+
+    sim=new simulator();
 }
+
+
+//----------------------------------------
+//
+//  Create a multi-thread "server" for works
+//
+//----------------------------------------
+mthread::mthread(int mem){
+//  int i_mem            // Number of memory positions reserved.
+
+
+    sim=new simulator(mem);
+}
+
 
 
 //----------------------------------------
@@ -26,6 +43,9 @@ mthread::mthread(){
 //
 //----------------------------------------
 mthread::~mthread(){
+
+
+    delete sim;
 }
 
 
@@ -34,10 +54,11 @@ mthread::~mthread(){
 //  Send a work to the server
 //
 //----------------------------------------
-void mthread::send_work(state *input,simulator *sim, qocircuit *qoc){
+void mthread::send_work(state *input, qocircuit *qoc, int method){
 //  state     *input;       // Input state to be run
 //  simulator *sim;         // Simulator employed to calculate the output from input.
 //  qocircuit *qoc;         // Circuit employed to run the simulation
+//  int        method;      // Simulation method
 //  Variables
     promise<qelem> paux;    // Promise of a future result.
     state    *copyinput;    // Internal copy of the input state
@@ -53,7 +74,7 @@ void mthread::send_work(state *input,simulator *sim, qocircuit *qoc){
     // Pus into the queue the promise of future result.
     fqueue.push_back(paux.get_future());
     // Create a new thread and execute it.
-    threads.push_back(thread(new_thread, copyinput, sim, copyqoc,move(paux)));
+    threads.push_back(thread(new_thread, copyinput, copyqoc, sim, method, move(paux)));
 }
 
 
@@ -96,10 +117,11 @@ state *mthread::receive_work(){
 //  Work to be carried by a thread.
 //
 //----------------------------------------
-void new_thread(state *input, simulator *sim, qocircuit *qoc, promise<qelem> p){
+void new_thread(state *input, qocircuit *qoc, simulator *sim, int method, promise<qelem> p){
 //  state     *input;       // Input state to be run
-//  simulator *sim;         // Simulator employed to calculate the output from input.
 //  qocircuit *qoc;         // Circuit employed to run the simulation
+//  simulator *sim;         // Simulator employed to calculate the output from input.
+//  int        method;      // Simulation method
 //  promise<qelem> p        // Promise of future result variable
 //  Variables
     qelem send;             // Element to be sent as a result
@@ -107,7 +129,7 @@ void new_thread(state *input, simulator *sim, qocircuit *qoc, promise<qelem> p){
 
     // Calculate and compose the result to be sent once the task is finished
     send.input=input;
-    send.output=sim->run(input,qoc);
+    send.output=sim->run(input,qoc,method);
     send.qoc=qoc;
 
     // Set the value of the promise to its definitive result.

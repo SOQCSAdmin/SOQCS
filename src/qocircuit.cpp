@@ -469,56 +469,36 @@ int qocircuit:: dielectric(int i_ch1, int i_ch2, cmplx t, cmplx r){
 //-------------------------------------------------------
 void qocircuit::compute_losses(){
 //  Variables
-    int  nchm;   // Half the number of channels
-    int  ch;     // Channel
-    int  m;      // Polarization
-    int  s;      // Wavepacket
-    matc D;      // Diagonal matrix S=U D U^*
-    matc U;      // Unitary  matrix S=U D U^*
-    ComplexEigenSolver<matc> es; // Eigensolver
+    matc M;           // Circuit non unitary matrix
+    matc off;         // Off diagonal matrix Rsqrt(1-D^2)V
+    matc offd;        // Off diagonal matrix sqrt(1-D^2)
+    matc D;           // Diagonal matrix M=RDV
+    matc R;           // Unitary matrix R
+    matc V;           // Unitary matrix V
+    BDCSVD<matc> svd; // Single value decomposition
 //  Auxiliary index
-    int  i;      // Aux index
-    int  j;      // Aux index
-    int  k;      // Aux index
-    int  q;      // Aux index
+    int  i;           // Aux index
 
+    //Single value decomposition
+    M=circmtx.block(0,0,nlevel/2,nlevel/2);
+    svd.compute(M,ComputeThinU | ComputeThinV);
+    D=svd.singularValues().asDiagonal();
+    R=svd.matrixU();
+    V=svd.matrixV().adjoint();
 
-    //Diagonalize
-    nchm=nch/2;
-    es.compute(circmtx);
-    D = es.eigenvalues().asDiagonal();
-    U= es.eigenvectors();
+    // Compute off diagonal couplings
+    offd.setZero(nlevel/2,nlevel/2);
+    for(i=0;i<nlevel/2;i++) offd(i,i)=sqrt(abs(1.0-abs(conj(D(i,i))*D(i,i))));
+    off=R*offd*V;
 
-    // Compute losses eigenchannels
-    for(i=0;i<nlevel;i++){
-        // First we calculate the couplings
-        ch=idx[i].ch;
-        m=idx[i].m;
-        s=idx[i].s;
-        ch=ch+nchm;
-        if(ch<nch){
-            k=i_idx[ch][m][s];
-            if((1.0-abs(conj(D(i,i))*D(i,i)))>0) D(i,k)=sqrt(1.0-abs(conj(D(i,i))*D(i,i)));
-            else D(i,k)=0.0;
-            D(k,i)=D(i,k);
-            D(k,k)=0.0;
-
-            // Second we write the proper unitary transformation
-            for(j=0;j<nlevel;j++){
-                ch=idx[j].ch;
-                m=idx[j].m;
-                s=idx[j].s;
-                ch=ch+nchm;
-                if(ch<nch){
-                    q=i_idx[ch][m][s];
-                    U(k,q)= U(i,j);
-                }
-            }
-        }
-    }
-
-    // Undo diagonalization
-    circmtx=U*D*U.adjoint();
+    // Build the extended matrix.
+    // Warning! Note that is assumed that the extended levels
+    // are ordered in the same way than the physical ones.
+    // Therefore it is not needed to check indexes.
+    circmtx.block(0,0,nlevel/2,nlevel/2)=M;
+    circmtx.block(0,nlevel/2,nlevel/2,nlevel/2)=off;
+    circmtx.block(nlevel/2,0,nlevel/2,nlevel/2)=off;
+    circmtx.block(nlevel/2,nlevel/2,nlevel/2,nlevel/2)=-M;
 }
 
 
