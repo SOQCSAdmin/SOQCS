@@ -14,10 +14,26 @@
 //----------------------------------------
 //
 //  Creates a set of probability bins
-//  The maximum number of kets is set by default.
+//  The maximum number of photons and kets are set by default.
 //
 //----------------------------------------
 p_bin::p_bin(int i_level):ket_list(i_level){
+//  int i_level     // Number of levels to describe a ket in the set
+
+
+    N=0;
+    p=new double[maxket]();
+}
+
+
+//----------------------------------------
+//
+//  Creates a set of probability bins
+//  The maximum number of kets is set by default.
+//
+//----------------------------------------
+p_bin::p_bin(int i_nph, int i_level):ket_list(i_nph, i_level){
+//  int i_nph       // Maximum number of photons
 //  int i_level     // Number of levels to describe a ket in the set
 
 
@@ -31,7 +47,8 @@ p_bin::p_bin(int i_level):ket_list(i_level){
 //  Creates a set of probability bins specifying the maximum number of bins.
 //
 //-----------------------------------------------------
-p_bin::p_bin(int i_level, int i_maxket):ket_list(i_level,i_maxket){
+p_bin::p_bin(int i_nph, int i_level, int i_maxket):ket_list(i_nph, i_level,i_maxket){
+//  int i_nph       // Maximum number of photons
 //  int i_level     // Number of levels to describe a ket in the set
 //  int i_maxket    // Maximum number of different kets in the set
 
@@ -48,7 +65,8 @@ p_bin::p_bin(int i_level, int i_maxket):ket_list(i_level,i_maxket){
 //  levels and circuit defined levels. Intended for internal use.
 //
 //-----------------------------------------------------
-p_bin::p_bin(int i_level, int i_maxket, int *i_vis):ket_list(i_level,i_maxket, i_vis){
+p_bin::p_bin(int i_nph, int i_level, int i_maxket, int *i_vis):ket_list(i_nph, i_level,i_maxket, i_vis){
+//  int i_nph       // Maximum number of photons
 //  int i_level     // Number of levels to describe a ket in the set
 //  int i_maxket    // Maximum number of different kets in the set
 //  int *i_vis      // Vector of equivalence between state levels and circuit defined levels
@@ -85,7 +103,7 @@ p_bin *p_bin::clone(){
     int    j;       // Aux index
 
 
-    aux=new p_bin(nlevel,maxket);
+    aux=new p_bin(nph, nlevel,maxket);
     aux->nket=nket;
     for(i=0;i<nket;i++){
         aux->p[i]=p[i];
@@ -243,7 +261,7 @@ string p_bin::tag(int index){
 
 
     // Perform conversion
-    value=hashval(ket[index],nlevel,9);
+    value=decval(ket[index],nlevel,10);
     aux=to_string(value);
     // Match the nlevel lenfth with 0's at the left
     len=aux.length();
@@ -282,7 +300,7 @@ double p_bin::prob(mati def,qocircuit *qoc){
 
 
     // Create bra state
-    bra= new ket_list(nlevel,1,vis);
+    bra= new ket_list(nph, nlevel,1,vis);
     bra->add_ket(def,qoc);
     index=find_ket(bra->ket[0]);
     delete bra;
@@ -466,7 +484,7 @@ p_bin *p_bin::post_selection(state *prj){
     }
 
     // Create new post-selected state / Reserve memory
-    nbin=new p_bin(nlevel-npost,maxket);
+    nbin=new p_bin(nph, nlevel-npost,maxket);
     k=0;
     for(l=0;l<nlevel;l++){
         if(islincl[l]==1){
@@ -647,7 +665,7 @@ p_bin *p_bin::meas_window(qocircuit* qoc){
     if(filter==false) return this->clone();
 
     // Calculate filtering
-    newpbin=new p_bin(nlevel,maxket,vis);
+    newpbin=new p_bin(nph, nlevel,maxket,vis);
     for(i=0;i<nket;i++){
         occ=new int[nlevel]();
         for(ch=0;ch<qoc->ndetc;ch++){
@@ -739,7 +757,7 @@ p_bin *p_bin::blink(int S, qocircuit* qoc){
     }
 
     // Calculate blinking
-    newpbin=new p_bin(nlevel,maxket,vis);
+    newpbin=new p_bin(nph, nlevel,maxket,vis);
     for(j=0;j<S;j++){
         for(i=0;i<nket;i++){
             occ=new int[nlevel]();
@@ -893,7 +911,7 @@ p_bin *p_bin:: post_select_cond(int ndec, mati def,qocircuit *qoc){
 
 
     // Init variables and reserve memory.
-    conditioned=new p_bin(nlevel,maxket,vis);
+    conditioned=new p_bin(this->nph, nlevel,maxket,this->vis);
     first=1;
 
     // Calculate:
@@ -992,7 +1010,7 @@ p_bin *p_bin:: post_select_cond(int ndec, mati def,qocircuit *qoc){
                 for(i=0;i<(ndec*qoc->nm*qoc->ns);i++){
                     keyprj[i]=select(3,i);
                 }
-                prjvalue=hashval(keyprj,ndec*qoc->nm*qoc->ns);
+                prjvalue=hashval(keyprj,ndec*qoc->nm*qoc->ns, this->nph);
                 vprjhash=prjhash.find(prjvalue);
                 // If the projector has not been created before
                 if(vprjhash==prjhash.end()){
@@ -1001,7 +1019,7 @@ p_bin *p_bin:: post_select_cond(int ndec, mati def,qocircuit *qoc){
                     nprj=nprj+1;
 
                     // We create the projector
-                    prj=new projector(this->nlevel,2,vis);
+                    prj=new projector(this->nph, this->nlevel,2,vis);
                     prj->add_term(1.0,select,qoc);
 
                     // Apply the projector to the input state and store the result
@@ -1009,7 +1027,7 @@ p_bin *p_bin:: post_select_cond(int ndec, mati def,qocircuit *qoc){
 
                     if(first==1){
                         delete conditioned;
-                        conditioned=new p_bin(post_selected->nlevel,maxket,post_selected->vis);
+                        conditioned=new p_bin(post_selected->nph, post_selected->nlevel,maxket,post_selected->vis);
                         first=0;
                     }
 
@@ -1094,12 +1112,12 @@ p_bin *p_bin:: remove_channels(veci ch, qocircuit *qoc){
     // Init variables
     select.resize(3,1);
     removed=this->clone();
-    next=new p_bin(removed->nlevel,maxket,removed->vis); // To avoid warning. Not really needed
+    next=new p_bin(removed->nph, removed->nlevel,maxket,removed->vis); // To avoid warning. Not really needed
 
     // For each channel
     for(ich=0;ich<ch.size();ich++){
         // Post-select each of the photon occupations. Trace out
-        for(nph=0;nph<=maxnph;nph++){
+        for(nph=0;nph<=this->nph;nph++){
             select(0,0)=ch(ich);
             select(1,0)=nph;
             select(2,0)=-1;
@@ -1107,7 +1125,7 @@ p_bin *p_bin:: remove_channels(veci ch, qocircuit *qoc){
 
             if(nph==0) {
                 delete next;
-                next=new p_bin(aux->nlevel,maxket,aux->vis);
+                next=new p_bin(aux->nph, aux->nlevel,maxket,aux->vis);
             }
             next->add_bin(aux);
             delete aux;
@@ -1225,7 +1243,7 @@ p_bin *p_bin::remove_freq(qocircuit* qoc){
 
     // Calculate counts in a channel-polarization
     // VISIBILITY information is to remember the post-selected channels.
-    newpbin=new p_bin(nlevel,nket,vis);
+    newpbin=new p_bin(nph, nlevel,nket,vis);
     for(i=0;i<nket;i++){
         occ=new int[qoc->nlevel]();
         for(j=0;j<nlevel;j++){
@@ -1286,7 +1304,7 @@ p_bin *p_bin::classify_period(qocircuit* qoc){
 
     // Calculate counts in a channel-polarization
     // VISIBILITY information is to remember the post-selected channels.
-    newpbin=new p_bin(nlevel,nket,vis);
+    newpbin=new p_bin(nph,nlevel,nket,vis);
     for(i=0;i<nket;i++){
         occ=new int[qoc->nlevel]();
         for(j=0;j<nlevel;j++){
@@ -1337,7 +1355,7 @@ p_bin *p_bin::perform_count(qocircuit* qoc){
 
 
     // Calculate counts in a channel-polarization
-    newpbin=new p_bin(nlevel,nket,vis);
+    newpbin=new p_bin(nph,nlevel,nket,vis);
     for(i=0;i<nket;i++){
         occ=new int[nlevel]();
         for(j=0;j<nlevel;j++){
@@ -1396,7 +1414,7 @@ p_bin *p_bin:: remove_time(qocircuit *qoc){
                 newnlevel=newnlevel+1;
         }
     }
-    auxlist=new p_bin(newnlevel,maxket,newvis);
+    auxlist=new p_bin(nph,newnlevel,maxket,newvis);
     delete[] newvis;
 
     // Perform operations
@@ -1467,7 +1485,7 @@ p_bin *p_bin::translate(mati qdef,qocircuit *qoc){
 
 
     // Reserve and initialize memory
-    qbin=new p_bin(qdef.cols(),maxket);
+    qbin=new p_bin(1,qdef.cols(),maxket);
 
     // Check translation conditions
     if((qoc->nm>1)||(qoc->ns>1)){
@@ -1568,7 +1586,7 @@ p_bin *p_bin::pol_translate(veci qdef,qocircuit *qoc){
 
 
     // Reserve and initialize memory
-    qbin=new p_bin(qdef.size(),maxket);
+    qbin=new p_bin(1,qdef.size(),maxket);
 
     // Check translation conditions
     if((qoc->nm!=2)||(qoc->ns>1)){

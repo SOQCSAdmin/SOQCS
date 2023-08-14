@@ -39,7 +39,7 @@ typedef unordered_map<long long int,long long int> thash; ///< Simplified type n
 
 
 //Extern variables.
-extern int maxnph;                         ///< Maximum photon occupation by level. (default value 4).
+extern int def_nph;                        ///< Default value of the maximum photon occupation by level.
                                            ///< It is also the base of our index system.
 // Static variables (a single instance for all the library) Random Number Generator (RNG) variables
 // Recipe taken from literature (cpp reference guide, common knowledge).
@@ -132,16 +132,6 @@ double grand(double mu, double stdev);
 */
 void cfg_soqcs(int nph);
 
-/**
-* Calculation of a hash value for a given occupation vector using maxnph as base.
-*
-* @param int *chainv  Occupation vector
-* @param int  n       Length of the occupation vector chainv.
-* @return             A hash index value of chainv.
-* \xrefitem know  "KnowIss" "Known Issues" If the number of degrees of freedom is very large a long int may not be enough to represent the return value. Nevertheless
-* if the density of indexed elements is small it will also work provided there is no collisions.
-*/
-long long int hashval(int *chainv,int n);
 
 /**
 * Calculation of a hash value for a given occupation vector. The maximum number of photons is specified explicitly to be used as a base.
@@ -150,8 +140,6 @@ long long int hashval(int *chainv,int n);
 * @param int  n       Length of the occupation vector chainv.
 * @param int  nph     Maximum number of photons.
 * @return             A hash indexing value of chainv.
-* \xrefitem know  "KnowIss" "Known Issues" If the number of degrees of freedom is very large a long int may not be enough to represent the return value. Nevertheless
-* if the density of indexed elements is small it will also work provided there is no collisions.
 */
 long long int hashval(int *chainv,int n,int nph);
 

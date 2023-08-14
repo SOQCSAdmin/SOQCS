@@ -23,7 +23,7 @@ qodev::qodev(int i_nph, int i_nch){
 
     cfg_soqcs(i_nph);
     circ=new qocircuit(i_nch,1,1, 1, -1.0,0,0, false,'G');
-    create_qodev(circ->num_levels(),DEFSTATEDIM,1);
+    create_qodev(i_nph,circ->num_levels(),DEFSTATEDIM,1);
 }
 
 
@@ -40,7 +40,7 @@ qodev::qodev(int i_nph, int i_nch, int i_nm){
 
     cfg_soqcs(i_nph);
     circ=new qocircuit(i_nch,i_nm, 1, 1, -1.0, 0, 0, false,'G');
-    create_qodev(circ->num_levels(),DEFSTATEDIM,1);
+    create_qodev(i_nph,circ->num_levels(),DEFSTATEDIM,1);
 }
 
 
@@ -60,7 +60,7 @@ qodev::qodev(int i_nph,int i_nch, int i_nm, int i_ns, int clock, char ckind){
 
     cfg_soqcs(i_nph);
     circ=new qocircuit(i_nch,i_nm,i_ns, 1, -1.0, clock, 0, false, ckind);
-    create_qodev(circ->num_levels(),DEFSTATEDIM,i_ns);
+    create_qodev(i_nph, circ->num_levels(),DEFSTATEDIM,i_ns);
 }
 
 
@@ -84,7 +84,7 @@ qodev::qodev(int i_nph, int i_nch, int i_nm, int i_ns, int i_np, double i_dtp, i
 
     cfg_soqcs(i_nph);
     circ=new qocircuit(i_nch,i_nm,i_ns, i_np, i_dtp, clock, i_R, loss,ckind);
-    create_qodev(circ->num_levels(),DEFSTATEDIM,i_ns);
+    create_qodev(i_nph, circ->num_levels(),DEFSTATEDIM,i_ns);
 }
 
 
@@ -109,7 +109,7 @@ qodev::qodev(int i_nph, int i_nch, int i_nm, int i_ns, int i_np, double i_dtp, i
 
     cfg_soqcs(i_nph);
     circ=new qocircuit(i_nch,i_nm,i_ns, i_np, i_dtp, clock, i_R, loss,ckind);
-    create_qodev(circ->num_levels(),i_maxket,i_ns);
+    create_qodev(i_nph, circ->num_levels(),i_maxket,i_ns);
 }
 
 
@@ -118,7 +118,8 @@ qodev::qodev(int i_nph, int i_nch, int i_nm, int i_ns, int i_np, double i_dtp, i
 //  Auxiliary private method to create a device
 //
 //----------------------------------------
-void qodev::create_qodev(int i_level, int i_maxket, int i_ns){
+void qodev::create_qodev(int i_nph, int i_level, int i_maxket, int i_ns){
+//  int  i_nph;    // Maximum number of photons to be simulated
 //  int  i_level;     // Number of levels to describe the state
 //  int  i_maxket;    // Maximum number of bunches in the list
 //  int  i_np;        // Number of packets
@@ -128,7 +129,7 @@ void qodev::create_qodev(int i_level, int i_maxket, int i_ns){
 
     npack=0;
     pack_list.resize(4,i_ns);
-    inpt=new state(i_level,i_maxket);
+    inpt=new state(i_nph, i_level,i_maxket);
     occ=new int[i_level]();
     inpt->add_term(1.0,occ);
 
@@ -249,7 +250,7 @@ int qodev::add_gate(veci chlist, qodev *dev){
 
     }
 
-    aux=new state(inpt->nlevel,1);
+    aux=new state(inpt->nph, inpt->nlevel,1);
     error=aux->add_term(1.0,in_term,circ);
     if(error<0){
         cout << "add_gate error (qodev) #3: Photons are being created at levels not defined in the circuit." << endl;
@@ -258,7 +259,7 @@ int qodev::add_gate(veci chlist, qodev *dev){
     }
 
     // Second, add the gate contribution (ancilla values) to the input state.
-    newinpt=new state(inpt->nlevel,inpt->maxket);
+    newinpt=new state(inpt->nph, inpt->nlevel,inpt->maxket);
     for(j=0;j<inpt->nket;j++){
         occ=new int[inpt->nlevel]();
         for(i=0;i<inpt->nlevel;i++){
@@ -377,14 +378,14 @@ int qodev::add_photons(int N, int ch, int P, double t, double f, double w){
                P,
                T,
                N;
-    aux=new state(inpt->nlevel,1);
+    aux=new state(inpt->nph, inpt->nlevel,1);
     error=aux->add_term(1.0,in_term,circ);
     if(error<0){
         cout << "add_photons error #3: Photons are being created at levels not defined in the circuit." << endl;
         return -1;
     }
 
-    newinpt=new state(inpt->nlevel,inpt->maxket);
+    newinpt=new state(inpt->nph, inpt->nlevel,inpt->maxket);
     for(j=0;j<inpt->nket;j++){
         occ=new int[inpt->nlevel]();
         for(i=0;i<inpt->nlevel;i++){
@@ -536,7 +537,7 @@ int qodev::add_QD(int ch1, int ch2,double i_t1, double i_f1, double i_w1, double
           T(0), T(1);
 
     // Update state
-    qdstate=new state(inpt->nlevel,inpt->maxket);
+    qdstate=new state(inpt->nph, inpt->nlevel,inpt->maxket);
     qdstate->QD(ch,k,S,i_w2,tss,thv,circ);
     error=inpt->dproduct(qdstate);
     delete qdstate;
@@ -663,7 +664,7 @@ int qodev::add_Bell(int ch1, int ch2, char kind, double phi, double t1, double f
           T(0), T(1);
 
     // Update state
-    qdstate=new state(inpt->nlevel,inpt->maxket);
+    qdstate=new state(inpt->nph, inpt->nlevel,inpt->maxket);
     qdstate->Bell(ch,kind,phi,circ);
     error=inpt->dproduct(qdstate);
     delete qdstate;
@@ -791,7 +792,7 @@ int qodev::add_BellP(int ch1, int ch2, char kind, double phi, double t1, double 
           T(0), T(1);
 
     // Update state
-    qdstate=new state(inpt->nlevel,inpt->maxket);
+    qdstate=new state(inpt->nph, inpt->nlevel,inpt->maxket);
     qdstate->BellP(ch,kind,phi,circ);
 //    qdstate->prnt_state(1,1,false,circ);
     error=inpt->dproduct(qdstate);
@@ -1318,7 +1319,7 @@ state* qodev:: apply_condition(state *input, bool ignore){
     }
 
     // Perform post-selection
-    prj=new projector(circ->nlevel,1);
+    prj=new projector(input->nph,circ->nlevel,1);
     if(circ->ncond>0){
         prj->add_term(1.0,cond,circ);
         pselected=input->post_selection(prj);
@@ -1331,7 +1332,7 @@ state* qodev:: apply_condition(state *input, bool ignore){
     if(ignore==true){
         // Reserve memory for the new state
         newnlevels=(pselected->nlevel)-(circ->nm*circ->nignored);
-        ignored=new state(newnlevels,pselected->maxket);
+        ignored=new state(input->nph, newnlevels,pselected->maxket);
 
         // Update visibility
         for(i=0;i<circ->nignored;i++){

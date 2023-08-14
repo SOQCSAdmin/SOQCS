@@ -19,9 +19,10 @@ class p_bin: public ket_list{
 public:
     // Public methods
     // Management methods
-    p_bin(int i_level);                                                        //  Creates a set of probability bins.The maximum number of outcomes is set by default
-    p_bin(int i_level,int i_maxket);                                           //  Creates a set of probability bins specifying the maximum number of outcomes
-    p_bin(int i_level, int i_maxket, int *i_vis);                              //  Creates a set of probability bins specifying the maximum number of outcomes and a vector of equivalence between state and circuit levels.
+    p_bin(int i_level);                                                        //  Creates a set of probability bins.The maximum number of photons and outcomes are set by default
+    p_bin(int i_nph, int i_level);                                             //  Creates a set of probability bins.The maximum number of outcomes is set by default
+    p_bin(int i_nph, int i_level,int i_maxket);                                //  Creates a set of probability bins specifying the maximum number of outcomes
+    p_bin(int i_nph, int i_level, int i_maxket, int *i_vis);                   //  Creates a set of probability bins specifying the maximum number of outcomes and a vector of equivalence between state and circuit levels.
     ~p_bin();                                                                  //  Destroys a set of probability bins
     p_bin *clone();                                                            //  Copies a set of probability bins
     void clear();                                                              //  Clears a set of probability bins
@@ -109,32 +110,42 @@ public:
     */
 
     /**
-    *  Creates a set of probability bins. The maximum number of bins is set by default.
+    *  Creates a set of probability bins. The maximum number of photons and bins are set by default.
     *
     *  @param int i_level   Number of levels.
     *  @ingroup Bin_management
     */
     p_bin(int i_level);
     /**
+    *  Creates a set of probability bins. The maximum number of bins is set by default.
+    *
+    *  @param int i_nph     Maximum number of photons.
+    *  @param int i_level   Number of levels.
+    *  @ingroup Bin_management
+    */
+    p_bin(int i_nph, int i_level);
+    /**
     *  Creates a set of probability bins specifying the maximum number of bins.
     *
+    *  @param int i_nph     Maximum number of photons.
     *  @param int i_level   Number of levels.
     *  @param int i_maxket  Maximum number of different bins in the set.
     *  @ingroup Bin_management
     */
-    p_bin(int i_level,int i_maxket);
+    p_bin(int i_nph, int i_level,int i_maxket);
     /**
     *  Creates a set of probability bins specifying the maximum number of bins
     *  and the vector of equivalence between state levels and
     *  circuit defined levels. <br>
     *  <b> Intended for internal use. </b>
     *
+    *  @param int i_nph     Maximum number of photons.
     *  @param int i_level   Number of levels.
     *  @param int i_maxket  Maximum number of different bins in the set.
     *  @param int i_vis  Vector that translates the p_bin levels to the circuit levels defined by the circuit indexes.
     *  @ingroup Bin_management
     */
-    p_bin(int i_level, int i_maxket, int *i_vis);
+    p_bin(int i_nph, int i_level, int i_maxket, int *i_vis);
     /**
     *  Destroys a set of probability bins object.
     *

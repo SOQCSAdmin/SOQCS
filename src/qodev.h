@@ -79,7 +79,7 @@ class qodev{
 
 protected:
     // Auxiliary methods
-    void create_qodev(int i_level, int i_maxket, int i_np);                             //  Auxiliary private method to create a metacircuit
+    void create_qodev(int i_nph, int i_level, int i_maxket, int i_np);                  //  Auxiliary private method to create a metacircuit
     void send2circuit();                                                                // Send photons to the circuit
 };
 ***********************************************************************************/
@@ -704,13 +704,14 @@ protected:
     *  Auxiliary method to create a quantum optical device.<br>
     *  <b> Intended for internal use of the library. </b>
     *
+    *  @param int i_nph   Maximum number of photons.
     *  @param int i_level  Number of levels.
     *  @param int i_maxket Maximum number of kets in the initial state. (Internal memory).
     *  @param int i_np     Number of packets.
     *  @ingroup Aux_QODev
     */
 
-    void create_qodev(int i_level, int i_maxket, int i_np);
+    void create_qodev(int i_nph, int i_level, int i_maxket, int i_np);
     /**
     *  Send photons to the circuit (Photon emission). <br>
     *  <b> Intended for internal use of the library. </b>

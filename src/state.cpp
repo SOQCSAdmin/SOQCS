@@ -14,14 +14,29 @@
 //----------------------------------------
 //
 //  Creates a ket list.
-//  The maximum number of kets is set by default.
+//  The maximum number of photons and kets are set by default.
 //
 //----------------------------------------
 ket_list::ket_list(int i_level){
 //  int i_level     // Number of levels to describe a ket
 
 
-    create_ket_list(i_level,DEFSTATEDIM);
+    create_ket_list(def_nph, i_level,DEFSTATEDIM);
+}
+
+
+//----------------------------------------
+//
+//  Creates a ket list.
+//  The maximum number of kets is set by default.
+//
+//----------------------------------------
+ket_list::ket_list(int i_nph, int i_level){
+//  int i_nph       // Maximum number of photons
+//  int i_level     // Number of levels to describe a ket
+
+
+    create_ket_list(i_nph, i_level,DEFSTATEDIM);
 }
 
 
@@ -30,12 +45,13 @@ ket_list::ket_list(int i_level){
 //  Creates a ket list specifying the maximum number of kets.
 //
 //-----------------------------------------------------
-ket_list::ket_list(int i_level, int i_maxket){
+ket_list::ket_list(int i_nph, int i_level, int i_maxket){
+//  int i_nph       // Maximum number of photons
 //  int i_level     // Number of levels to describe a ket
 //  int i_maxket    // Maximum number of different kets in the list
 
 
-    create_ket_list(i_level,i_maxket);
+    create_ket_list(i_nph, i_level,i_maxket);
 }
 
 
@@ -46,7 +62,8 @@ ket_list::ket_list(int i_level, int i_maxket){
 //  circuit defined levels. Intended for internal use.
 //
 //-----------------------------------------------------
-ket_list::ket_list(int i_level, int i_maxket, int *i_vis){
+ket_list::ket_list(int i_nph, int i_level, int i_maxket, int *i_vis){
+//  int  i_nph       // Maximum number of photons
 //  int  i_level     // Number of levels to describe a ket
 //  int  i_maxket    // Maximum number of different kets in the list
 //  int *i_vis       // Vector of equivalence between state levels and circuit defined levels
@@ -54,7 +71,7 @@ ket_list::ket_list(int i_level, int i_maxket, int *i_vis){
     int  g;           // Aux index
 
 
-    create_ket_list(i_level,i_maxket);
+    create_ket_list(i_nph, i_level,i_maxket);
     for(g=0;g<i_level;g++) vis[g]=i_vis[g];
 }
 
@@ -65,7 +82,8 @@ ket_list::ket_list(int i_level, int i_maxket, int *i_vis){
 //  Each ket is distinguished by level occupations
 //
 //----------------------------------------
-void ket_list::create_ket_list(int i_level, int i_maxket){
+void ket_list::create_ket_list(int i_nph, int i_level, int i_maxket){
+//  int i_nph       // Maximum number of photons
 //  int i_level     // Number of levels to describe a ket
 //  int i_maxket    // Maximum number of different kets in the list
 //  Auxiliary index
@@ -73,6 +91,8 @@ void ket_list::create_ket_list(int i_level, int i_maxket){
 
 
     // Init ket information
+    if(i_nph>0) nph=i_nph;
+    else nph=def_nph;
     nket=0;
     nlevel=i_level;
     maxket=i_maxket;
@@ -127,7 +147,7 @@ ket_list *ket_list::clone(){
     int j;          // Aux index
 
 
-    aux=new ket_list(nlevel,maxket);
+    aux=new ket_list(nph, nlevel,maxket);
     aux->nket=nket;
     for(i=0;i<nket;i++){
         for(j=0;j<nlevel;j++){
@@ -156,7 +176,7 @@ int ket_list::find_ket(int *occ){
 
     // Update amplitude and occupation
     // Store
-    value=hashval(occ,nlevel);
+    value=hashval(occ,nlevel,nph);
     hashv=ketindex.find(value);
     // If the ket does not exist yet on the output create new one.
     if(hashv==ketindex.end()){
@@ -183,7 +203,7 @@ int ket_list::find_ket(mati def,qocircuit *qoc){
 
 
     // Create bra reference ket
-    aux= new ket_list(nlevel,1,vis);
+    aux= new ket_list(nph, nlevel,1,vis);
     aux->add_ket(def,qoc);
 
     // Search the reference
@@ -220,7 +240,7 @@ int ket_list::add_ket(int *occ){
 
     // Update amplitude and occupation
     //Store
-    value=hashval(occ,nlevel);
+    value=hashval(occ,nlevel,nph);
     hashv=ketindex.find(value);
 
     if(hashv==ketindex.end()){
@@ -375,7 +395,7 @@ ket_list *ket_list:: remove_time(qocircuit *qoc){
         }
     }
 
-    auxlist=new ket_list(newnlevel,maxket,newvis);
+    auxlist=new ket_list(nph, newnlevel,maxket,newvis);
     delete[] newvis;
 
     // Compute operation
@@ -514,10 +534,25 @@ void  ket_list::prnt_ket(int iket, int format, bool loss, qocircuit *qoc){
 //----------------------------------------
 //
 //  Creates a state
-//  The maximum number of kets is set by default.
+//  The maximum number of photons and kets are set by default.
 //
 //----------------------------------------
 state::state(int i_level):ket_list(i_level){
+//  int i_level;     // Number of levels to describe the state
+
+
+    ampl=new cmplx[maxket]();
+}
+
+
+//----------------------------------------
+//
+//  Creates a state
+//  The maximum number of kets is set by default.
+//
+//----------------------------------------
+state::state(int i_nph, int i_level):ket_list(i_nph, i_level){
+//  int i_nph        // Maximum number of photons
 //  int i_level;     // Number of levels to describe the state
 
 
@@ -530,7 +565,8 @@ state::state(int i_level):ket_list(i_level){
 //  Creates a state specifying the maximum number of kets.
 //
 //-----------------------------------------------------
-state::state(int i_level, int i_maxket):ket_list(i_level,i_maxket){
+state::state(int i_nph, int i_level, int i_maxket):ket_list(i_nph, i_level,i_maxket){
+//  int i_nph       // Maximum number of photons
 //  int i_level     // Number of levels to describe the state
 //  int i_maxket    // Maximum number of different kets in the summation
 
@@ -546,7 +582,8 @@ state::state(int i_level, int i_maxket):ket_list(i_level,i_maxket){
 //  circuit defined levels. Intended for internal use.
 //
 //-----------------------------------------------------
-state::state(int i_level, int i_maxket, int *i_vis):ket_list(i_level,i_maxket, i_vis){
+state::state(int i_nph, int i_level, int i_maxket, int *i_vis):ket_list(i_nph, i_level,i_maxket, i_vis){
+//  int  i_nph       // Maximum number of photons
 //  int  i_level     // Number of levels to describe the state
 //  int  i_maxket    // Maximum number of different kets in the state
 //  int *i_vis       // Vector of equivalence between state levels and circuit defined levels
@@ -582,7 +619,7 @@ state *state::clone(){
     int    j;    // Aux index
 
 
-    aux=new state(nlevel,maxket);
+    aux=new state(nph, nlevel,maxket);
     aux->nket=nket;
     for(i=0;i<nket;i++){
         aux->ampl[i]=ampl[i];
@@ -772,7 +809,7 @@ state *state::post_selection(state *prj){
     }
 
     // Create new post-selected state / Reserve memory
-    nstate=new state(nlevel-npost,maxket);
+    nstate=new state(nph, nlevel-npost,maxket);
     k=0;
     for(l=0;l<nlevel;l++){
         if(islincl[l]==1){
@@ -859,7 +896,7 @@ state *state::post_selection(state *prj,qocircuit *qoc){
     }
 
     // Create new post-selected state / Reserve memory
-    nstate=new state(nlevel-npost,maxket);
+    nstate=new state(nph, nlevel-npost,maxket);
     k=0;
     for(l=0;l<nlevel;l++){
         if(islincl[l]==1){
@@ -964,7 +1001,7 @@ state *state:: remove_empty_channels(veci ch, int it, qocircuit *qoc){
 
         }}}
 
-        auxprj=new projector(qoc->num_levels(),1,vis);
+        auxprj=new projector(this->nph,qoc->num_levels(),1,this->vis);
         auxprj->add_term(1.0,select,qoc);
         auxstate=this->post_selection(auxprj);
         delete auxprj;
@@ -990,7 +1027,7 @@ state *state:: remove_empty_channels(veci ch, int it, qocircuit *qoc){
         for(i=0;i<auxstate->nlevel;i++) ket[i]=-1;
         for(i=0;i<nl;i++)  ket[llist(i)]=0;
 
-        auxprj=new projector(auxstate->nlevel,1,auxstate->vis);
+        auxprj=new projector(auxstate->nph, auxstate->nlevel,1,auxstate->vis);
         auxprj->add_term(1.0,ket);
         newstate=auxstate->post_selection(auxprj);
         delete auxprj;
@@ -1027,7 +1064,7 @@ state *state::convert(veci cnv, qocircuit *qoc){
     int    k;         // Aux index
 
 
-    aux=new state(nlevel,maxket);
+    aux=new state(nph, nlevel,maxket);
     for(i=0;i<nket;i++){
         occ= new int[nlevel]();
         for(j=0;j<nlevel;j++){
@@ -1292,7 +1329,7 @@ int state::Bell_Pol(int i_ch0, int i_ch1, veci i_t, char kind, double phi, qocir
         // If the state is initialized we have to do the direct product with
         // the already existent term. We are assuming here the pre-existing
         // initialization is for different channels.
-        auxemitter=new state(nlevel,maxket);
+        auxemitter=new state(nph, nlevel,maxket);
         if ( auxemitter->add_term( A1,Bell1,qoc) <0 ) return -1;
         if ( auxemitter->add_term( A2,Bell2,qoc) <0 ) return -1;
         if ( this->dproduct(auxemitter) <0 ) return -1;
@@ -1381,7 +1418,7 @@ int state::Rand_Pol(int i_ch0,int i_ch1, veci i_t, qocircuit *qoc){
         // If the state is initialized we have to do the direct product with
         // the already existent term. We are assuming here the pre-existing
         // initialization is for different channels.
-        auxemitter=new state(nlevel,maxket);
+        auxemitter=new state(nph, nlevel,maxket);
         if( auxemitter->add_term(1.0,Rand,qoc) < 0 ) return -1;
         if( this->dproduct(auxemitter) < 0 ) return -1;
         delete auxemitter;
@@ -1451,7 +1488,7 @@ int state::Corr_Pol(int i_ch0,int i_ch1, veci i_t, qocircuit *qoc){
         // If the state is initialized we have to do the direct product with
         // the already existent term. We are assuming here the pre-existing
         // initialization is for different channels.
-        auxemitter=new state(nlevel,maxket);
+        auxemitter=new state(nph, nlevel,maxket);
         if( auxemitter->add_term( 1.0,Corr,qoc) < 0 ) return -1;
         if( this->dproduct(auxemitter) < 0 ) return -1;
         delete auxemitter;
@@ -1635,7 +1672,7 @@ int state::Bell_Path(int i_ch0, int i_ch1, veci i_t, char kind, double phi,  qoc
         // If the state is initialized we have to do the direct product with
         // the already existent term. We are assuming here the pre-existing
         // initialization is for different channels.
-        auxemitter=new state(nlevel,maxket);
+        auxemitter=new state(nph, nlevel,maxket);
         if ( auxemitter->add_term( A1,Bell1,qoc) < 0 ) return -1;
         if ( auxemitter->add_term( A2,Bell2,qoc) < 0 ) return -1;
         if ( this->dproduct(auxemitter) < 0 ) return -1;
@@ -1728,7 +1765,7 @@ int state::dproduct(state *rhs){
 
 
     // Initialize
-    aux=new state(this->nlevel,this->maxket);
+    aux=new state(this->nph, this->nlevel,this->maxket);
     aux=this->clone();
     this->clear();
     occ= new int[nlevel]();
@@ -1785,7 +1822,7 @@ state *state::encode(mati qdef,qocircuit *qoc){
 
 
     // Reserve memory
-    qstate=new state(qdef.cols(),maxket);
+    qstate=new state(1,qdef.cols(),maxket);
 
     // Check encoding conditions
     if((qoc->nm>1)||(qoc->ns>1)){
@@ -1863,7 +1900,7 @@ state *state::decode(mati qdef,state *ancilla,qocircuit *qoc){
 
 
     // Reserve and initialize memory
-    phstate=new state(ancilla->nlevel,maxket);
+    phstate=new state(ancilla->nph,ancilla->nlevel,maxket);
 
     // Check decoding conditions
     if((qoc->nm>1)||(qoc->ns>1)){
@@ -1922,6 +1959,7 @@ state *state::decode(mati qdef,veci ancilla,qocircuit *qoc){
 //  veci ancilla;        // Vector defining the values of the ancilla channels in order ( from smaller to larger channel number )
 //  qocircuit *qoc;      // Quantum optical circuit to which this state is referred
 //  Variables
+    int    maxnph;       // Maximum number of photons
     int   *isquch;       // Is a qubit channel? For every channel 0=Ancilla/1= Qubit channel
     mati   def_state;    // State definition
     state *anzstate;     // Ansatz state. State with the ansatz channel values defined.
@@ -1930,6 +1968,10 @@ state *state::decode(mati qdef,veci ancilla,qocircuit *qoc){
     int    i;            // Aux index
     int    k;            // Aux index
 
+
+    // Number of photons calculation
+    maxnph=qdef.cols();
+    for(i=0;i<ancilla.size();i++) maxnph=maxnph+ancilla(i);
 
     // Determine which channel is ansatz
     isquch=new int[qoc->nch]();
@@ -1955,7 +1997,7 @@ state *state::decode(mati qdef,veci ancilla,qocircuit *qoc){
     }
 
     // Create the ansatz state
-    anzstate=new state(qoc->nlevel,1);
+    anzstate=new state(maxnph,qoc->nlevel,1);
     anzstate->add_term(1.0,def_state,qoc);
 
     // Decode
@@ -1998,7 +2040,7 @@ state *state::pol_encode(veci qdef,qocircuit *qoc){
 
 
     // Reserve memory
-    qstate=new state(qdef.size(),maxket);
+    qstate=new state(1,qdef.size(),maxket);
 
     // Check encoding conditions
     if((qoc->nm!=2)||(qoc->ns>1)){
@@ -2076,7 +2118,7 @@ state *state::pol_decode(veci qdef,state *ancilla,qocircuit *qoc){
 
 
     // Reserve and initialize memory
-    phstate=new state(ancilla->nlevel,maxket);
+    phstate=new state(ancilla->nph,ancilla->nlevel,maxket);
 
     // Check decoding conditions
     if((qoc->nm!=2)||(qoc->ns>1)){
@@ -2135,6 +2177,7 @@ state *state::pol_decode(veci qdef,mati ancilla,qocircuit *qoc){
 //  veci ancilla;        // Vector defining the values of the ancilla channels in order ( from smaller to larger channel number )
 //  qocircuit *qoc;      // Quantum optical circuit to which this state is referred
 //  Variables
+    int    maxnph;       // Maximum number of photons
     int   *isquch;       // Is a qubit channel? For every channel 0=Ancilla/1= Qubit channel
     mati   def_state;    // State definition
     state *anzstate;     // Ansatz state. State with the ansatz channel values defined.
@@ -2145,6 +2188,10 @@ state *state::pol_decode(veci qdef,mati ancilla,qocircuit *qoc){
     int    k;            // Aux index
     int    l;            // Aux index
 
+
+    // Number of photons calculation
+    maxnph=qdef.size();
+    for(i=0;i<ancilla.size();i++) maxnph=maxnph+ancilla(i);
 
     // Determine which channel is ansatz
     isquch=new int[qoc->nch]();
@@ -2175,7 +2222,7 @@ state *state::pol_decode(veci qdef,mati ancilla,qocircuit *qoc){
     }
 
     // Create the ansatz state
-    anzstate=new state(qoc->nlevel,1);
+    anzstate=new state(maxnph, qoc->nlevel,1);
     anzstate->add_term(1.0,def_state,qoc);
 
     // Decode
@@ -2192,10 +2239,23 @@ state *state::pol_decode(veci qdef,mati ancilla,qocircuit *qoc){
 
 //-------------------------------------------------------
 //
-//  Creates a projector. The maximum number of kets is set by default.
+//  Creates a projector. The maximum number of photons and kets are set by default.
 //
 //-------------------------------------------------------
 projector::projector(int i_level):state(i_level){
+//  int i_level     // Number of levels to describe the projector
+
+
+    create_projector(i_level,DEFSTATEDIM);
+}
+
+//-------------------------------------------------------
+//
+//  Creates a projector. The maximum number of kets is set by default.
+//
+//-------------------------------------------------------
+projector::projector(int i_nph, int i_level):state(i_nph, i_level){
+//  int i_nph       // Maximum number of photons
 //  int i_level     // Number of levels to describe the projector
 
 
@@ -2208,7 +2268,8 @@ projector::projector(int i_level):state(i_level){
 // Creates a projector specifying the maximum number of kets.
 //
 //-------------------------------------------------------
-projector::projector(int i_level, int i_maxket):state(i_level, i_maxket){
+projector::projector(int i_nph, int i_level, int i_maxket):state(i_nph, i_level, i_maxket){
+//  int i_nph       // Maximum number of photons
 //  int i_level     // Number of levels to describe the projector
 //  int i_maxket    // Maximum number of different kets in the summation
 
@@ -2224,7 +2285,8 @@ projector::projector(int i_level, int i_maxket):state(i_level, i_maxket){
 //  circuit defined levels. Intended for internal use.
 //
 //-----------------------------------------------------
-projector::projector(int i_level, int i_maxket, int *i_vis):state(i_level, i_maxket, i_vis){
+projector::projector(int i_nph, int i_level, int i_maxket, int *i_vis):state(i_nph, i_level, i_maxket, i_vis){
+//  int i_nph       // Maximum number of photons
 //  int i_level      // Number of levels to describe the projector
 //  int  i_maxket    // Maximum number of different kets in the list
 //  int *i_vis       // Vector of equivalence between state levels and circuit defined levels

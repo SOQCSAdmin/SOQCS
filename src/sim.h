@@ -236,7 +236,6 @@ public:
     tuple<p_bin*, double> metropolis( state *istate, qocircuit *qoc ,int method, int N, int Nburn, int Nthin);
 
 
-
 protected:
     /** @defgroup Simulation_auxiliary Simulator auxiliary methods
     *   @ingroup Simulator

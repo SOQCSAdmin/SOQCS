@@ -59,7 +59,7 @@ void dmatrix:: create_dmtx(int i_mem){
     // Crete placeholder dictionary.
     // The good one will be created with the first element.
     // Important data extracted from the first added state.
-    dicc=new ket_list(1,1);
+    dicc=new ket_list(1,1,1);
 }
 
 
@@ -120,7 +120,7 @@ void dmatrix:: clear(){
     // The good one will be created with the first element.
     // Important data extracted from the first added state.
     delete dicc;
-    dicc=new ket_list(1,1);
+    dicc=new ket_list(1,1,1);
 }
 
 
@@ -367,7 +367,7 @@ double dmatrix::get_result(mati def,qocircuit *qoc){
 
 
     // Create bra state
-    bra= new state(dicc->nlevel,1,dicc->vis);
+    bra= new state(dicc->nph, dicc->nlevel,1,dicc->vis);
     bra->add_term(1.0,def,qoc);
     irow=dicc->find_ket(bra->ket[0]);
     delete bra;
@@ -394,7 +394,7 @@ p_bin *dmatrix::get_pbin(){
 
 
     // Create the set of probability bin
-    aux=new p_bin(dicc->nlevel,dicc->maxket,dicc->vis);
+    aux=new p_bin(dicc->nph,dicc->nlevel,dicc->maxket,dicc->vis);
 
     // Store the values
     for(i=0;i<dicc->maxket;i++){
@@ -513,7 +513,7 @@ void dmatrix::add_reduced_state(int ndec,mati def,veci chlist,state* input, qoci
 
 //  Init variables
     nchtotal=chlist.size();
-    if(nchtotal>0) nph=maxnph;
+    if(nchtotal>0) nph=input->nph;
     else nph=0;
 
     // Reserve memory
@@ -736,7 +736,7 @@ void dmatrix:: add_state_cond(int ndec, mati def,state *in_state,qocircuit *qoc)
                     // is built repetitions may appear. If it has not been generated
                     // before the projector is created
                     for(i=0;i<(ndec*qoc->nm*qoc->ns);i++) keyprj[i]=select(3,i);
-                    prjvalue=hashval(keyprj,ndec*qoc->nm*qoc->ns);
+                    prjvalue=hashval(keyprj,ndec*qoc->nm*qoc->ns, in_state->nph);
                     vprjhash=prjhash.find(prjvalue);
                     // If the projector has not been created before
                     if(vprjhash==prjhash.end()){
@@ -745,7 +745,7 @@ void dmatrix:: add_state_cond(int ndec, mati def,state *in_state,qocircuit *qoc)
                         nprj=nprj+1;
 
                         // We create the projector
-                        prj=new projector(qoc->num_levels(),1,in_state->vis);
+                        prj=new projector(in_state->nph, qoc->num_levels(),1,in_state->vis);
                         prj->add_term(1.0,select,qoc);
 
                         // Apply the projector to the input state and store the result
@@ -816,7 +816,7 @@ void dmatrix:: sum_state(state *newstate){
     // row otherwise.
     if(dicc->nket==0){
         delete dicc;
-        dicc=new ket_list(newstate->nlevel,mem,newstate->vis);
+        dicc=new ket_list(newstate->nph,newstate->nlevel,mem,newstate->vis);
     }
 
     for(k=0;k<newstate->nket;k++){
@@ -914,7 +914,7 @@ dmatrix *dmatrix::relabel(mati label_idx, qocircuit *qoc){
     newdmat=new dmatrix(mem);
     // Update visibility
     delete newdmat->dicc;
-    newdmat->dicc=new ket_list(dicc->nlevel,mem,dicc->vis);
+    newdmat->dicc=new ket_list(dicc->nph,dicc->nlevel,mem,dicc->vis);
 
 
     // DIAGONAL ELEMENTS and PROBABILITES BY COMMON LABELS
@@ -1255,13 +1255,13 @@ dmatrix *dmatrix::translate(mati qdef,qocircuit *qoc){
     newmat=this->clone();
 
     // Encode
-    raw=new state(newmat->dicc->nlevel,newmat->dicc->nket);
+    raw=new state(newmat->dicc->nph,newmat->dicc->nlevel,newmat->dicc->nket);
     for(i=0;i<newmat->dicc->nket;i++) raw->add_term(1.0,newmat->dicc->ket[i]);
     encoded=raw->encode(qdef,qoc);
 
     // Update
     delete newmat->dicc;
-    newmat->dicc=new ket_list(encoded->nlevel,dicc->maxket);
+    newmat->dicc=new ket_list(encoded->nph, encoded->nlevel,dicc->maxket);
     for(i=0;i<encoded->nket;i++) newmat->dicc->add_ket(encoded->ket[i]);
 
     // Free memory
@@ -1309,13 +1309,13 @@ dmatrix *dmatrix::pol_translate(veci qdef,qocircuit *qoc){
     newmat=this->clone();
 
     // Encode
-    raw=new state(newmat->dicc->nlevel,newmat->dicc->nket);
+    raw=new state(newmat->dicc->nph,newmat->dicc->nlevel,newmat->dicc->nket);
     for(i=0;i<newmat->dicc->nket;i++) raw->add_term(1.0,newmat->dicc->ket[i]);
     encoded=raw->pol_encode(qdef,qoc);
 
     // Update
     delete newmat->dicc;
-    newmat->dicc=new ket_list(encoded->nlevel,dicc->maxket);
+    newmat->dicc=new ket_list(encoded->nph,encoded->nlevel,dicc->maxket);
     for(i=0;i<encoded->nket;i++) newmat->dicc->add_ket(encoded->ket[i]);
 
     // Free memory

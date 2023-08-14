@@ -1,7 +1,7 @@
 /**************************************************************************
 * @file soqcs.h
 
-* @version 1.4 ( Beta )
+* @version 5.2
 * @author Javier Osca
 * @author Jiri Vala
 *
@@ -44,7 +44,7 @@
  *  <b> Comput. Phys. Commun. Volume 289, 108773 (2023). </b> <br>
  *  <br>
  *  Javier Osca and Jiri Vala. <i style="color:blue;">Implementation of a Stochastic Optical Quantum Circuit Simulator ( SOQCS ) </i>. <br>
- *  <b> In preparation </b>. <br>
+ *  <b> arXiv:2307.06965 </b>. <br>
  * <br>
  *
  * \section StructureP Library structure

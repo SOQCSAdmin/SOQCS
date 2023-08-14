@@ -66,7 +66,7 @@ p_bin *simulator::run(qodev *circuit, int method){
     output=run(circuit->inpt,circuit->circ, method);
 
     // Store the raw statistic in a probability bin
-    outcome= new p_bin(output->nlevel,mem);
+    outcome= new p_bin(output->nph,output->nlevel,mem);
     outcome->add_state(output);
 
     // Calculate the measured outcome including possible detector errors, etc
@@ -110,7 +110,7 @@ state *simulator::run( state *istate, qocircuit *qoc, int method ){
             break;
         default:
             cout << "Run error: No recognized backend." << endl;
-            empty_state=new state(qoc->nlevel,mem);
+            empty_state=new state(istate->nph,istate->nlevel,mem);
             return empty_state;
             break;
     }
@@ -140,7 +140,7 @@ state *simulator::run( state *istate, ket_list* olist, qocircuit *qoc, int metho
             return GlynnS(istate,olist,qoc);
             break;
         default:
-            empty_state=new state(qoc->nlevel,mem);
+            empty_state=new state(istate->nph, istate->nlevel,mem);
             return empty_state;
             break;
     }
@@ -177,7 +177,7 @@ state *simulator::DirectF( state *istate, qocircuit *qoc ){
 
     //Set up variables and reserve memory
     nlevel=qoc->nlevel;
-    ostate=new state(nlevel,mem);
+    ostate=new state(istate->nph, nlevel,mem);
 
     // Main loop
     // For each ket of a state calculate transformation rule.
@@ -206,6 +206,7 @@ state *simulator::DirectF( state *istate, qocircuit *qoc ){
 
         // Translate these sequences into actual coefficients and occupations
         occs.resize(nlevel);
+
         //For each coefficient and its occupation that correspond with one sequence
         for(icoef=0;icoef<ncoef;icoef++){
             coef=1.0;
@@ -221,6 +222,8 @@ state *simulator::DirectF( state *istate, qocircuit *qoc ){
             }
             // Normalize
             coef=istate->ampl[iket]*coef/sqfact;
+
+            // Store
             if(abs(coef)>xcut){
                 index=ostate->add_term(coef,(int *)(occs.data()));
                 if(index<0){
@@ -270,7 +273,7 @@ state *simulator::DirectR( state *istate, qocircuit *qoc ){
 
     //Set up variables and reserve memory
     nlevel=qoc->nlevel;
-    ostate=new state(nlevel,mem);
+    ostate=new state(istate->nph,nlevel,mem);
 
     // Main loop
     // For each ket of a state calculate transformation rule.
@@ -385,7 +388,7 @@ state *simulator::GlynnF( state *istate, qocircuit *qoc ){
 
     //Set up variables and reserve memory
     nlevel=qoc->nlevel;
-    ostate=new state(nlevel,mem);
+    ostate=new state(istate->nph,nlevel,mem);
 
     // Main loop
     // For each ket of a state calculate transformation rule.
@@ -506,7 +509,7 @@ state *simulator::GlynnR( state *istate, qocircuit *qoc ){
 
     //Set up variables and reserve memory
     nlevel=qoc->nlevel;
-    ostate=new state(nlevel,mem);
+    ostate=new state(istate->nph,nlevel,mem);
 
     // Main loop
     // For each ket of a state calculate transformation rule.
@@ -623,7 +626,7 @@ state *simulator::DirectS( state *istate, ket_list *olist, qocircuit *qoc ){
 
     //Set up variables and reserve memory
     nlevel=qoc->nlevel;
-    ostate=new state(nlevel,olist->nket+1);
+    ostate=new state(istate->nph,nlevel,olist->nket+1);
 
     // Main loop
     // For each ket of a state calculate transformation rule.
@@ -739,7 +742,7 @@ state *simulator::GlynnS( state *istate, ket_list *olist, qocircuit *qoc ){
 
     //Set up variables and reserve memory
     nlevel=qoc->nlevel;
-    ostate=new state(nlevel,olist->nket+1);
+    ostate=new state(istate->nph,nlevel,olist->nket+1);
 
     // Main loop
     // For each ket of a state calculate transformation rule.
@@ -872,14 +875,12 @@ p_bin *simulator::sample( state *istate, qocircuit *qoc ,int N){
 
     //Set up variables and reserve memory
     nlevel=qoc->nlevel;
-    obin=new p_bin(nlevel,mem);
 
     // Process the input ket probabilities to perform random selection
     iw=new double[istate->nket]();
     for(iket=0;iket<istate->nket;iket++) iw[iket]=pow((double)abs(istate->ampl[iket]),2);
     for(iket=1;iket<istate->nket;iket++) iw[iket]=iw[iket]+iw[iket-1];
     for(iket=0;iket<istate->nket;iket++) iw[iket]=iw[iket]/iw[istate->nket-1];
-
 
     // Calculate number of photons in input ket
     maxnph=0;
@@ -896,6 +897,7 @@ p_bin *simulator::sample( state *istate, qocircuit *qoc ,int N){
     r=new int[maxnph]();
     w=new double[nlevel]();
     ilist=new int[maxnph]();
+    obin=new p_bin(maxnph, nlevel,mem);
 
     // Sample N end states
     for(isample=0;isample<N;isample++){
@@ -1117,7 +1119,7 @@ tuple<p_bin*, double> simulator::metropolis( state *istate, qocircuit *qoc ,int 
     ilist=new int[nph]();
     r=new int[nph]();
     Ust.resize(nph,nph);
-    obin=new p_bin(nlevel,mem);
+    obin=new p_bin(nph,nlevel,mem);
 
     //Initialize input configuration.
     k=0;

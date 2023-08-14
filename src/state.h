@@ -20,9 +20,10 @@ class ket_list{
 public:
     // Public methods
     // Management methods
-    ket_list(int i_level);                                               //  Creates a ket list.The maximum number of kets is set by default.
-    ket_list(int i_level,int i_maxket);                                  //  Creates a ket list specifying the maximum number of kets.
-    ket_list(int i_level, int i_maxket, int *i_vis);                     //  Creates a ket list specifying the maximum number of kets and a vector of equivalence between state and circuit levels.
+    ket_list(int i_level);                                               //  Creates a ket list.The maximum number of photons and kets are set by default.
+    ket_list(int i_nph, int i_level);                                    //  Creates a ket list.The maximum number of kets is set by default.
+    ket_list(int i_nph, int i_level,int i_maxket);                       //  Creates a ket list specifying the maximum number of kets.
+    ket_list(int i_nph, int i_level, int i_maxket, int *i_vis);          //  Creates a ket list specifying the maximum number of kets and a vector of equivalence between state and circuit levels.
     ~ket_list();                                                         //  Destroys a ket_list
     void clone();                                                        //  Copies a ket list
     void clear_kets();                                                   //  Clear the list (without destroying it).
@@ -40,7 +41,7 @@ public:
     void  prnt_ket(int iket, int format, bool loss,qocircuit *qoc);      // Prints a ket
 
 protected:
-    void create_ket_list(int i_level, int i_maxket);                     // Create ket list auxiliary function
+    void create_ket_list(int i_nph, int i_level, int i_maxket);          // Create ket list auxiliary function
 };
 
 
@@ -48,9 +49,10 @@ class state{
 public:
     // Public methods
     // Management methods
-    state(int i_level);                                                  //  Creates a state.The maximum number of kets is set by default.
-    state(int i_level,int i_maxket);                                     //  Creates a state specifying the maximum number of kets.
-    state(int i_level, int i_maxket, int *i_vis);                        //  Creates a state specifying the maximum number of kets and a vector of equivalence between state and circuit levels.
+    state(int i_level);                                                  //  Creates a state.The maximum number of photons and kets are set by default.
+    state(int i_nph, int i_level);                                       //  Creates a state.The maximum number of kets is set by default.
+    state(int i_nph, int i_level,int i_maxket);                          //  Creates a state specifying the maximum number of kets.
+    state(int i_nph, int i_level, int i_maxket, int *i_vis);             //  Creates a state specifying the maximum number of kets and a vector of equivalence between state and circuit levels.
 
     ~state();                                                            //  Destroys a state
     state *clone();                                                      //  Copy a state
@@ -102,9 +104,10 @@ class projector : public state{
 public:
     // Public methods
     // Management methods
-    projector(int i_level);                                              //  Creates a projector.The maximum number of kets is set by default.
-    projector(int i_level,int i_maxket);                                 //  Creates a projector specifying the maximum number of kets.
-    projector(int i_level, int i_maxket, int *i_vis);                    //  Creates a projector specifying the maximum number of kets and a vector of equivalence between state and circuit levels.
+    projector(int i_level);                                              //  Creates a projector.The maximum number of of photons and kets are set by default.
+    projector(int i_nph, int i_level);                                   //  Creates a projector.The maximum number of kets is set by default.
+    projector(int i_nph, int i_level,int i_maxket);                      //  Creates a projector specifying the maximum number of kets.
+    projector(int i_nph, int i_level, int i_maxket, int *i_vis);         //  Creates a projector specifying the maximum number of kets and a vector of equivalence between state and circuit levels.
 
     // Auxiliary methods
     void create_projector(int i_level, int i_maxket);                    // Create projector auxiliary function
@@ -145,6 +148,7 @@ const double DEFTHOLDPRNT= 0.0001;    ///< Default amplitude magnitude threshold
 class ket_list{
 public:
     // Public variables
+    int nph;               ///< Maximum number of photons
     int nket;              ///< Number of kets (C1|1>+C2|2>+...+Cn|nket>.
     int maxket;            ///< Maximum number of kets.
     int nlevel;            ///< Number of levels in each ket |0, 1, 2, ... nlevel>.
@@ -164,31 +168,41 @@ public:
     */
 
     /**
-    *  Creates a list of kets. The maximum number of kets is set by default.
+    *  Creates a list of kets. The maximum number of photons and kets are set by default.
     *
     *  @param int i_level   Number of levels to describe a ket.
     *  @ingroup Ket_management
     */
     ket_list(int i_level);
     /**
+    *  Creates a list of kets. The maximum number of kets is set by default.
+    *
+    *  @param int i_nph     Maximum number of photons.
+    *  @param int i_level   Number of levels to describe a ket.
+    *  @ingroup Ket_management
+    */
+    ket_list(int i_nph, int i_level);
+    /**
     *  Creates a list of kets specifying the maximum number of kets.
     *
+    *  @param int i_nph     Maximum number of photons.
     *  @param int i_level   Number of levels to describe a ket.
     *  @param int i_maxket  Maximum number of different kets in the list.
     *  @ingroup Ket_management
     */
-    ket_list(int i_level,int i_maxket);
+    ket_list(int i_nph, int i_level,int i_maxket);
     /**
     *  Creates a list of kets specifying the maximum number of them given the correspondence vector between state levels and
     *  circuit defined levels. <br>
     *  <b> Intended for internal use. </b>
     *
+    *  @param int i_nph     Maximum number of photons.
     *  @param int i_level   Number of levels to describe a ket.
     *  @param int i_maxket  Maximum number of different kets in the list.
     *  @param int i_vis  Vector that translates the ket levels to the circuit levels defined by the circuit indexes.
     *  @ingroup Ket_management
     */
-    ket_list(int i_level, int i_maxket, int *i_vis);
+    ket_list(int i_nph, int i_level, int i_maxket, int *i_vis);
     /**
     *  Destroys this list of kets.
     *
@@ -359,10 +373,11 @@ protected:
     *  Auxiliary method to create a ket list.
     *  Each ket is described as level occupations.
     *
+    *  @param int i_nph     Maximum number of photons.
     *  @param int i_level   Number of levels to describe a ket.
     *  @param int i_maxket  Maximum number of different kets in the list.
     */
-    void create_ket_list(int i_level, int i_maxket);
+    void create_ket_list(int i_nph, int i_level, int i_maxket);
 
 };
 
@@ -399,32 +414,42 @@ public:
     */
 
     /**
-    *  Creates a state object. The maximum number of kets is set by default.
+    *  Creates a state object. The maximum number of photons and kets are set by default.
     *
     *  @param int i_level   Number of levels to describe the state.
     *  @ingroup State_management
     */
     state(int i_level);
     /**
+    *  Creates a state object. The maximum number of kets is set by default.
+    *
+    *  @param int i_nph     Maximum number of photons.
+    *  @param int i_level   Number of levels to describe the state.
+    *  @ingroup State_management
+    */
+    state(int i_nph, int i_level);
+    /**
     *  Creates a state object specifying the maximum number of kets.
     *
+    *  @param int i_nph     Maximum number of photons.
     *  @param int i_level   Number of levels to describe the state.
     *  @param int i_maxket  Maximum number of different kets in the summation.
     *  @ingroup State_management
     */
-    state(int i_level,int i_maxket);
+    state(int i_nph, int i_level, int i_maxket);
     /**
     *  Creates a state specifying the maximum number of kets
     *  and the vector of equivalence between state levels and
     *  circuit defined levels. <br>
     *  <b>Intended for internal use.</b>
     *
+    *  @param int i_nph     Maximum number of photons.
     *  @param int i_level   Number of levels to describe the state.
     *  @param int i_maxket  Maximum number of different kets in the summation.
     *  @param int i_vis  Vector that translates the state levels to the circuit levels defined by the circuit indexes.
     *  @ingroup State_management
     */
-    state(int i_level, int i_maxket, int *i_vis);
+    state(int i_nph, int i_level, int i_maxket, int *i_vis);
     /**
     *  Destroys a state object.
     *
@@ -921,28 +946,37 @@ public:
     // Public methods
     // Management methods
     /**
-    *  Creates a projector object. The maximum number of terms is set by default.
+    *  Creates a projector object. The maximum number of photons and terms terms are set by default.
     *
     *  @param int i_level   Number of levels to describe the projector.
     */
     projector(int i_level);
     /**
+    *  Creates a projector object. The maximum number of terms is set by default.
+    *
+    *  @param int i_nph     Maximum number of photons.
+    *  @param int i_level   Number of levels to describe the projector.
+    */
+    projector(int i_nph, int i_level);
+    /**
     *  Creates a projector specifying the maximum number of terms.
     *
+    *  @param int i_nph     Maximum number of photons.
     *  @param int i_level   Number of levels to describe the projector.
     *  @param int i_maxket  Maximum number of different kets in the projector.
     */
-    projector(int i_level,int i_maxket);
+    projector(int i_nph, int i_level,int i_maxket);
     /**
     *  Creates a projector specifying the maximum number of terms and the vector of equivalence between state levels and
     *  circuit defined levels. <br>
     *  <b>Intended for internal use</b>.
     *
+    *  @param int i_nph     Maximum number of photons.
     *  @param int i_level   Number of levels to describe the projector.
     *  @param int i_maxket  Maximum number of different terms in the summation.
     *  @param int i_vis  Vector that translates the projector levels to the circuit levels defined by the circuit indices.
     */
-    projector(int i_level, int i_maxket, int *i_vis);
+    projector(int i_nph, int i_level, int i_maxket, int *i_vis);
 
     // Auxiliary methods
     /**

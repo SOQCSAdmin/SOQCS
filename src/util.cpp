@@ -13,7 +13,7 @@
 
 
 // Initialization of extern variables
-int maxnph=4;        // Maximum photon occupation by level. (default value 4).
+int def_nph=4;        // Default value of the maximum photon occupation by level.
 
 
 //-----------------------------------------------
@@ -114,24 +114,9 @@ void cfg_soqcs(int nph){
 //  int nph     // Number of photons by level
 
 
-    maxnph=nph;
+    def_nph=nph;
     // Random seed for the random number generator that feeds the distributions
     gen.seed(std::chrono::system_clock::now().time_since_epoch().count());
-}
-
-
-//--------------------------------------------
-//
-//  Calculate a hash value for a given vector of numbers.
-//  (We get an unique number for a given occupation vector)
-//
-//--------------------------------------------
-long long int hashval(int *chainv,int n){
-//  int *chainv       // List of numbers. For us occupations.
-//  int n             // Length of chainv
-
-
-    return hashval(chainv,n,maxnph);
 }
 
 
