@@ -95,4 +95,6 @@ Acknowledgements
 
 If You use the Software then You should reference the following papers in any publication:
 
-Javier Osca and Jiri Vala. Implementation of photon partial distinguishability in a quantum optical circuit simulation. In preparation. 
+Javier Osca and Jiri Vala. Implementation of photon partial distinguishability in a quantum optical circuit simulation. Comput. Phys. Commun. Volume 289, 108773 (2023).
+Javier Osca and Jiri Vala. Implementation of a Stochastic Optical Quantum Circuit Simulator ( SOQCS ). arXiv:2307.06965.
+
