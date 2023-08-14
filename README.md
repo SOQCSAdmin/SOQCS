@@ -17,10 +17,10 @@
 # Related Publications #
 Please cite the most appropriate of these works if you make use of this library:
 
-*  Javier Osca and Jiri Vala.  <span style="color:blue"> <i>Implementation of photon partial distinguishability in a quantum optical circuit simulation</i></span>. <br>
-   **Comput. Phys. Commun. Volume 289, 108773 (2023).** <br>
+*  Javier Osca and Jiri Vala.  <span style="color:blue"> <i>Implementation of photon partial distinguishability in a quantum optical circuit simulation</i></span>.<br> 
+   **Comput. Phys. Commun. Volume 289, 108773 (2023).**
 *  Javier Osca and Jiri Vala.  <span style="color:blue"> <i>Implementation of a Stochastic Optical Quantum Circuit Simulator ( SOQCS ) </i></span>. <br>
-   **In preparation.**
+   **arXiv:2307.06965**
 
  
 # 1. Requirements #
@@ -87,6 +87,10 @@ Use of SOQCS is only permitted under the terms of the licence in [LICENCE.TXT](.
 # Version release history #
 
 
+* Version RV1.4.1:
+
+    * Various bugs solved
+    
 * Version RV1.4:
 
     * Added metropolis sampler
