@@ -103,7 +103,7 @@ def to_int_vec(vec):
 def cfg_soqcs(nph):
     """
 
-    It defines the maximum number of photons to be used by SOQCS.
+    It defines the default maximum number of photons to be used by SOQCS.
     
     :nph (int): Maximum number of photons used by SOQCS.
     
@@ -542,6 +542,7 @@ class state(object):
     Quantum bosonic state definition. A quantum state is a sum of kets multiplied by amplitudes.
 
     :level (int): Number of levels to describe the state.
+    :nph(optional(int)): Maximum number of photons.
     :maxket(optional(int)): Maximum number of different terms in the summation. (Internal memory).
     :dummy(automatic(bool)): If True it creates a dummy empty class. (Option used internally by the library).
     
@@ -549,11 +550,11 @@ class state(object):
     #---------------------------------------------------------------------------      
     # Create a state
     #---------------------------------------------------------------------------      
-    def __init__(self, level,maxket=50,dummy=False):
+    def __init__(self, level, nph=-1, maxket=50,dummy=False):
         func=soqcs.st_new_state
         func.restype=c_long
         if(dummy==False):
-            self.obj = func(level,maxket)
+            self.obj = func(nph, level,maxket)
 
     #---------------------------------------------------------------------------              
     # Delete a state
@@ -878,16 +879,17 @@ class projector(object):
     Condition that have to be met to accept a state in post-selection.
 
     :level (int): Number of levels
+    :nph(optional(int)): Maximum number of photons.
     :maxket(optional(int)): Maximum number of terms to define the projector. (Internal memory)
     
     """  
     #---------------------------------------------------------------------------      
     # Create a projector
     #---------------------------------------------------------------------------      
-    def __init__(self,nlevel,maxket):
+    def __init__(self,nlevel,nph=-1,maxket=10):
         func=soqcs.prj_new_projector
         func.restype=c_long    
-        self.obj = func(nlevel,maxket)
+        self.obj = func(nph,nlevel,maxket)
 
     #---------------------------------------------------------------------------          
     # Delete a projector
@@ -931,6 +933,8 @@ class p_bin(object):
 
     Outcomes. Set of bins where in each bin it is stored the probability of one particular outcome.
     
+    :level (int): Number of levels to describe the bins.
+    :nph(optional(int)): Maximum number of photons.    
     :maxket(optional(int)): Maximum number of bins possible. (Internal memory)
     :dummy(automatic(bool)): If True it creates a dummy empty class. (Option used internally by the library).
     
@@ -938,11 +942,11 @@ class p_bin(object):
     #---------------------------------------------------------------------------      
     # Create a p_bin
     #---------------------------------------------------------------------------      
-    def __init__(self, level,maxket=50,dummy=False):
+    def __init__(self, level, nph=-1, maxket=50,dummy=False):
         func=soqcs.pb_new_pbin
         func.restype=c_long
         if(dummy==False):
-            self.obj = func(level,maxket)
+            self.obj = func(nph,level,maxket)
 
     #---------------------------------------------------------------------------                      
     # Delete a p_bin

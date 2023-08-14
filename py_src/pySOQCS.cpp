@@ -164,7 +164,7 @@ extern "C" {
     //--------------------------------------------------------------------------------------------------------------------------
     // STATE
     // Management functions
-    long int st_new_state(int i_level, int i_maxket){ return (long int)new state(i_level,i_maxket);}
+    long int st_new_state(int i_nph, int i_level, int i_maxket){ return (long int)new state(i_nph,i_level,i_maxket);}
     void st_destroy_state(long int st){state* aux=(state*)st; delete aux; }
 
     // State manipulation methods.
@@ -225,7 +225,7 @@ extern "C" {
                                                                                                     return (long int) auxdecoded;}
 
     // PROJECTOR
-    long int prj_new_projector(int i_level, int i_maxket){ return (long int)new projector(i_level,i_maxket);}
+    long int prj_new_projector(int i_nph, int i_level, int i_maxket){ return (long int)new projector(i_nph, i_level,i_maxket);}
     void prj_destroy_projector(long int prj){projector* aux=(projector *)prj; delete aux; }
 
     // State manipulation methods.
@@ -241,7 +241,7 @@ extern "C" {
     //--------------------------------------------------------------------------------------------------------------------------
     // PBINS
     // Management functions
-    long int pb_new_pbin(int i_level, int i_maxket){ return (long int)new p_bin(i_level,i_maxket);}
+    long int pb_new_pbin(int i_nph, int i_level, int i_maxket){ return (long int)new p_bin(i_nph, i_level,i_maxket);}
     void pb_destroy_pbin(long int pbin){p_bin* aux=(p_bin *)pbin; delete aux; }
 
     // Update pdate methods
