@@ -58,7 +58,9 @@ are standard compilation tools that can be found in your favourite package repos
 pip install git+https://github.com/SOQCSAdmin/SOQCS
 
 # 3. Documentation #
-For more details about how to use SOQCS library consult the available documentationthat can be found in https://SOQCSADmin.github.io/SOQCS/index.html
+For more details about how to use SOQCS library in Python consult the available documentation that can be found in https://SOQCSADmin.github.io/SOQCS/index.html
+
+The C++ API documentation can be found in https://soqcsadmin.github.io/SOQCS/indexcpp.html
 
 # 4. Authorship #
 <b>Javier Osca</b> <br>
