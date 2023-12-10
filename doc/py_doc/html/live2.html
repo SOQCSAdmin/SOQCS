@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SOQCS Example 2: CNOT circuit. &mdash; SOQCS 1.5 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/extended.css" type="text/css" />
+      <link rel="stylesheet" href="_static/nbsphinx-code-cells.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="SOQCS Example 3: CZ" href="live3.html" />
+    <link rel="prev" title="SOQCS Example 1: Introduction to using SOQCS" href="live1.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> SOQCS
+            <img src="_static/Logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Compilation and installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="details_pub.html">Software details</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="program.html">Examples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="live1.html"> Example 1: Elementary example program</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#"> Example 2: CNOT circuit</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Building-a-CNOT-circuit">Building a CNOT circuit</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Qubit-declaration">Qubit declaration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Example-with-|-1,-0-&gt;-input.">Example with | 1, 0 &gt; input.</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Additional-results">Additional results</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#|0,-0-&gt;-input">|0, 0 &gt; input</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#|0,-1-&gt;-input">|0, 1 &gt; input</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#|1,-1-&gt;-input">|1, 1 &gt; input</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="live3.html"> Example 3: CZ</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live4.html"> Example 4: HOM Visibility simulation of a 2x2 MMI beamsplitter.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live5.html"> Example 5: Partial distinguishability</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live6.html"> Example 6: Simulation of a delay in the middle of a circuit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live7.html"> Example 7: Boson sampling example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live8.html"> Example 8: Entanglement swapping protocol using a physical quantum dot as a non-ideal Bell emitter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live9.html"> Example 9: Dielectric film with losses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark.html"> Benchmark</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="genindex.html">Index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="biblio.html">Bibliography</a></li>
+<li class="toctree-l1"><a class="reference internal" href="licence.html">Licence and copyright</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">SOQCS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="program.html">Examples</a> &raquo;</li>
+      <li>SOQCS Example 2: CNOT circuit.</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/live2.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="SOQCS-Example-2:-CNOT-circuit.">
+<h1>SOQCS Example 2: CNOT circuit.<a class="headerlink" href="#SOQCS-Example-2:-CNOT-circuit." title="Permalink to this headline"></a></h1>
+<p style="text-align: justify;"><p>We use SOQCS to simulate a CNOT circuit as described in [1].</p>
+</p><p>[1] J L O’Brien, G J Pryde, A G White, T C Ralph, D Branning Demonstration of an all-optical quantum controlled-NOT gate. Nature 426:264 (2003)</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Import libraries</span>
+<span class="kn">import</span> <span class="nn">soqcs</span>                    <span class="c1"># Import SOQCS</span>
+<span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">acos</span><span class="p">,</span><span class="n">sqrt</span><span class="p">,</span><span class="n">pi</span>   <span class="c1"># Import mathematical functions</span>
+
+<span class="c1"># Create a simulator</span>
+<span class="n">sim</span><span class="o">=</span><span class="n">soqcs</span><span class="o">.</span><span class="n">simulator</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<section id="Building-a-CNOT-circuit">
+<h2>Building a CNOT circuit<a class="headerlink" href="#Building-a-CNOT-circuit" title="Permalink to this headline"></a></h2>
+<p style="text-align: justify;"><p>Here we build a circuit as described in [1]. Note that we are not defining the inputs like in example one. We left the channels open to indicate that we will append this circuit to the output of other circuit. Open channels helps to clarify the functionality of the circuit graphically like the barrier definition. A channel without any defined input will work in the same way.</p>
+</p><div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">cnot</span> <span class="o">=</span> <span class="n">soqcs</span><span class="o">.</span><span class="n">qodev</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">6</span><span class="p">);</span>
+<span class="n">cnot</span><span class="o">.</span><span class="n">open_channel</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">cnot</span><span class="o">.</span><span class="n">open_channel</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">cnot</span><span class="o">.</span><span class="n">open_channel</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">cnot</span><span class="o">.</span><span class="n">open_channel</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">cnot</span><span class="o">.</span><span class="n">open_channel</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+<span class="n">cnot</span><span class="o">.</span><span class="n">open_channel</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+<span class="n">cnot</span><span class="o">.</span><span class="n">separator</span><span class="p">()</span>
+<span class="n">cnot</span><span class="o">.</span><span class="n">beamsplitter</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span> <span class="o">-</span><span class="mf">45.0</span><span class="p">,</span><span class="mf">0.0</span><span class="p">)</span>
+<span class="n">cnot</span><span class="o">.</span><span class="n">separator</span><span class="p">()</span>
+<span class="n">cnot</span><span class="o">.</span><span class="n">beamsplitter</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">180</span><span class="o">*</span><span class="n">acos</span><span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">3.0</span><span class="p">))</span><span class="o">/</span><span class="n">pi</span><span class="p">,</span><span class="mf">0.0</span><span class="p">)</span>
+<span class="n">cnot</span><span class="o">.</span><span class="n">beamsplitter</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">180</span><span class="o">*</span><span class="n">acos</span><span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">3.0</span><span class="p">))</span><span class="o">/</span><span class="n">pi</span><span class="p">,</span><span class="mf">0.0</span><span class="p">)</span>
+<span class="n">cnot</span><span class="o">.</span><span class="n">beamsplitter</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">180</span><span class="o">*</span><span class="n">acos</span><span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">3.0</span><span class="p">))</span><span class="o">/</span><span class="n">pi</span><span class="p">,</span><span class="mf">0.0</span><span class="p">)</span>
+<span class="n">cnot</span><span class="o">.</span><span class="n">separator</span><span class="p">()</span>
+<span class="n">cnot</span><span class="o">.</span><span class="n">beamsplitter</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span> <span class="o">-</span><span class="mf">45.0</span><span class="p">,</span><span class="mf">0.0</span><span class="p">)</span>
+<span class="n">cnot</span><span class="o">.</span><span class="n">separator</span><span class="p">()</span>
+<span class="n">cnot</span><span class="o">.</span><span class="n">phase_shifter</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">180</span><span class="p">)</span>
+<span class="n">cnot</span><span class="o">.</span><span class="n">phase_shifter</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">180</span><span class="p">)</span>
+<span class="n">cnot</span><span class="o">.</span><span class="n">separator</span><span class="p">()</span>
+<span class="n">cnot</span> <span class="o">.</span><span class="n">detector</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">cnot</span><span class="o">.</span><span class="n">detector</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">cnot</span><span class="o">.</span><span class="n">detector</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">cnot</span><span class="o">.</span><span class="n">detector</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">cnot</span><span class="o">.</span><span class="n">detector</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+<span class="n">cnot</span><span class="o">.</span><span class="n">detector</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">cnot</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">sizexy</span><span class="o">=</span><span class="mi">80</span><span class="p">,</span><span class="n">depth</span><span class="o">=</span><span class="mi">13</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="_images/live2_5_0.png" src="_images/live2_5_0.png" />
+</div>
+</div>
+</section>
+<section id="Qubit-declaration">
+<h2>Qubit declaration<a class="headerlink" href="#Qubit-declaration" title="Permalink to this headline"></a></h2>
+<p style="text-align: justify;"><p>We will relate the input channels with the qubit definition. In this case, we use a path encoded photon initialization. A pair of channels define a qubit. If the occupation of that pair of channels is “01” then the qubit value is “0”. If the occupation is “10” then the value is “1”. Below we define a 2xn matrix with as many columns as qubits. The first row determines the leftmost value while evaluating occupations.</p>
+</p><div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">qmap</span><span class="o">=</span><span class="p">[[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
+      <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">]]</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Example-with-|-1,-0-&gt;-input.">
+<h2>Example with | 1, 0 &gt; input.<a class="headerlink" href="#Example-with-|-1,-0->-input." title="Permalink to this headline"></a></h2>
+<p style="text-align: justify;"><p>Below we create a circuit and we define the input adding the photons to the circuit. The initialization can be done directly from the qubit values. In this case the list qlist=[1,0]. Channels that do not belong to a qubit definition are the ancilla channels. We initialize both channel 0 and 5 to zero with the list ancilla=[0,0] The values of this list are assigned to the channels in order by their channel number. Once the circuit is initialized we append the previous circuit with the gate
+definitions.</p>
+</p><div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">cnot10</span><span class="o">=</span><span class="n">soqcs</span><span class="o">.</span><span class="n">qodev</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">6</span><span class="p">);</span>                           <span class="c1"># Create a circuit</span>
+<span class="n">cnot10</span><span class="o">.</span><span class="n">qubits</span><span class="p">(</span><span class="n">qlist</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span><span class="n">ancilla</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span><span class="n">qmap</span><span class="o">=</span><span class="n">qmap</span><span class="p">)</span> <span class="c1"># Define the input</span>
+<span class="n">cnot10</span> <span class="o">&lt;&lt;</span> <span class="n">cnot</span>                                     <span class="c1"># Append the gates</span>
+<span class="n">cnot10</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">depth</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span><span class="n">slin</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>                       <span class="c1"># Show the resulting circuit.</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="_images/live2_11_0.png" src="_images/live2_11_0.png" />
+</div>
+</div>
+<p>Simulation and plot of the output. The output is a photonic one therefore we need to traslate this output into qubit encoding before the plot.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">outcome</span><span class="o">=</span><span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">cnot10</span><span class="p">)</span>                  <span class="c1"># Run the simulation</span>
+<span class="n">encoded</span><span class="o">=</span><span class="n">outcome</span><span class="o">.</span><span class="n">translate</span><span class="p">(</span><span class="n">qmap</span><span class="p">,</span> <span class="n">cnot10</span><span class="p">)</span>  <span class="c1"># Encode the output</span>
+<span class="n">encoded</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">sizex</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span><span class="n">dpi</span><span class="o">=</span><span class="mi">70</span><span class="p">)</span>             <span class="c1"># Plot the result</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="_images/live2_13_0.png" src="_images/live2_13_0.png" />
+</div>
+</div>
+</section>
+<section id="Additional-results">
+<h2>Additional results<a class="headerlink" href="#Additional-results" title="Permalink to this headline"></a></h2>
+<p>Here we repeat the same process for the rest of the inputs.</p>
+<section id="|0,-0-&gt;-input">
+<h3>|0, 0 &gt; input<a class="headerlink" href="#|0,-0->-input" title="Permalink to this headline"></a></h3>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">cnot00</span><span class="o">=</span><span class="n">soqcs</span><span class="o">.</span><span class="n">qodev</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">6</span><span class="p">);</span>
+<span class="n">cnot00</span><span class="o">.</span><span class="n">qubits</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span><span class="n">qmap</span><span class="p">)</span>
+<span class="n">cnot00</span> <span class="o">&lt;&lt;</span> <span class="n">cnot</span>
+<span class="n">outcome</span><span class="o">=</span><span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">cnot00</span><span class="p">)</span>
+<span class="n">encoded</span><span class="o">=</span><span class="n">outcome</span><span class="o">.</span><span class="n">translate</span><span class="p">(</span><span class="n">qmap</span><span class="p">,</span> <span class="n">cnot10</span><span class="p">)</span>
+<span class="n">encoded</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">sizex</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span><span class="n">dpi</span><span class="o">=</span><span class="mi">70</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="_images/live2_17_0.png" src="_images/live2_17_0.png" />
+</div>
+</div>
+</section>
+<section id="|0,-1-&gt;-input">
+<h3>|0, 1 &gt; input<a class="headerlink" href="#|0,-1->-input" title="Permalink to this headline"></a></h3>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">cnot01</span><span class="o">=</span><span class="n">soqcs</span><span class="o">.</span><span class="n">qodev</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">6</span><span class="p">);</span>
+<span class="n">cnot01</span><span class="o">.</span><span class="n">qubits</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span><span class="n">qmap</span><span class="p">)</span>
+<span class="n">cnot01</span> <span class="o">&lt;&lt;</span> <span class="n">cnot</span>
+<span class="n">outcome</span><span class="o">=</span><span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">cnot01</span><span class="p">)</span>
+<span class="n">encoded</span><span class="o">=</span><span class="n">outcome</span><span class="o">.</span><span class="n">translate</span><span class="p">(</span><span class="n">qmap</span><span class="p">,</span> <span class="n">cnot10</span><span class="p">)</span>
+<span class="n">encoded</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">sizex</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span><span class="n">dpi</span><span class="o">=</span><span class="mi">70</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="_images/live2_19_0.png" src="_images/live2_19_0.png" />
+</div>
+</div>
+</section>
+<section id="|1,-1-&gt;-input">
+<h3>|1, 1 &gt; input<a class="headerlink" href="#|1,-1->-input" title="Permalink to this headline"></a></h3>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">cnot11</span><span class="o">=</span><span class="n">soqcs</span><span class="o">.</span><span class="n">qodev</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">6</span><span class="p">);</span>
+<span class="n">cnot11</span><span class="o">.</span><span class="n">qubits</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span><span class="n">qmap</span><span class="p">)</span>
+<span class="n">cnot11</span> <span class="o">&lt;&lt;</span> <span class="n">cnot</span>
+<span class="n">outcome</span><span class="o">=</span><span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">cnot11</span><span class="p">)</span>
+<span class="n">encoded</span><span class="o">=</span><span class="n">outcome</span><span class="o">.</span><span class="n">translate</span><span class="p">(</span><span class="n">qmap</span><span class="p">,</span> <span class="n">cnot10</span><span class="p">)</span>
+<span class="n">encoded</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">sizex</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span><span class="n">dpi</span><span class="o">=</span><span class="mi">70</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="_images/live2_21_0.png" src="_images/live2_21_0.png" />
+</div>
+</div>
+<p><strong>THIS CODE IS PART OF SOQCS</strong></p>
+<p><strong>Copyright:</strong> Copyright © 2023 National University of Ireland Maynooth, Maynooth University. All rights reserved. The contents and use of this document and the related code are subject to the licence terms detailed in LICENCE.txt</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          ﻿<footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="live1.html" class="btn btn-neutral float-left" title="SOQCS Example 1: Introduction to using SOQCS" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="live3.html" class="btn btn-neutral float-right" title="SOQCS Example 3: CZ" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+<jinja2.runtime.BlockReference object at 0x7fb897053eb0>
+<html lang="en">
+<style type="text/css">
+
+<style>
+.footer {
+    background:white;   
+}
+.ft-list {
+    text-align:left;
+    list-style:none;
+    overflow:hidden;/*contain floats*/
+    margin:0 auto;
+    padding:0;
+    height:150px;
+    background:white;
+    border-top-width: 1px;
+    border-top-style: solid;
+    border-top-color: darkblue;
+    
+}
+.ft-list li {
+    float:right;
+    margin:0 15px 0 0;
+    background:white;
+}
+
+.ft-list li.last {margin:0;}
+
+</style>
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+<div class="ft-list"
+  <ul>
+     <li>
+            <p style="color:black"> 
+            <b>Maynooth Univeristy</b><br>
+            <img src="../../assets/Maynooth2.png"/>
+            </p>
+    </li>
+
+    <li>
+            <p style="color:black">
+            <b>Copyright:</b><br>
+            Copyright © 2023 National University of Ireland Maynooth, 
+            <br> Maynooth University. All rights reserved.<br>
+            The contents and use of this document and the related code <br>
+            are subject to the licence terms detailed in <a  href="../../assets/LICENCE.TXT"> LICENCE.txt </a> 
+            </p>
+    </li>
+
+    <li>
+            <p style="color:black">
+            <br>
+            Jiri Vala <br>
+            <br>
+            <b>e-mail:</b><br>
+            <a  href="mailto:jiri.vala@mu.ie">jiri.vala@mu.ie</a>
+            </p>
+    </li>
+    
+    
+    <li>
+            <p style="color:black">
+            <b>Authorship:</b><br>
+            Javier Osca Cotarelo<br>
+            <br>
+            <b>e-mail:</b><br>
+            <a  href="mailto:soqcslib@gmail.com">soqcslib@gmail.com</a>
+            </p>
+    </li>
+  </ul>
+</div>
+</div>
+</html>
+<!-- your custom footer here-->
+
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
