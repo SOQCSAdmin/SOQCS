@@ -1,6 +1,0 @@
-License and copyright
-=====================
-
-Copyright (c) 2023 National University of Ireland Maynooth, Maynooth University. All rights reserved.
-This library and its related files are subject to the licence terms detailed in :download:`LICENCE.TXT <../assets/LICENCE.TXT>`.
-Use of SOQCS is only permitted under the terms of the licence in :download:`LICENCE.TXT<../assets/LICENCE.TXT>`.
