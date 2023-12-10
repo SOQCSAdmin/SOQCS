@@ -10,7 +10,7 @@
 * **Simulate the output of an optical circuit** using different cores/backends.
 * Perform detection using a model of **physical detectors** that considers effects of efficiency, dead time, dark counts and noise.
 * Establish **post-selection** conditions in the detector configuration.
-* Basic **boson sampling support**.
+* **Boson sampling support**.
 * A **Python port**.
 
 
