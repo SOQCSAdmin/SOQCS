@@ -1,0 +1,17 @@
+ 
+Examples
+========
+
+.. toctree::
+   :maxdepth: 2
+   
+    Example 1: Elementary example program <live1>
+    Example 2: CNOT circuit <live2>
+    Example 3: CZ <live3>
+    Example 4: HOM Visibility simulation of a 2x2 MMI beamsplitter. <live4>
+    Example 5: Partial distinguishability <live5>
+    Example 6: Simulation of a delay in the middle of a circuit  <live6>
+    Example 7: Boson sampling example <live7>
+    Example 8: Entanglement swapping protocol using a physical quantum dot as a non-ideal Bell emitter <live8>
+    Example 9: Dielectric film with losses <live9>
+    Benchmark <benchmark>

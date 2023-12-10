@@ -1,0 +1,15 @@
+SOQCS RV 1.5 documentation.
+===========================
+
+   
+.. toctree::
+   :maxdepth: 2
+      
+   Introduction <intro>
+   Compilation and installation <install>
+   Software details <details_pub>
+   Examples <program>
+   API <api>
+   Index <genindex>
+   Bibliography <biblio>
+   Licence and copyright <licence>
