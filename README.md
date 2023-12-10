@@ -7,7 +7,7 @@
 * Building of circuits from **non-ideal physical devices** that may contain losses.
 * Connecting the circuit elements through **lossy media**.
 * Creating sets of **partially distinguishable photons** from their physical parameters (this is shape, frequency, width, etc).
-* **Simulate the output of an optical circuit** using different cores/backends.
+* **Simulate the output of an optical circuit** using different cores.
 * Perform detection using a model of **physical detectors** that considers effects of efficiency, dead time, dark counts and noise.
 * Establish **post-selection** conditions in the detector configuration.
 * **Boson sampling support**.
