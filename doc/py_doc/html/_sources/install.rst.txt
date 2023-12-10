@@ -1,0 +1,59 @@
+Compilation and installation
+============================
+
+Requirements
+^^^^^^^^^^^^
+- **Linux or MacOsX operating system**
+- **C++ Compiler**
+- **GNU Make**
+- **ar tool**
+- :download:`Eigen 3 <https://eigen.tuxfamily.org/index.php?title=Main_Page>`: library. 
+- **Python 3**
+- **matplotlib** (installed automatically)
+- **numpy** (installed automatically)
+ 
+Installation
+^^^^^^^^^^^^
+Step 1: Install compilation tools 
+"""""""""""""""""""""""""""""""""
+
+SOQCS is a C++ library with a Python port. Sources will be compiled automatically as part of the installation.
+The system needs a C++ compiler, the make and ar tools and the Eigen 3 library for linear algebra. To install Eigen 3 
+type in your command line,
+
+.. code-block:: bash
+
+   sudo apt install libeigen3-dev
+
+or 
+
+.. code-block:: bash
+
+   sudo zypper install eigen3-devel
+
+depending on your distribution. The names of the libraries may also depend on the distribution. The rest of the tools
+are standard compilation tools that can be found in your favourite package repository. 
+
+
+Step 2: Install the library
+"""""""""""""""""""""""""""
+
+.. code-block:: bash
+
+   pip install git+https://github.com/SOQCSAdmin/SOQCS
+
+Using SOQCS library  
+^^^^^^^^^^^^^^^^^^^
+In your programs include the line,
+
+.. code-block:: bash
+
+   import soqcs
+  
+For examples and the library API check the rest of the documentation.
+
+Documentation
+^^^^^^^^^^^^^
+    This documentation can be found in https://soqcsadmin.github.io/SOQCS/    
+    
+    For the C++ documentation click :download:`here <https://github.com/SOQCSAdmin/SOQCS/indexcpp.html>`
