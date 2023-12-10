@@ -7,7 +7,7 @@ interface:
 	$(GPP)  $(FLAGS) -c pysoqcs.cpp -o pysoqcs.o	
 
 libsoqcs.a:  mthread.o sim.o dmat.o pbin.o qodev.o state.o qocircuit.o util.o
-	     $(AR) $(ARFLAGS) libsoqcs.a shoes.o mthread.o sim.o dmat.o pbin.o qodev.o state.o qocircuit.o util.o
+	     $(AR) $(ARFLAGS) libsoqcs.a mthread.o sim.o dmat.o pbin.o qodev.o state.o qocircuit.o util.o
      
 mthread.o:   mthread.cpp
 	     $(GPP)  $(FLAGS) -c mthread.cpp
