@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Examples &mdash; SOQCS 1.5 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/extended.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="SOQCS Example 1: Introduction to using SOQCS" href="live1.html" />
+    <link rel="prev" title="Software details" href="details_pub.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> SOQCS
+            <img src="_static/Logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Compilation and installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="details_pub.html">Software details</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="live1.html"> Example 1: Elementary example program</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live2.html"> Example 2: CNOT circuit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live3.html"> Example 3: CZ</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live4.html"> Example 4: HOM Visibility simulation of a 2x2 MMI beamsplitter.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live5.html"> Example 5: Partial distinguishability</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live6.html"> Example 6: Simulation of a delay in the middle of a circuit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live7.html"> Example 7: Boson sampling example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live8.html"> Example 8: Entanglement swapping protocol using a physical quantum dot as a non-ideal Bell emitter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live9.html"> Example 9: Dielectric film with losses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark.html"> Benchmark</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="genindex.html">Index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="biblio.html">Bibliography</a></li>
+<li class="toctree-l1"><a class="reference internal" href="licence.html">Licence and copyright</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">SOQCS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Examples</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/program.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="examples">
+<h1>Examples<a class="headerlink" href="#examples" title="Permalink to this headline"></a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="live1.html"> Example 1: Elementary example program</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="live1.html#Import-and-configure-library">Import and configure library</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live1.html#Managing-photons">Managing photons</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live1.html#Managing-states">Managing states</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="live2.html"> Example 2: CNOT circuit</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="live2.html#Building-a-CNOT-circuit">Building a CNOT circuit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live2.html#Qubit-declaration">Qubit declaration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live2.html#Example-with-|-1,-0-&gt;-input.">Example with | 1, 0 &gt; input.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live2.html#Additional-results">Additional results</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="live3.html"> Example 3: CZ</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="live3.html#Building-a-CZ-circuit">Building a CZ circuit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live3.html#Qubit-declaration">Qubit declaration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live3.html#Example-with-|-1,-1-&gt;-input">Example with | 1, 1 &gt; input</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live3.html#Example-with-|-0,-0-&gt;-+-|-0,-1-&gt;-+-|-1,-0-&gt;-+-|-1,-1-&gt;-input">Example with | 0, 0 &gt; + | 0, 1 &gt; + | 1, 0 &gt; + | 1, 1 &gt; input</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="live4.html"> Example 4: HOM Visibility simulation of a 2x2 MMI beamsplitter.</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="live4.html#Building-a-plotting-function-with-a-SOQCS-circuit">Building a plotting function with a SOQCS circuit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live4.html#Plotting-the-function">Plotting the function</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="live5.html"> Example 5: Partial distinguishability</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="live5.html#Building-a-plotting-function-with-a-SOQCS-circuit">Building a plotting function with a SOQCS circuit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live5.html#Plotting-the-function">Plotting the function</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="live6.html"> Example 6: Simulation of a delay in the middle of a circuit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="live7.html"> Example 7: Boson sampling example</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="live7.html#Build-a-random-circuit">Build a random circuit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live7.html#Obtain-a-list-of-samples">Obtain a list of samples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live7.html#Perform-a-comparison-between-sampled-and-exact-results">Perform a comparison between sampled and exact results</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="live8.html"> Example 8: Entanglement swapping protocol using a physical quantum dot as a non-ideal Bell emitter</a></li>
+<li class="toctree-l1"><a class="reference internal" href="live9.html"> Example 9: Dielectric film with losses</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="live9.html#Build-the-plotting-function-for-a-|-2,-0-&gt;-input.">Build the plotting function for a | 2, 0 &gt; input.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live9.html#Build-the-plotting-function-for-a-|-1,-1-&gt;-input.">Build the plotting function for a | 1, 1 &gt; input.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live9.html#Plotting-the-function">Plotting the function</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="benchmark.html"> Benchmark</a></li>
+</ul>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          ﻿<footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="details_pub.html" class="btn btn-neutral float-left" title="Software details" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="live1.html" class="btn btn-neutral float-right" title="SOQCS Example 1: Introduction to using SOQCS" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+<jinja2.runtime.BlockReference object at 0x7f394c8bcdc0>
+<html lang="en">
+<style type="text/css">
+
+<style>
+.footer {
+    background:white;   
+}
+.ft-list {
+    text-align:left;
+    list-style:none;
+    overflow:hidden;/*contain floats*/
+    margin:0 auto;
+    padding:0;
+    height:150px;
+    background:white;
+    border-top-width: 1px;
+    border-top-style: solid;
+    border-top-color: darkblue;
+    
+}
+.ft-list li {
+    float:right;
+    margin:0 15px 0 0;
+    background:white;
+}
+
+.ft-list li.last {margin:0;}
+
+</style>
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+<div class="ft-list"
+  <ul>
+     <li>
+            <p style="color:black"> 
+            <b>Maynooth Univeristy</b><br>
+            <img src="../../assets/Maynooth2.png"/>
+            </p>
+    </li>
+
+    <li>
+            <p style="color:black">
+            <b>Copyright:</b><br>
+            Copyright © 2023 National University of Ireland Maynooth, 
+            <br> Maynooth University. All rights reserved.<br>
+            The contents and use of this document and the related code <br>
+            are subject to the licence terms detailed in <a  href="../../assets/LICENCE.TXT"> LICENCE.txt </a> 
+            </p>
+    </li>
+
+    <li>
+            <p style="color:black">
+            <br>
+            Jiri Vala <br>
+            <br>
+            <b>e-mail:</b><br>
+            <a  href="mailto:jiri.vala@mu.ie">jiri.vala@mu.ie</a>
+            </p>
+    </li>
+    
+    
+    <li>
+            <p style="color:black">
+            <b>Authorship:</b><br>
+            Javier Osca Cotarelo<br>
+            <br>
+            <b>e-mail:</b><br>
+            <a  href="mailto:soqcslib@gmail.com">soqcslib@gmail.com</a>
+            </p>
+    </li>
+  </ul>
+</div>
+</div>
+</html>
+<!-- your custom footer here-->
+
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

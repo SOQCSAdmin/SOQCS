@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Compilation and installation &mdash; SOQCS 1.5 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/extended.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Software details" href="details_pub.html" />
+    <link rel="prev" title="Introduction" href="intro.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> SOQCS
+            <img src="_static/Logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Introduction</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Compilation and installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#requirements">Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#step-1-install-compilation-tools">Step 1: Install compilation tools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#step-2-install-the-library">Step 2: Install the library</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#using-soqcs-library">Using SOQCS library</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#documentation">Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="details_pub.html">Software details</a></li>
+<li class="toctree-l1"><a class="reference internal" href="program.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="genindex.html">Index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="biblio.html">Bibliography</a></li>
+<li class="toctree-l1"><a class="reference internal" href="licence.html">Licence and copyright</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">SOQCS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Compilation and installation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/install.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="compilation-and-installation">
+<h1>Compilation and installation<a class="headerlink" href="#compilation-and-installation" title="Permalink to this headline"></a></h1>
+<section id="requirements">
+<h2>Requirements<a class="headerlink" href="#requirements" title="Permalink to this headline"></a></h2>
+<ul class="simple">
+<li><p><strong>Linux or MacOsX operating system</strong></p></li>
+<li><p><strong>C++ Compiler</strong></p></li>
+<li><p><strong>GNU Make</strong></p></li>
+<li><p><strong>ar tool</strong></p></li>
+<li><p><a class="reference download external" download="" href="https://eigen.tuxfamily.org/index.php?title=Main_Page"><code class="xref download docutils literal notranslate"><span class="pre">Eigen</span> <span class="pre">3</span></code></a>: library.</p></li>
+<li><p><strong>Python 3</strong></p></li>
+<li><p><strong>matplotlib</strong> (installed automatically)</p></li>
+<li><p><strong>numpy</strong> (installed automatically)</p></li>
+</ul>
+</section>
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline"></a></h2>
+<section id="step-1-install-compilation-tools">
+<h3>Step 1: Install compilation tools<a class="headerlink" href="#step-1-install-compilation-tools" title="Permalink to this headline"></a></h3>
+<p>SOQCS is a C++ library with a Python port. Sources will be compiled automatically as part of the installation.
+The system needs a C++ compiler, the make and ar tools and the Eigen 3 library for linear algebra. To install Eigen 3
+type in your command line,</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>sudo apt install libeigen3-dev
+</pre></div>
+</div>
+<p>or</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>sudo zypper install eigen3-devel
+</pre></div>
+</div>
+<p>depending on your distribution. The names of the libraries may also depend on the distribution. The rest of the tools
+are standard compilation tools that can be found in your favourite package repository.</p>
+</section>
+<section id="step-2-install-the-library">
+<h3>Step 2: Install the library<a class="headerlink" href="#step-2-install-the-library" title="Permalink to this headline"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip install git+https://github.com/SOQCSAdmin/SOQCS
+</pre></div>
+</div>
+</section>
+</section>
+<section id="using-soqcs-library">
+<h2>Using SOQCS library<a class="headerlink" href="#using-soqcs-library" title="Permalink to this headline"></a></h2>
+<p>In your programs include the line,</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>import soqcs
+</pre></div>
+</div>
+<p>For examples and the library API check the rest of the documentation.</p>
+</section>
+<section id="documentation">
+<h2>Documentation<a class="headerlink" href="#documentation" title="Permalink to this headline"></a></h2>
+<blockquote>
+<div><p>This documentation can be found in <a class="reference external" href="https://soqcsadmin.github.io/SOQCS/">https://soqcsadmin.github.io/SOQCS/</a></p>
+<p>For the C++ documentation click <a class="reference download external" download="" href=" https://soqcsadmin.github.io/SOQCS/indexcpp.html"><code class="xref download docutils literal notranslate"><span class="pre">here</span></code></a></p>
+</div></blockquote>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          ﻿<footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="intro.html" class="btn btn-neutral float-left" title="Introduction" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="details_pub.html" class="btn btn-neutral float-right" title="Software details" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+<jinja2.runtime.BlockReference object at 0x7f394c795b80>
+<html lang="en">
+<style type="text/css">
+
+<style>
+.footer {
+    background:white;   
+}
+.ft-list {
+    text-align:left;
+    list-style:none;
+    overflow:hidden;/*contain floats*/
+    margin:0 auto;
+    padding:0;
+    height:150px;
+    background:white;
+    border-top-width: 1px;
+    border-top-style: solid;
+    border-top-color: darkblue;
+    
+}
+.ft-list li {
+    float:right;
+    margin:0 15px 0 0;
+    background:white;
+}
+
+.ft-list li.last {margin:0;}
+
+</style>
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+<div class="ft-list"
+  <ul>
+     <li>
+            <p style="color:black"> 
+            <b>Maynooth Univeristy</b><br>
+            <img src="../../assets/Maynooth2.png"/>
+            </p>
+    </li>
+
+    <li>
+            <p style="color:black">
+            <b>Copyright:</b><br>
+            Copyright © 2023 National University of Ireland Maynooth, 
+            <br> Maynooth University. All rights reserved.<br>
+            The contents and use of this document and the related code <br>
+            are subject to the licence terms detailed in <a  href="../../assets/LICENCE.TXT"> LICENCE.txt </a> 
+            </p>
+    </li>
+
+    <li>
+            <p style="color:black">
+            <br>
+            Jiri Vala <br>
+            <br>
+            <b>e-mail:</b><br>
+            <a  href="mailto:jiri.vala@mu.ie">jiri.vala@mu.ie</a>
+            </p>
+    </li>
+    
+    
+    <li>
+            <p style="color:black">
+            <b>Authorship:</b><br>
+            Javier Osca Cotarelo<br>
+            <br>
+            <b>e-mail:</b><br>
+            <a  href="mailto:soqcslib@gmail.com">soqcslib@gmail.com</a>
+            </p>
+    </li>
+  </ul>
+</div>
+</div>
+</html>
+<!-- your custom footer here-->
+
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
