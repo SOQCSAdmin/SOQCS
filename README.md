@@ -1,6 +1,6 @@
 # Stochastic Optical Quantum Circuit Simulator (SOQCS) #
 
-<p align="justify"> SOQCS is a C++ library (with a port in Python) to simulate optical circuits for quantum light modeled as Fock wavepackets. Optical circuits are defined from non-ideal basic components connected by a lossy medium. The library also provides support for non-ideal emitters and physical detectors considering detection efficiency, dead time, dark counts and noise effects. Detectors can also be configured to establish post-selection conditions on the circuit. Circuit measurements provide detection statistics in the form of probability outcomes and density matrices. </p>
+ <p align="justify"> Stochastic Optical Quantum Circuit Simulator (SOQCS) is a C++ and Python library which offers a framework to define, simulate and study quantum linear optical circuits in presence of various imperfections typically encountered in experiments. Optical circuits are defined from non-ideal basic components connected by a lossy medium. The library also provides support for non-ideal emitters and physical detectors considering detection efficiency, dead time, dark counts and noise effects. Detectors can also be configured to establish post-selection conditions on the circuit. Circuit measurements provide detection statistics in the form of probability outcomes and density matrices. </p>
 
 **SOQCS features**:
 
@@ -17,65 +17,52 @@
 # Related Publications #
 Please cite the most appropriate of these works if you make use of this library:
 
+*  Javier Osca and Jiri Vala.  <span style="color:blue"> <i>Stochastic Optical Quantum Circuit Simulator ( SOQCS ) </i></span>. <br>
+   **SoftwareX. Volume 25, 101603 (2024)**. 
+   
 *  Javier Osca and Jiri Vala.  <span style="color:blue"> <i>Implementation of photon partial distinguishability in a quantum optical circuit simulation</i></span>.<br> 
    **Comput. Phys. Commun. Volume 289, 108773 (2023).**
-*  Javier Osca and Jiri Vala.  <span style="color:blue"> <i>Implementation of a Stochastic Optical Quantum Circuit Simulator ( SOQCS ) </i></span>. <br>
-   **arXiv:2307.06965**
-
  
 # 1. Requirements #
 
-* Linux or MaxOsX operating system
+* Linux or MacOsX operating system
 * C++ Compiler
 * GNU Make
+* ar tool
 * [Eigen 3](https://eigen.tuxfamily.org/index.php?title=Main_Page)
-* **wget** or **curl** ( to automatically download Eigen with the provided scripts)
+* Python 3
+* matplotlib (installed automatically)
+* numpy (installed automatically)
 
 
-# 2. Quick Start #
-# 2.1 How to build it? #
-**Step 1**: Download the library.<br>
-Download SOQCS library from the github folder.
+# 2. Installation #
 
-**Step 2**: Decompress. <br>
-Decompress the zip file with your favorite decompressor.
+**Step 1**: Install compilation tools 
 
-**Step 3**: Configure the library. <br>
-The configuration script *config.sh* automatically downloads and installs Eigen3 external library and creates symbolic links within the SOQCS source tree that are 
-needed to build SOQCS library. It also unzips the SOQCS HTML documentation stored in doc.zip. Note that you may need to give execution permissions to the scripts present in SOQCS root folder.
+SOQCS is a C++ library with a Python port. Sources will be compiled automatically as part of the installation.
+The system needs a c++ compiler, the make and ar tools and the Eigen3 library for linear algebra. To install Eigen3 
+type in your command line,
 
-```bash
-chmod 744 *.sh
-./config.sh
-```  
+sudo apt install libeigen3-dev
 
-**Step 4**: Build the library. <br>
-Inside the library main SOQCS folder type <i>make</i>. This will build the library and all the examples. 
+or 
+
+sudo zypper install eigen3-devel
+
+depending on your distribution. The names of the libraries may also depend on the distribution. The rest of the tools
+are standard compilation tools that can be found in your favourite package repository. 
 
 
-# 2.2 How to use it? #
-<p align="justify"> Nine examples in C++ can be found in the <i>examples</i> subfolder. They can be compiled with the whole library following the instructions above or typing <i>make</i> within the examples folder after compiling the library.
-Additionally, there are also versions of those same examples in Python that can be found in the same folder as Jupyter notebooks. 
-</p>
+**Step 2**: Install the library.
 
-* **Example 1  [C++] [Python]**: Elementary example program to show a basic simulation in SOQCS.
-* **Example 2  [C++] [Python]**: Example of a CNOT gate simulation in SOQCS.
-* **Example 3  [C++] [Python]**: Example of a CSign gate simulation in SOQCS.
-* **Example 4  [C++] [Python]**: An example of HOM visibility using a beamsplitter and physical detectors.
-* **Example 5  [C++] [Python]**: An example of partial distinguishability.
-* **Example 6  [C++] [Python]**: An example of the delay gate.
-* **Example 7  [C++] [Python]**: A boson sampling example.
-* **Example 8  [C++] [Python]**: A simulation of the entanglement swapping protocol. Example of use of density matrices in SOQCS.
-* **Example 9  [C++] [Python]**: An example of a dielectric film simulation in SOQCS including losses.
+pip install git+https://github.com/SOQCSAdmin/SOQCS
 
-For extended information about how to use SOQCS library in your own projects check the documentation.
 # 3. Documentation #
-<p align="justify"> For more details about how to program with SOQCS library, add it to your project or learn the details of the available methods and classes consult the available documentation that can be found in the root folder of SOQCS
-after executing the configuration script. Otherwise, it will be found compressed in the file doc.zip. The documentation consists in two manuals, one for the C++ library that can be accessed by clicking on <b>SOQCS_cpp.html</b> and one for the Python port that can be accesed by clicking on <b>SOQCS_phy.html</b>.</p>
+For more details about how to use SOQCS library consult the available documentationthat can be found in https://SOQCSADmin.github.io/SOQCS/index.html
 
 # 4. Authorship #
 <b>Javier Osca</b> <br>
-javier.oscacotarelo@mu.ie
+soqcslib@gmail.com
 
 <b>Jiri Vala</b> <br>
 jiri.vala@mu.ie
@@ -86,9 +73,18 @@ Use of SOQCS is only permitted under the terms of the licence in [LICENCE.TXT](.
 
 # Version release history #
 
+* Version RV1.5:
+    * New benchmark example.
+    * Added Ryser method to calculate permanents
+    * Added Ryser method with parallelism as shown in: J. Comp. Phys., 455 (2022), 110990
+    * Added optimization in the amount of permanents to be calculated when post-selection is present.
+    * Samplers now return a list of samples instead of just their probability distribution.
+    * C++ Muti-thread server functionality now available also on Python.
+    * C++ restriction on the output selection functionality now available also on Python.
+    * New packaging. pip install should be enough to install the library.
+    * Improved documentation.
 
 * Version RV1.4.1:
-
     * Various bugs solved
     
 * Version RV1.4:
@@ -131,4 +127,4 @@ Use of SOQCS is only permitted under the terms of the licence in [LICENCE.TXT](.
     * Density matrix and fidelity measurements.
     * Losses support.
     * Basic Sampling.
-    * Basic python support.
+    * Basic Python support.

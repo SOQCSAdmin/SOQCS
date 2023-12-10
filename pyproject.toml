@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "SOQCS"
+version = "6.0"
+maintainers = [
+  { name="SOQCSADmin", email="soqcslib@google.com" },
+]
+authors = [
+  { name="Javier Osca", email="soqcslib@google.com" },
+  { name="Jiri Vala", email="jiri.vala@mu.ie" },
+]
+
+description = "Stochastic Optical Quantum Circuit Simulator (SOQCS) is a C++ and Python library which offers a framework to define, simulate and study quantum linear optical circuits in presence of various imperfections typically encountered in experiments. Optical circuits are defined from non-ideal basic components connected by a lossy medium. The library also provides support for non-ideal emitters and physical detectors considering detection efficiency, dead time, dark counts and noise effects. Detectors can also be configured to establish post-selection conditions on the circuit. Circuit measurements provide detection statistics in the form of probability outcomes and density matrices."
+
+readme = "README.md"
+
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: NUIM Licence ",
+    "Operating System :: Linux :: MacOSX",
+]
+
+dependencies = [
+  'numpy>=1.20.3',
+  'matplotlib>=3.5.1'
+]
+
+
+[project.urls]
+Homepage = "https://github.com/SOQCSADmin/SOQCS"
+
+
+
+
