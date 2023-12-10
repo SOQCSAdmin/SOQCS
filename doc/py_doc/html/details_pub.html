@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Software details &mdash; SOQCS 1.5 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/extended.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Examples" href="program.html" />
+    <link rel="prev" title="Compilation and installation" href="install.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> SOQCS
+            <img src="_static/Logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Compilation and installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Software details</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#library-structure">Library structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#source-tree-structure">Source tree structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#version-release-history">Version release history</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="program.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="genindex.html">Index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="biblio.html">Bibliography</a></li>
+<li class="toctree-l1"><a class="reference internal" href="licence.html">Licence and copyright</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">SOQCS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Software details</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/details_pub.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="software-details">
+<h1>Software details<a class="headerlink" href="#software-details" title="Permalink to this headline"></a></h1>
+<section id="library-structure">
+<h2>Library structure<a class="headerlink" href="#library-structure" title="Permalink to this headline"></a></h2>
+<ul class="simple">
+<li><p><a class="reference download external" download="" href="https://eigen.tuxfamily.org/index.php?title=Main_Page"><code class="xref download docutils literal notranslate"><span class="pre">Eigen3</span></code></a>: External library for matrix manipulation required by SOQCS. <strong>It is not part of the SOQCS code.</strong></p></li>
+<li><p><strong>util</strong>: Module of utilities.</p></li>
+<li><p><strong>qocircuit</strong>: Circuit definition.</p></li>
+<li><p><strong>state</strong>:  Quantum bosonic state definition.</p></li>
+<li><p><strong>qodev</strong>: Quantum optical device definition. Quantum device=Input photons + Circuit definition.</p></li>
+<li><p><strong>pbins</strong>: Set if probability bins. Output statistics.</p></li>
+<li><p><strong>dmat</strong>: Density matrix. Output statistics.</p></li>
+<li><p><strong>simulator</strong>: Simulator module. This is the core of SOQCS.</p></li>
+<li><p><strong>mthread</strong>: Parallelism support for SOQCS simulations.</p></li>
+<li><p><strong>SOQCS</strong>: The full C++ library</p></li>
+<li><p><strong>pySOQCS</strong>: Interface for the SOQCS port into Python.</p></li>
+</ul>
+<a class="reference internal image-reference" href="_images/Public.png"><img alt="_images/Public.png" src="_images/Public.png" style="width: 597.0999999999999px; height: 563.5px;" /></a>
+</section>
+<section id="source-tree-structure">
+<h2>Source tree structure<a class="headerlink" href="#source-tree-structure" title="Permalink to this headline"></a></h2>
+<p>Inside the main SOQCS folder the next subfolders can be found in alphabetical order:</p>
+<ul class="simple">
+<li><p><strong>doc</strong>: Documentation folder. Here can be found the HTML files of the documentation.</p></li>
+<li><p><strong>examples</strong>: Examples of SOQCS simulations can be found here.</p></li>
+<li><p><strong>src/soqcs</strong>: Source tree of the SOQCS library.</p></li>
+</ul>
+</section>
+<section id="version-release-history">
+<h2>Version release history<a class="headerlink" href="#version-release-history" title="Permalink to this headline"></a></h2>
+<blockquote>
+<div><dl class="simple">
+<dt>Version <strong>RV1.5</strong>:</dt><dd><ul class="simple">
+<li><p>New benchmark example.</p></li>
+<li><p>Added Ryser method to calculate permanents</p></li>
+<li><p>Added Ryser method with parallelism as shown in: P.H. Lundow, K. Markström, Journal of Computational Physics, Volume 455, 2022,110990.</p></li>
+<li><p>Added optimization in the amount of permanents to be calculated when post-selection is present.</p></li>
+<li><p>Samplers now return a list of samples instead of just their probability distribution.</p></li>
+<li><p>C++ Muti-thread server functionality now available also on Python.</p></li>
+<li><p>C++ restriction on the output selection functionality now available also on Python.</p></li>
+<li><p>New packaging. pip install should be enough to install the library.</p></li>
+<li><p>Improved documentation.</p></li>
+</ul>
+</dd>
+<dt>Version <strong>RV1.4.1</strong>:</dt><dd><ul class="simple">
+<li><p>Various bugs solved</p></li>
+</ul>
+</dd>
+<dt>Version <strong>RV1.4</strong>:</dt><dd><ul class="simple">
+<li><p>Added metropolis sampler.</p></li>
+<li><p>Solved bug introduced in V1.3.</p></li>
+<li><p>Various bugs solved.</p></li>
+</ul>
+</dd>
+<dt>Version <strong>RV1.3</strong>:</dt><dd><ul class="simple">
+<li><p>Qubit polarization encoding.</p></li>
+<li><p>Post selection by polarization.</p></li>
+<li><p>QOL improvements.</p></li>
+<li><p>Various bugs solved.</p></li>
+</ul>
+</dd>
+<dt>Version <strong>RV1.2</strong>:</dt><dd><ul class="simple">
+<li><p>Qubit encoding.</p></li>
+<li><p>More examples.</p></li>
+<li><p>QOL improvements.</p></li>
+<li><p>Various bugs solved.</p></li>
+<li><p>Automated configuration.</p></li>
+<li><p>Extended MacOsX support.</p></li>
+</ul>
+</dd>
+<dt>Version <strong>RV1.1</strong>:</dt><dd><ul class="simple">
+<li><p>Extended Python support.</p></li>
+<li><p>QOL improvements.</p></li>
+<li><p>Various bugs solved.</p></li>
+<li><p>Simplified configuration.</p></li>
+<li><p>Basic MacOsX support.</p></li>
+</ul>
+</dd>
+<dt>Version <strong>RV1.0</strong>:</dt><dd><ul class="simple">
+<li><p>Framework for circuit simulation.</p></li>
+<li><p>Non-idealities in the emitter and detector statistics.</p></li>
+<li><p>Partial distinguishability of photons and photon shape model.</p></li>
+<li><p>Parallel execution support.</p></li>
+<li><p>Density matrix and fidelity measurements.</p></li>
+<li><p>Losses support.</p></li>
+<li><p>Basic Sampling.</p></li>
+<li><p>Basic Python support.</p></li>
+</ul>
+</dd>
+</dl>
+</div></blockquote>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          ﻿<footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="install.html" class="btn btn-neutral float-left" title="Compilation and installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="program.html" class="btn btn-neutral float-right" title="Examples" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+<jinja2.runtime.BlockReference object at 0x7fc159e6beb0>
+<html lang="en">
+<style type="text/css">
+
+<style>
+.footer {
+    background:white;   
+}
+.ft-list {
+    text-align:left;
+    list-style:none;
+    overflow:hidden;/*contain floats*/
+    margin:0 auto;
+    padding:0;
+    height:150px;
+    background:white;
+    border-top-width: 1px;
+    border-top-style: solid;
+    border-top-color: darkblue;
+    
+}
+.ft-list li {
+    float:right;
+    margin:0 15px 0 0;
+    background:white;
+}
+
+.ft-list li.last {margin:0;}
+
+</style>
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+<div class="ft-list"
+  <ul>
+     <li>
+            <p style="color:black"> 
+            <b>Maynooth Univeristy</b><br>
+            <img src="../../assets/Maynooth2.png"/>
+            </p>
+    </li>
+
+    <li>
+            <p style="color:black">
+            <b>Copyright:</b><br>
+            Copyright © 2023 National University of Ireland Maynooth, 
+            <br> Maynooth University. All rights reserved.<br>
+            The contents and use of this document and the related code <br>
+            are subject to the licence terms detailed in <a  href="../../assets/LICENCE.TXT"> LICENCE.txt </a> 
+            </p>
+    </li>
+
+    <li>
+            <p style="color:black">
+            <br>
+            Jiri Vala <br>
+            <br>
+            <b>e-mail:</b><br>
+            <a  href="mailto:jiri.vala@mu.ie">jiri.vala@mu.ie</a>
+            </p>
+    </li>
+    
+    
+    <li>
+            <p style="color:black">
+            <b>Authorship:</b><br>
+            Javier Osca Cotarelo<br>
+            <br>
+            <b>e-mail:</b><br>
+            <a  href="mailto:soqcslib@gmail.com">soqcslib@gmail.com</a>
+            </p>
+    </li>
+  </ul>
+</div>
+</div>
+</html>
+<!-- your custom footer here-->
+
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

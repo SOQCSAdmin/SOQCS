@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SOQCS Example 5: Partial distinguishability. &mdash; SOQCS 1.5 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/extended.css" type="text/css" />
+      <link rel="stylesheet" href="_static/nbsphinx-code-cells.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="SOQCS Example 6: Simulation of a delay in the middle of a circuit." href="live6.html" />
+    <link rel="prev" title="SOQCS Example 4: HOM Visibility simulation of a 2x2 MMI beamsplitter." href="live4.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> SOQCS
+            <img src="_static/Logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Compilation and installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="details_pub.html">Software details</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="program.html">Examples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="live1.html"> Example 1: Elementary example program</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live2.html"> Example 2: CNOT circuit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live3.html"> Example 3: CZ</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live4.html"> Example 4: HOM Visibility simulation of a 2x2 MMI beamsplitter.</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#"> Example 5: Partial distinguishability</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Building-a-plotting-function-with-a-SOQCS-circuit">Building a plotting function with a SOQCS circuit</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Plotting-the-function">Plotting the function</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="live6.html"> Example 6: Simulation of a delay in the middle of a circuit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live7.html"> Example 7: Boson sampling example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live8.html"> Example 8: Entanglement swapping protocol using a physical quantum dot as a non-ideal Bell emitter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="live9.html"> Example 9: Dielectric film with losses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark.html"> Benchmark</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="genindex.html">Index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="biblio.html">Bibliography</a></li>
+<li class="toctree-l1"><a class="reference internal" href="licence.html">Licence and copyright</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">SOQCS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="program.html">Examples</a> &raquo;</li>
+      <li>SOQCS Example 5: Partial distinguishability.</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/live5.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="SOQCS-Example-5:-Partial-distinguishability.">
+<h1>SOQCS Example 5: Partial distinguishability.<a class="headerlink" href="#SOQCS-Example-5:-Partial-distinguishability." title="Permalink to this headline"></a></h1>
+<p style="text-align: justify;"><p>We simulate a circuit made of a single balanced beamsplitter with three photons of Gaussian shape in each of the input channels. This is a | 3, 3 &gt; input. We consider the time, frequency and width given in random adimensional units. At the output we print the probability of having the outcomes | 3, 3 &gt;, | 4, 2 &gt;, | 5, 1&gt; and |6, 0 &gt; in the two different channels depending on the delay time between them. We reproduce here numerically the analytical result presented in figure 12a of ref. [1].</p>
+</p><p>[1] M. C. Tichy, Interference of identical particles from entanglement to boson-sampling, <strong>Journal of Physics B: Atomic, Molecular and Optical Physics 47 (10)</strong> (2014) 103001.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">soqcs</span>
+</pre></div>
+</div>
+</div>
+<section id="Building-a-plotting-function-with-a-SOQCS-circuit">
+<h2>Building a plotting function with a SOQCS circuit<a class="headerlink" href="#Building-a-plotting-function-with-a-SOQCS-circuit" title="Permalink to this headline"></a></h2>
+<p style="text-align: justify;"><p>Next, we build a function that contains the calculation of the probability of various photons to be found in different channels at the output of a beamsplitter. The probability is calculated for a specific outcome. Its occupation is provided to the function as parameters. a relative delay dt between them.</p>
+</p><p style="text-align: justify;"><p>Note 1: This is not the most efficient implementation. All the objects have to be recreated for each point calculation and only one probability is returned at a time (even if various have been calculated). This code is implemented for demonstration purposes therefore it is intended to be simple.</p>
+</p><p style="text-align: justify;"><p>Note 2: The number of packets is the number of different single photon wavefunctions found in the simulation. In this case six different photons arrive at two different times therefore there are two possible packets.</p>
+</p><div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">HOMP</span><span class="p">(</span><span class="n">dt</span><span class="p">,</span><span class="n">args</span><span class="p">):</span>
+    <span class="c1"># Build the circuit</span>
+    <span class="n">example</span> <span class="o">=</span> <span class="n">soqcs</span><span class="o">.</span><span class="n">qodev</span><span class="p">(</span><span class="n">nph</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span>       <span class="c1"># Number of photons</span>
+                          <span class="n">nch</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>       <span class="c1"># Number of channels</span>
+                          <span class="n">nm</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>        <span class="c1"># Number of polarizations</span>
+                          <span class="n">ns</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>        <span class="c1"># Number of packets</span>
+                          <span class="n">clock</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>     <span class="c1"># Detectors are configured as counters</span>
+                          <span class="n">R</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>     <span class="c1"># Number of iterations to calculate detector effects.</span>
+                          <span class="n">loss</span><span class="o">=</span><span class="kc">True</span><span class="p">);</span>  <span class="c1"># Calculation of losses = True</span>
+    <span class="c1"># Add photons with gaussian wavefunction</span>
+    <span class="c1"># at time t, frequency f and gaussian width w</span>
+    <span class="n">example</span><span class="o">.</span><span class="n">add_photons</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">t</span> <span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">f</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">w</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+    <span class="n">example</span><span class="o">.</span><span class="n">add_photons</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">t</span> <span class="o">=</span> <span class="n">dt</span><span class="p">,</span> <span class="n">f</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">w</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+    <span class="c1"># Beamsplitter</span>
+    <span class="n">example</span><span class="o">.</span><span class="n">beamsplitter</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mf">45.0</span><span class="p">,</span><span class="mf">0.0</span><span class="p">)</span>
+    <span class="c1"># Detectors</span>
+    <span class="n">example</span><span class="o">.</span><span class="n">detector</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">example</span><span class="o">.</span><span class="n">detector</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Create a simulator and run the simulation</span>
+    <span class="n">sim</span><span class="o">=</span><span class="n">soqcs</span><span class="o">.</span><span class="n">simulator</span><span class="p">()</span>
+    <span class="n">measured</span><span class="o">=</span><span class="n">sim</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">example</span><span class="p">)</span>
+
+    <span class="c1"># Calculate the probability</span>
+    <span class="n">och0</span><span class="o">=</span><span class="mi">3</span><span class="o">+</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">och1</span><span class="o">=</span><span class="mi">3</span><span class="o">-</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">term</span><span class="o">=</span><span class="p">[[</span> <span class="mi">0</span>   <span class="p">,</span>    <span class="mi">1</span><span class="p">],</span>   <span class="c1"># Channels</span>
+          <span class="p">[</span> <span class="mi">0</span>   <span class="p">,</span>    <span class="mi">0</span><span class="p">],</span>   <span class="c1"># Polarization</span>
+          <span class="p">[</span> <span class="mi">0</span>   <span class="p">,</span>    <span class="mi">0</span><span class="p">],</span>   <span class="c1"># Package (it has to be 0 because we have configures detctors as counters)</span>
+          <span class="p">[</span> <span class="n">och0</span><span class="p">,</span> <span class="n">och1</span><span class="p">]]</span>   <span class="c1"># Occupation</span>
+    <span class="n">prob</span><span class="o">=</span><span class="n">measured</span><span class="o">.</span><span class="n">prob</span><span class="p">(</span><span class="n">term</span><span class="p">,</span><span class="n">example</span><span class="p">)</span>
+
+    <span class="c1"># Return the probabiity</span>
+    <span class="k">return</span> <span class="n">prob</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Plotting-the-function">
+<h2>Plotting the function<a class="headerlink" href="#Plotting-the-function" title="Permalink to this headline"></a></h2>
+<p>This is the main program where the probability of the different outcomes is plotted.</p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(| 3, 3 &gt;\)</span>: Black</p></li>
+<li><p><span class="math notranslate nohighlight">\(| 4, 2 &gt;\)</span>: Red</p></li>
+<li><p><span class="math notranslate nohighlight">\(| 5, 1 &gt;\)</span>: Green</p></li>
+<li><p><span class="math notranslate nohighlight">\(| 6, 0 &gt;\)</span>: Yellow</p></li>
+</ul>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">dtm</span><span class="o">=</span><span class="mi">4</span> <span class="c1"># Max/Min limit of dt in the plot</span>
+<span class="n">soqcs</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">HOMP</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span><span class="s1">&#39;dt&#39;</span><span class="p">,</span><span class="o">-</span><span class="n">dtm</span><span class="p">,</span> <span class="n">dtm</span><span class="p">,</span> <span class="mi">5</span> <span class="p">,</span> <span class="s1">&#39;P&#39;</span><span class="p">,</span><span class="mf">0.0</span> <span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="p">[{</span><span class="mi">0</span><span class="p">:</span><span class="mi">0</span><span class="p">},{</span><span class="mi">0</span><span class="p">:</span><span class="mi">1</span><span class="p">},{</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">},{</span><span class="mi">0</span><span class="p">:</span><span class="mi">3</span><span class="p">}],[</span><span class="s1">&#39;k&#39;</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">,</span><span class="s1">&#39;g&#39;</span><span class="p">,</span><span class="s1">&#39;y&#39;</span><span class="p">],</span><span class="n">padt</span><span class="o">=</span><span class="mf">0.02</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="_images/live5_8_0.png" src="_images/live5_8_0.png" />
+</div>
+</div>
+<p><strong>THIS CODE IS PART OF SOQCS</strong></p>
+<p><strong>Copyright:</strong> Copyright © 2023 National University of Ireland Maynooth, Maynooth University. All rights reserved. The contents and use of this document and the related code are subject to the licence terms detailed in LICENCE.txt</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          ﻿<footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="live4.html" class="btn btn-neutral float-left" title="SOQCS Example 4: HOM Visibility simulation of a 2x2 MMI beamsplitter." accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="live6.html" class="btn btn-neutral float-right" title="SOQCS Example 6: Simulation of a delay in the middle of a circuit." accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+<jinja2.runtime.BlockReference object at 0x7fc159c44340>
+<html lang="en">
+<style type="text/css">
+
+<style>
+.footer {
+    background:white;   
+}
+.ft-list {
+    text-align:left;
+    list-style:none;
+    overflow:hidden;/*contain floats*/
+    margin:0 auto;
+    padding:0;
+    height:150px;
+    background:white;
+    border-top-width: 1px;
+    border-top-style: solid;
+    border-top-color: darkblue;
+    
+}
+.ft-list li {
+    float:right;
+    margin:0 15px 0 0;
+    background:white;
+}
+
+.ft-list li.last {margin:0;}
+
+</style>
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+<div class="ft-list"
+  <ul>
+     <li>
+            <p style="color:black"> 
+            <b>Maynooth Univeristy</b><br>
+            <img src="../../assets/Maynooth2.png"/>
+            </p>
+    </li>
+
+    <li>
+            <p style="color:black">
+            <b>Copyright:</b><br>
+            Copyright © 2023 National University of Ireland Maynooth, 
+            <br> Maynooth University. All rights reserved.<br>
+            The contents and use of this document and the related code <br>
+            are subject to the licence terms detailed in <a  href="../../assets/LICENCE.TXT"> LICENCE.txt </a> 
+            </p>
+    </li>
+
+    <li>
+            <p style="color:black">
+            <br>
+            Jiri Vala <br>
+            <br>
+            <b>e-mail:</b><br>
+            <a  href="mailto:jiri.vala@mu.ie">jiri.vala@mu.ie</a>
+            </p>
+    </li>
+    
+    
+    <li>
+            <p style="color:black">
+            <b>Authorship:</b><br>
+            Javier Osca Cotarelo<br>
+            <br>
+            <b>e-mail:</b><br>
+            <a  href="mailto:soqcslib@gmail.com">soqcslib@gmail.com</a>
+            </p>
+    </li>
+  </ul>
+</div>
+</div>
+</html>
+<!-- your custom footer here-->
+
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
