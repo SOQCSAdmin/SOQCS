@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "SOQCS"
-version = "6.0"
+version = "1.5"
 maintainers = [
   { name="SOQCSADmin", email="soqcslib@google.com" },
 ]
